@@ -1,4 +1,4 @@
-# Struktur Kode yang Rapi dengan Clean Architecture
+const content = `# Struktur Kode yang Rapi dengan Clean Architecture
 
 Apakah proyek Node.js Anda berantakan? Clean Architecture membantu memisahkan logika bisnis dari detail teknis.
 
@@ -8,3 +8,5 @@ Apakah proyek Node.js Anda berantakan? Clean Architecture membantu memisahkan lo
 3. **Interface**: Controller, Routes, dan Presenter.
 
 Keuntungannya adalah kode Anda menjadi mudah ditest dan tidak bergantung pada framework tertentu. Jika Anda ingin mengganti database dari MongoDB ke PostgreSQL, Anda hanya perlu mengubah lapisan Infrastructure.
+`;
+export default content;

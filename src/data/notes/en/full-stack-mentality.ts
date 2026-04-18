@@ -1,4 +1,4 @@
-# Full Stack Developer Mentality
+const content = `# Full Stack Developer Mentality
 
 Being full stack doesn't mean having to master everything instantly, but having the courage to **solve problems end-to-end**.
 
@@ -9,3 +9,5 @@ Being full stack doesn't mean having to master everything instantly, but having 
 
 ### Learning Strategy
 Focus on fundamental concepts first. Frameworks can change, but core principles like HTTP, Databases, and the DOM will always be relevant.
+`;
+export default content;

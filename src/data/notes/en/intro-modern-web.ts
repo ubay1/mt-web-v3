@@ -1,4 +1,4 @@
-# Modern Web: A New Era of Digital Architecture
+const content = `# Modern Web: A New Era of Digital Architecture
 
 The world of web development has changed drastically in the last decade. We are no longer just talking about static HTML pages, but about **immersive user experiences**.
 
@@ -11,3 +11,5 @@ The world of web development has changed drastically in the last decade. We are 
 Without the right architecture, web applications will feel slow and difficult to maintain. Adopting modern standards ensures long-term scalability.
 
 > "The web is no longer just a document, it is a platform."
+`;
+export default content;

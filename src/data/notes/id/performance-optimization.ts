@@ -1,4 +1,4 @@
-# Rahasia React yang Cepat
+const content = `# Rahasia React yang Cepat
 
 Aplikasi React yang lambat seringkali disebabkan oleh render yang tidak perlu. Berikut cara memperbaikinya.
 
@@ -8,4 +8,6 @@ Aplikasi React yang lambat seringkali disebabkan oleh render yang tidak perlu. B
 - **React.memo**: Lakukan pembungkusan pada komponen murni untuk menghindari re-render.
 
 ## Image Loading
-Gunakan `loading="lazy"` dan format modern seperti WebP atau AVIF untuk mempercepat waktu pemuatan halaman pertama.
+Gunakan \`loading="lazy"\` dan format modern seperti WebP atau AVIF untuk mempercepat waktu pemuatan halaman pertama.
+`;
+export default content;

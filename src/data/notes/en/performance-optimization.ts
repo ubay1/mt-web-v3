@@ -1,4 +1,4 @@
-# Secrets of Fast React
+const content = `# Secrets of Fast React
 
 Slow React applications are often caused by unnecessary renders. Here is how to fix it.
 
@@ -8,4 +8,6 @@ Slow React applications are often caused by unnecessary renders. Here is how to 
 - **React.memo**: Wrap pure components to avoid unnecessary re-renders.
 
 ## Image Loading
-Use `loading="lazy"` and modern formats like WebP or AVIF to speed up initial page load times.
+Use \`loading="lazy"\` and modern formats like WebP or AVIF to speed up initial page load times.
+`;
+export default content;

@@ -1,4 +1,4 @@
-# Web Modern: Era Baru Arsitektur Digital
+const content = `# Web Modern: Era Baru Arsitektur Digital
 
 Dunia pengembangan web telah berubah drastis dalam satu dekade terakhir. Kita tidak lagi hanya berbicara tentang halaman HTML statis, melainkan tentang **pengalaman pengguna yang imersif**.
 
@@ -11,3 +11,5 @@ Dunia pengembangan web telah berubah drastis dalam satu dekade terakhir. Kita ti
 Tanpa arsitektur yang tepat, aplikasi web akan terasa lambat dan sulit dipelihara. Mengadopsi standar modern memastikan skalabilitas jangka panjang.
 
 > "Web bukan lagi sekadar dokumen, tapi adalah sebuah platform."
+`;
+export default content;

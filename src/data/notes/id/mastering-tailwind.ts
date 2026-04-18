@@ -1,4 +1,4 @@
-# Tailwind CSS v4: Kecepatan Tanpa Batas
+const content = `# Tailwind CSS v4: Kecepatan Tanpa Batas
 
 Versi terbaru Tailwind membawa perubahan besar dalam cara kita mendesain. Dengan engine baru yang lebih cepat, kita bisa melakukan iterasi desain dalam hitungan detik.
 
@@ -9,12 +9,14 @@ Versi terbaru Tailwind membawa perubahan besar dalam cara kita mendesain. Dengan
 
 ### Tutorial Utility Kustom
 Contoh penggunaan utility baru untuk grid system:
-```css
+\`\`\`css
 @utility custom-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 1rem;
 }
-```
+\`\`\`
 
 Dengan pendekatan ini, kode kita tetap bersih dan mudah dibaca (maintainability).
+`;
+export default content;

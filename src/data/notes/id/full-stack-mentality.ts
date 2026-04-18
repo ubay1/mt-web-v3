@@ -1,4 +1,4 @@
-# Mentalitas Menjadi Full Stack Developer
+const content = `# Mentalitas Menjadi Full Stack Developer
 
 Menjadi full stack bukan berarti harus menguasai Segalanya secara instan, tapi berani untuk **menyelesaikan masalah dari ujung ke ujung**.
 
@@ -9,3 +9,5 @@ Menjadi full stack bukan berarti harus menguasai Segalanya secara instan, tapi b
 
 ### Strategi Belajar
 Fokus lah pada konsep dasar terlebih dahulu. Framework bisa berubah, tapi prinsip dasar seperti HTTP, Database, dan DOM akan selalu relevan.
+`;
+export default content;
