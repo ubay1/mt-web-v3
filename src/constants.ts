@@ -1,5 +1,5 @@
-import { notesId } from './data/notes/id';
-import { notesEn } from './data/notes/en';
+import { notesId } from './data/notes/id-data';
+import { notesEn } from './data/notes/en-data';
 
 export const NAV_LINKS = [
   { name: 'nav.home', href: '#home' },

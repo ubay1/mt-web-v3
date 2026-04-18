@@ -1,9 +1,9 @@
-import introContent from './en/intro-modern-web.md?raw';
-import tailwindContent from './en/mastering-tailwind.md?raw';
-import mindsetContent from './en/full-stack-mentality.md?raw';
-import tsContent from './en/typescript-best-practices.md?raw';
-import reactPerfContent from './en/performance-optimization.md?raw';
-import cleanArchContent from './en/clean-architecture.md?raw';
+import introContent from './en/intro-modern-web.md';
+import tailwindContent from './en/mastering-tailwind.md';
+import mindsetContent from './en/full-stack-mentality.md';
+import tsContent from './en/typescript-best-practices.md';
+import reactPerfContent from './en/performance-optimization.md';
+import cleanArchContent from './en/clean-architecture.md';
 
 export const notesEn = {
   'intro-modern-web': {
