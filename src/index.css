@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-bg: #050505;
+  --color-ink: #ffffff;
+  --color-accent: #d4ff00;
+  --color-line: rgba(255, 255, 255, 0.15);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+}
+
+@utility cell-border {
+  border-width: 0.5px;
+  border-color: var(--color-line);
+  border-style: solid;
+}
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+@utility header-display {
+  font-size: 3.75rem;
+  @media (min-width: 768px) {
+    font-size: 8rem;
+  }
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+
+@utility btn-brutal {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid black;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  font-size: 0.875rem;
+  transition-property: all;
+  transition-duration: 150ms;
+  &:hover {
+    background-color: black;
+    color: var(--color-accent);
+  }
+}
+
+@utility input-brutal {
+  width: 100%;
+  background-color: transparent;
+  border-width: 0;
+  border-bottom-width: 1px;
+  border-color: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  &:focus {
+    outline: none;
+    border-color: rgba(0, 0, 0, 0.5);
+  }
+  &::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+  }
+}
+
+@utility grid-cell {
+  @apply cell-border p-6 md:p-10 flex flex-col;
+}
+
+@layer utilities {
+  .markdown-content h1 {
+    @apply text-4xl font-black uppercase tracking-tighter mb-6 mt-12 first:mt-0;
+  }
+  .markdown-content h2 {
+    @apply text-2xl font-black uppercase tracking-tight mb-4 mt-8;
+  }
+  .markdown-content h3 {
+    @apply text-xl font-bold uppercase mb-3 mt-6;
+  }
+  .markdown-content p {
+    @apply text-white/70 leading-relaxed mb-6 last:mb-0 text-lg;
+  }
+  .markdown-content ul, .markdown-content ol {
+    @apply mb-6 pl-6;
+  }
+  .markdown-content li {
+    @apply mb-2 last:mb-0 text-white/70 text-lg;
+  }
+  .markdown-content ul {
+    @apply list-disc;
+  }
+  .markdown-content ol {
+    @apply list-decimal;
+  }
+  .markdown-content blockquote {
+    @apply border-l-4 border-accent pl-6 py-2 italic bg-white/5 mb-8 text-xl font-medium;
+  }
+  .markdown-content code {
+    @apply font-mono text-sm bg-white/10 px-1.5 py-0.5 rounded text-accent;
+  }
+  .markdown-content pre {
+    @apply bg-white/5 p-6 rounded-lg mb-8 overflow-x-auto border border-line;
+  }
+  .markdown-content pre code {
+    @apply p-0 bg-transparent text-white text-sm block leading-relaxed;
+  }
+  .markdown-content strong {
+    @apply text-white font-bold;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 2px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(212, 255, 0, 0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 255, 0, 0.5);
+  }
+}
