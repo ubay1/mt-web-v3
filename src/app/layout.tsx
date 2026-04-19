@@ -1,13 +1,13 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import I18nProvider from '../components/I18nProvider';
-import SmoothScroll from '../components/SmoothScroll';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import "./globals.css";
+import type { Metadata } from "next";
+import I18nProvider from "../components/I18nProvider";
+import SmoothScroll from "../components/SmoothScroll";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
-  title: 'Ubay Dillah - Creative Developer & Designer',
-  description: 'Crafting digital experiences through code and aesthetics.',
+  title: "Ubay Dillah - Software Developer",
+  description: "Crafting digital experiences through code and aesthetics.",
 };
 
 export default function RootLayout({

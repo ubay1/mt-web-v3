@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowUpRight, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { PROJECTS } from "../../constants";
 import { cn } from "../../lib/utils";
 
@@ -11,10 +11,10 @@ export default function ProjectsPage() {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const categories = ["frontend", "backend", "mobile", "fullstack"];
+  const categories = ["frontend", "backend", "mobile", "fullstack", "library"];
 
   const filteredProjects = activeCategory
-    ? PROJECTS.filter((p) => (p as any).category === activeCategory)
+    ? PROJECTS.filter((p) => p.category === activeCategory)
     : PROJECTS;
 
   return (
@@ -34,7 +34,7 @@ export default function ProjectsPage() {
           </div>
 
           <div className="mb-8 lg:mb-10">
-            <span className="label-mono opacity-30 !mb-4">
+            <span className="label-mono mb-4! text-white/40">
               {t("portfolio.filter")}
             </span>
             <div className="flex flex-wrap gap-2">
@@ -66,15 +66,15 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest max-w-xs leading-relaxed opacity-60">
+          <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest max-w-xs leading-relaxed opacity-60">
             {t("portfolio.description")}
           </p>
         </div>
 
-        <div className="px-6 md:px-8 lg:px-10 py-6 lg:py-8 border-t border-line bg-white/[0.02]">
+        <div className="px-6 md:px-8 lg:px-10 py-6 lg:py-8 border-t border-line bg-white/2">
           <div className="flex justify-between items-end">
             <div>
-              <span className="label-mono !mb-1 opacity-30 italic">
+              <span className="label-mono mb-1! opacity-30 italic text-white">
                 {t("portfolio.total")}
               </span>
               <span className="text-3xl lg:text-4xl font-black text-accent">
@@ -82,10 +82,6 @@ export default function ProjectsPage() {
               </span>
             </div>
           </div>
-        </div>
-
-        <div className="absolute -bottom-10 -right-10 font-black text-[15rem] lg:text-[20rem] text-white/[0.01] select-none pointer-events-none leading-none">
-          UB.
         </div>
       </section>
 
@@ -105,24 +101,23 @@ export default function ProjectsPage() {
               >
                 <div className="p-10 flex flex-col h-full relative z-10">
                   <div className="flex justify-between items-start">
-                    <span className="label-mono italic opacity-40">
-                      #00{idx + 1} / {project.tech[0]}
+                    <span className="label-mono italic opacity-50 text-white/40">
+                      #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
+                      / {project.tech[0]}
                     </span>
-                    <div className="w-8 h-8 rounded-full border border-line flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-accent scale-50 group-hover:scale-100">
-                      <ArrowUpRight size={16} />
-                    </div>
                   </div>
 
                   <h3 className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
-                    {project.title}
+                    {t(`portfolio.featured_projects.${idx}.title`)}
                   </h3>
-                  <p className="text-zinc-500 mt-4 text-sm leading-relaxed max-w-md line-clamp-3">
-                    {project.description}
+                  <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
+                    {t(`portfolio.featured_projects.${idx}.description`)}
                   </p>
 
                   <div className="mt-8 flex items-center gap-6">
                     <a
                       href={project.link}
+                      target="_blank"
                       className="group/link flex items-center gap-2 text-[10px] font-bold uppercase tracking-[2px] hover:text-accent transition-colors"
                     >
                       {t("portfolio.visit")}{" "}
@@ -139,10 +134,10 @@ export default function ProjectsPage() {
                   <img
                     src={project.image}
                     alt={project.title}
-                    className="w-full h-full object-cover opacity-10 group-hover:opacity-30 transition-all duration-700 grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100"
+                    className="w-full h-full object-cover opacity-5 group-hover:opacity-30 transition-all duration-700 grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60"></div>
+                  <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent opacity-60"></div>
                 </div>
               </motion.div>
             ))}
@@ -150,7 +145,7 @@ export default function ProjectsPage() {
             {filteredProjects.length % 2 !== 0 && (
               <div className="grid-cell hidden sm:flex border-r border-b border-line justify-center items-center group overflow-hidden">
                 <div className="font-mono text-[8vw] select-none opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12">
-                  {t(`portfolio.categories.${activeCategory}`) || "PROJECTS"}
+                  {activeCategory ? activeCategory.toUpperCase() : "PROJECTS"}
                 </div>
               </div>
             )}
@@ -159,7 +154,7 @@ export default function ProjectsPage() {
 
         {filteredProjects.length === 0 && (
           <div className="flex flex-col items-center justify-center py-40">
-            <span className="label-mono opacity-20 italic">
+            <span className="label-mono opacity-40 italic text-white">
               {t("portfolio.no_projects")}
             </span>
           </div>

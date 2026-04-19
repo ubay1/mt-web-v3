@@ -24,13 +24,13 @@ const resources = {
         contact: 'Contact',
       },
       hero: {
-        subtitle: 'Creative Developer & Designer',
+        subtitle: 'Software Developer',
         title: 'UBAY<br />DILLAH',
-        description: 'Crafting digital experiences through code and aesthetics. Specialized in full-stack development and interactive design.',
+        description: 'Building digital experiences through code and design.',
       },
       about: {
-        label: 'The Story',
-        text: 'I am a passionate developer from Semarang, Indonesia, with a deep interest in modern web architecture and user-centric design. My goal is to bridge the gap between complex backend logic and elegant frontend experiences.',
+        label: 'About Me',
+        text: 'A Software Developer focused on building modern web applications that are fast, efficient, and easy to use. Enjoys simplifying complex problems into simple, functional solutions, and continuously learning to keep up with evolving technology.',
       },
       expertise: {
         label: 'Core Expertise',
@@ -49,8 +49,59 @@ const resources = {
           frontend: 'Frontend',
           backend: 'Backend',
           mobile: 'Mobile',
-          fullstack: 'Fullstack'
-        }
+          fullstack: 'Fullstack',
+          library: 'Library',
+        },
+        featured_projects: [
+          {
+            title: 'Sveltekit HPKE Wrapper',
+            description: 'A wrapper library for data encryption built using TypeScript and hpke-js.',
+          },
+          {
+            title: 'Mini Super Fetch',
+            description: 'A small library for fetching data that has features like axios and tanstack query.',
+          },
+          {
+            title: 'Meme Generator',
+            description: 'A meme generator application for fun and sharing on social media.',
+          },
+          {
+            title: 'Shopify - Autopro Performance',
+            description: 'Shopify UI theme specifically designed for the automotive industry.',
+          },
+          {
+            title: 'Shopify - Sun Store',
+            description: 'Shopify UI theme specifically designed for the ecommerce industry.',
+          },
+          {
+            title: 'Montrack',
+            description: 'A monitoring application for domestic and international shipments that helps users track delivery status in real time.',
+          },
+          {
+            title: 'Polri Connect',
+            description: 'A video conferencing application developed for internal police needs, similar to Google Meet or Zoom. This application enables virtual meetings and remote communication, and is equipped with features such as screen sharing and multi-user support.',
+          },
+          {
+            title: 'Sehat Indonesiaku',
+            description: 'A digital health platform developed to monitor public health status in Indonesia, including routine immunization tracking, health data management, and medical history monitoring.',
+          },
+          {
+            title: 'Dashboard Sehat Indonesiaku',
+            description: 'A platform for monitoring and analyzing health data comprehensively.',
+          },
+          {
+            title: 'Free Health Check (CKG)',
+            description: 'A government program that aims to provide free health checks to the Indonesian people. so that people can detect various diseases early and monitor their health conditions periodically.',
+          },
+          {
+            title: 'Money Management',
+            description: 'A personal finance management application that is simple and easy to use.',
+          },
+          {
+            title: 'Homi',
+            description: 'A smarthome application that allows users to control and manage smart home devices from a single platform.',
+          },
+        ],
       },
       notes: {
         label: 'Thoughts',
@@ -85,13 +136,13 @@ const resources = {
         contact: 'Kontak',
       },
       hero: {
-        subtitle: 'Creative Developer & Designer',
+        subtitle: 'Software Developer',
         title: 'UBAY<br />DILLAH',
-        description: 'Membangun pengalaman digital melalui kode dan estetika. Spesialisasi dalam full-stack development dan interaksi desain.',
+        description: 'Membangun pengalaman digital melalui kode dan desain.',
       },
       about: {
-        label: 'Cerita Saya',
-        text: 'Saya adalah pengembang yang bersemangat dari Semarang, Indonesia, dengan ketertarikan mendalam pada arsitektur web modern dan desain yang berpusat pada pengguna. Tujuan saya adalah menjembatani kesenjangan antara logika backend yang kompleks dan pengalaman frontend yang elegan.',
+        label: 'Tentang Saya',
+        text: 'Seorang Software Developer yang fokus membangun aplikasi web modern yang cepat, efisien, dan mudah digunakan. Senang menyederhanakan hal-hal kompleks menjadi solusi yang simpel dan fungsional, serta terus belajar mengikuti perkembangan teknologi.',
       },
       expertise: {
         label: 'Keahlian Inti',
@@ -110,8 +161,60 @@ const resources = {
           frontend: 'Frontend',
           backend: 'Backend',
           mobile: 'Mobile',
-          fullstack: 'Fullstack'
-        }
+          fullstack: 'Fullstack',
+          library: 'Library',
+        },
+        featured_projects: [
+          {
+            title: 'Sveltekit HPKE Wrapper',
+            description: 'Library wrapper untuk encryption data yang dibuat menggunakan Typescript dan hpke-js.',
+          },
+          {
+            title: 'Mini Super Fetch',
+            description: 'Library kecil untuk fetch data yang memiliki fitur seperti axios dan tanstack query.',
+          },
+          {
+            title: 'Meme Generator',
+            description: 'Aplikasi meme generator untuk senang senang dan share ke sosial media.',
+          },
+          {
+            title: 'Shopify - Autopro Performance',
+            description: 'UI Theme shopify khusus untuk automotive',
+          },
+          {
+            title: 'Shopify - Sun Store',
+            description: 'UI Theme shopify khusus untuk ecommerce',
+          },
+          {
+            title: 'Montrack',
+            description: 'Aplikasi monitoring pengiriman barang antar negara atau antar kota yang memudahkan pengguna dalam melacak status kiriman secara real-time.',
+          },
+          {
+            title: 'Polri Connect',
+            description: 'Aplikasi konferensi video yang dikembangkan untuk kebutuhan internal kepolisian, mirip dengan Google Meet atau Zoom. Aplikasi ini memungkinkan rapat virtual dan komunikasi jarak jauh, serta dilengkapi dengan fitur-fitur seperti berbagi layar dan dukungan multi-pengguna.',
+          },
+          {
+            title: 'Sehat Indonesiaku',
+            description: 'Platform untuk memantau status kesehatan masyarakat di Indonesia. Diantaranya seperti pencatatan imunisasi rutin, pengelolaan data kesehatan, dan pelacakan riwayat medis.',
+          },
+          {
+            title: 'Dashboard Sehat Indonesiaku',
+            description: 'Platform untuk memantau dan menganalisis data kesehatan secara komprehensif.',
+          },
+          {
+            title: 'Cek Kesehatan Gratis (CKG)',
+            description: 'Program pemerintah yang bertujuan memberikan pemeriksaan kesehatan tanpa biaya kepada masyarakat Indonesia. agar masyarakat bisa melakukan deteksi dini berbagai penyakit serta memantau kondisi kesehatannya secara berkala.',
+          },
+          {
+            title: 'Kelola Uang',
+            description: 'Aplikasi pengelola keuangan pribadi yang simpel dan mudah digunakan.',
+          },
+          {
+            title: 'Homi',
+            description: 'Aplikasi smarthome yang memungkinkan pengguna mengontrol dan mengelola perangkat rumah pintar dari satu platform.',
+          },
+
+        ],
       },
       notes: {
         label: 'Pemikiran',
