@@ -222,15 +222,15 @@ export default function HomePage() {
                 >
                   <div className="flex flex-col h-full relative z-10">
                     <span className="label-mono italic opacity-50 text-white/40">
-                      #00{idx + 1} / {project.tech[0]}
+                      #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")} / {project.tech[0]}
                     </span>
                     <div className="mt-auto">
                       <PretextTitle
-                        text={t(`portfolio.featured_projects.${idx}.title`)}
+                        text={t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`)}
                         className="text-2xl font-bold uppercase tracking-tight group-hover:text-accent transition-colors"
                       />
                       <p className="text-sm text-white/40 mt-2">
-                        {t(`portfolio.featured_projects.${idx}.description`)}
+                        {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`)}
                       </p>
                     </div>
                   </div>

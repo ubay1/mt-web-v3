@@ -108,10 +108,10 @@ export default function ProjectsPage() {
                   </div>
 
                   <h3 className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
-                    {t(`portfolio.featured_projects.${idx}.title`)}
+                    {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`)}
                   </h3>
                   <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
-                    {t(`portfolio.featured_projects.${idx}.description`)}
+                    {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`)}
                   </p>
 
                   <div className="mt-8 flex items-center gap-6">
