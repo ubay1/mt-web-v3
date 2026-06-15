@@ -56,13 +56,21 @@ export const NOTES = [
 ];
 
 export const SKILLS = [
-  { name: 'Frontend', items: ['React', 'Next.js', 'Vue', 'Nuxt.js', 'Svelte', 'Tailwind CSS', 'TypeScript'] },
-  { name: 'Backend', items: ['Node.js', 'Express', 'Go'] },
+  { name: 'Frontend', items: ['React', 'Next.js', 'Vue', 'Nuxt.js', 'Sveltekit', 'Tailwind CSS', 'TypeScript', 'Shopify'] },
+  { name: 'Backend', items: ['Node.js', 'Express', 'Elysia'] },
   { name: 'Tools', items: ['Git', 'Docker', 'Antigravity', 'VS Code'] },
   { name: 'Database', items: ['PostgreSQL', 'Supabase', 'SQLite'] },
 ];
 
 export const PROJECTS = [
+  {
+    title: 'HPKE Wrapper',
+    description: 'Pengembangan dari library sveltekit hpke wrapper menjadi library agnostic yang bisa digunakan pada meta framework seperti sveltekit, nextjs, nuxtjs, dan lainnya.',
+    tech: ['TypeScript', 'hpke-js', 'Nodejs'],
+    link: 'https://www.npmjs.com/package/@ubay182/hpke-wrapper',
+    image: '/hpke.jpeg',
+    category: 'library',
+  },
   {
     title: 'Sveltekit HPKE Wrapper',
     description: 'Library wrapper untuk encryption data yang dibuat menggunakan Typescript dan hpke-js.',

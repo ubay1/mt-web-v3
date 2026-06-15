@@ -106,15 +106,16 @@ export default function HomePage() {
             alt="Hero"
             fill
             priority
-            quality={40}
+            quality={75}
             className="hidden sm:block object-cover object-center absolute top-0 left-0 -z-10 opacity-20 pointer-events-none"
           />
           <Image
             src={`/profil-sm.jpeg`}
             alt="Hero"
             fill
+            sizes="100%"
             priority
-            quality={40}
+            quality={75}
             className="block sm:hidden object-cover object-center absolute top-0 left-0 -z-10 opacity-20 pointer-events-none"
           />
           <div className="flex justify-between items-start w-full">
@@ -222,15 +223,20 @@ export default function HomePage() {
                 >
                   <div className="flex flex-col h-full relative z-10">
                     <span className="label-mono italic opacity-50 text-white/40">
-                      #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")} / {project.tech[0]}
+                      #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
+                      / {project.tech[0]}
                     </span>
                     <div className="mt-auto">
                       <PretextTitle
-                        text={t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`)}
+                        text={t(
+                          `portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`,
+                        )}
                         className="text-2xl font-bold uppercase tracking-tight group-hover:text-accent transition-colors"
                       />
                       <p className="text-sm text-white/40 mt-2">
-                        {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`)}
+                        {t(
+                          `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
+                        )}
                       </p>
                     </div>
                   </div>

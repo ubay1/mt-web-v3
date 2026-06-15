@@ -54,6 +54,10 @@ const resources = {
         },
         featured_projects: [
           {
+            title: 'HPKE Wrapper',
+            description: 'Evolution of the sveltekit hpke wrapper library into an agnostic library that can be used across meta-frameworks such as SvelteKit, Next.js, Nuxt.js, and others.',
+          },
+          {
             title: 'Sveltekit HPKE Wrapper',
             description: 'A wrapper library for data encryption built using TypeScript and hpke-js.',
           },
@@ -165,6 +169,10 @@ const resources = {
           library: 'Library',
         },
         featured_projects: [
+          {
+            title: 'HPKE Wrapper',
+            description: 'Pengembangan dari library sveltekit hpke wrapper menjadi library agnostic yang bisa digunakan pada meta framework seperti sveltekit, nextjs, nuxtjs, dan lainnya.',
+          },
           {
             title: 'Sveltekit HPKE Wrapper',
             description: 'Library wrapper untuk encryption data yang dibuat menggunakan Typescript dan hpke-js.',
