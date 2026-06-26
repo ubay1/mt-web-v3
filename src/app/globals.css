@@ -3,7 +3,7 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  
+
   --color-bg: #050505;
   --color-ink: #ffffff;
   --color-accent: #d4ff00;
@@ -99,7 +99,8 @@
   .markdown-content p {
     @apply text-white/70 leading-relaxed mb-6 last:mb-0 text-lg;
   }
-  .markdown-content ul, .markdown-content ol {
+  .markdown-content ul,
+  .markdown-content ol {
     @apply mb-6 pl-6;
   }
   .markdown-content li {

@@ -74,6 +74,7 @@ export default function Navbar() {
             </button>
             <button
               className="p-2 text-ink"
+              aria-label="btn-menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}

@@ -59,7 +59,7 @@ function PretextTitle({
           </div>
         ))
       ) : (
-        <h3>{text}</h3>
+        <div>{text}</div>
       )}
     </div>
   );
@@ -106,7 +106,8 @@ export default function HomePage() {
             alt="Hero"
             fill
             priority
-            quality={75}
+            quality={30}
+            fetchPriority="high"
             className="hidden sm:block object-cover object-center absolute top-0 left-0 -z-10 opacity-20 pointer-events-none"
           />
           <Image
@@ -115,7 +116,8 @@ export default function HomePage() {
             fill
             sizes="100%"
             priority
-            quality={75}
+            fetchPriority="high"
+            quality={30}
             className="block sm:hidden object-cover object-center absolute top-0 left-0 -z-10 opacity-20 pointer-events-none"
           />
           <div className="flex justify-between items-start w-full">
@@ -142,9 +144,9 @@ export default function HomePage() {
 
           <div className="mt-20">
             <span className="label-mono italic">{t("hero.subtitle")}</span>
-            <h1 className="header-display mb-4">
+            <div className="header-display mb-4">
               <Trans i18nKey="hero.title" components={{ br: <br /> }} />
-            </h1>
+            </div>
             <p className="font-mono text-accent text-sm tracking-[2px] uppercase">
               {t("hero.description")}
             </p>
@@ -163,14 +165,18 @@ export default function HomePage() {
               <a
                 href="https://github.com/ubay1"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="p-2 border border-line rounded-lg hover:border-accent hover:text-accent transition-all"
+                aria-label="github"
               >
                 <Github size={18} />
               </a>
               <a
                 href="https://www.linkedin.com/in/ubay-dillah-ba5219165"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="p-2 border border-line rounded-lg hover:border-accent hover:text-accent transition-all"
+                aria-label="linkedin"
               >
                 <Linkedin size={18} />
               </a>
@@ -186,9 +192,9 @@ export default function HomePage() {
           <div className="space-y-10 mt-6">
             {SKILLS.map((skillGroup, idx) => (
               <div key={idx}>
-                <h3 className="text-[10px] font-mono text-accent/50 uppercase tracking-widest mb-4">
+                <div className="text-[10px] font-mono text-accent/50 uppercase tracking-widest mb-4">
                   {skillGroup.name}
-                </h3>
+                </div>
                 <ul className="space-y-2">
                   {skillGroup.items.map((skill, i) => (
                     <li
@@ -240,11 +246,16 @@ export default function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <img
+                  <Image
                     src={project.image}
                     alt={project.title}
                     className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none"
                     referrerPolicy="no-referrer"
+                    width={100}
+                    height={100}
+                    quality={30}
+                    fetchPriority="high"
+                    priority
                   />
                 </Link>
               ))}
@@ -271,9 +282,9 @@ export default function HomePage() {
             <span className="label-mono text-black/50!">
               {t("inquiries.label")}
             </span>
-            <h2 className="text-4xl font-black uppercase tracking-tighter leading-none mb-6">
+            <div className="text-4xl font-black uppercase tracking-tighter leading-none mb-6">
               <Trans i18nKey="inquiries.title" components={{ br: <br /> }} />
-            </h2>
+            </div>
 
             <form
               className="mt-4"

@@ -43,9 +43,9 @@ export default function NotesPage() {
           <span className="label-mono italic text-accent/50">
             {t("notes.label")}
           </span>
-          <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] mt-4 mb-8">
+          <div className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] mt-4 mb-8">
             <Trans i18nKey="notes.title" components={{ br: <br /> }} />
-          </h2>
+          </div>
           <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest max-w-md leading-relaxed opacity-60">
             {t("notes.description")}
           </p>
@@ -103,9 +103,9 @@ export default function NotesPage() {
                   <span className="font-mono text-[9px] text-accent/50 block mb-4 italic">
                     {note.date}
                   </span>
-                  <h3 className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-none">
+                  <div className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-none">
                     {getNoteTitle(note)}
-                  </h3>
+                  </div>
                   <div className="flex gap-2 flex-wrap mb-6">
                     {note.tags.map((tag) => (
                       <span
@@ -178,9 +178,9 @@ export default function NotesPage() {
                   ))}
                 </div>
 
-                <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-12">
+                <div className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-12">
                   {getNoteTitle(selectedNote)}
-                </h2>
+                </div>
 
                 <div className="markdown-content mt-20 border-t border-line pt-20">
                   <ReactMarkdown>{getNoteContent(selectedNote)}</ReactMarkdown>

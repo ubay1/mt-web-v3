@@ -27,9 +27,9 @@ export default function ProjectsPage() {
           </span>
 
           <div className="my-8 lg:my-10">
-            <h2 className="text-4xl sm:text-5xl lg:text-5xl font-black tracking-[-0.04em] leading-[0.85] uppercase">
+            <div className="text-4xl sm:text-5xl lg:text-5xl font-black tracking-[-0.04em] leading-[0.85] uppercase">
               <Trans i18nKey="portfolio.title" components={{ br: <br /> }} />
-            </h2>
+            </div>
             <div className="w-16 lg:w-20 h-1 bg-accent mt-4 lg:mt-6"></div>
           </div>
 
@@ -107,11 +107,15 @@ export default function ProjectsPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
-                    {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`)}
-                  </h3>
+                  <div className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
+                    {t(
+                      `portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`,
+                    )}
+                  </div>
                   <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
-                    {t(`portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`)}
+                    {t(
+                      `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
+                    )}
                   </p>
 
                   <div className="mt-8 flex items-center gap-6">

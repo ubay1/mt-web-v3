@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    inlineCss: true
+  }
 };
 
 export default nextConfig;
