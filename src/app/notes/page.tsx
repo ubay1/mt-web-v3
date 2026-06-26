@@ -146,8 +146,7 @@ export default function NotesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            data-lenis-prevent
-            className="fixed inset-0 z-60 bg-bg overflow-y-auto custom-scrollbar"
+            className="fixed inset-0 z-60 bg-bg overflow-y-auto custom-scrollbar overscroll-contain"
           >
             {/* Modal Header */}
             <div className="sticky top-0 left-0 right-0 z-10 bg-bg/80 backdrop-blur-md border-b border-line px-6 py-4 flex items-center justify-between">
