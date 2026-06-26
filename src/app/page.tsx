@@ -21,7 +21,7 @@ function PretextTitle({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let observer = new ResizeObserver((entries) => {
+    const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry && entry.contentRect.width > 0) {
         import("@chenglou/pretext").then(
@@ -129,13 +129,13 @@ export default function HomePage() {
                 </span>
                 AVAILABLE FOR HIRE
               </span>
-              <span className="font-mono text-[9px] text-white/30 uppercase tracking-[3px]">
+              <span className="font-mono text-[9px] text-white/50 uppercase tracking-[3px]">
                 Bekasi, ID / {currentTime}{" "}
                 {lang.startsWith("id") ? "WIB" : "GMT+7"}
               </span>
             </div>
             <div className="hidden sm:block text-right">
-              <span className="label-mono mb-0! text-[8px] opacity-30">
+              <span className="label-mono mb-0! text-[8px] text-white/50">
                 SCROLL TO EXPLORE
               </span>
               <div className="w-px h-12 bg-line mx-auto mt-4 origin-top animate-bounce"></div>
@@ -143,7 +143,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-20">
-            <span className="label-mono italic">{t("hero.subtitle")}</span>
+            <span className="label-mono italic text-white/60">{t("hero.subtitle")}</span>
             <div className="header-display mb-4">
               <Trans i18nKey="hero.title" components={{ br: <br /> }} />
             </div>
@@ -154,7 +154,7 @@ export default function HomePage() {
         </section>
 
         <section id="about" className="grid-cell md:col-span-4 bg-white/5">
-          <span className="label-mono italic text-accent/50">
+          <span className="label-mono italic text-accent/70">
             {t("about.label")}
           </span>
           <div className="mt-auto">
@@ -188,11 +188,11 @@ export default function HomePage() {
       {/* Skills & Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 items-start">
         <section id="skills" className="grid-cell md:col-span-3">
-          <span className="label-mono">{t("expertise.label")}</span>
+          <span className="label-mono text-white/60">{t("expertise.label")}</span>
           <div className="space-y-10 mt-6">
             {SKILLS.map((skillGroup, idx) => (
               <div key={idx}>
-                <div className="text-[10px] font-mono text-accent/50 uppercase tracking-widest mb-4">
+                <div className="text-[10px] font-mono text-accent/70 uppercase tracking-widest mb-4">
                   {skillGroup.name}
                 </div>
                 <ul className="space-y-2">
@@ -228,7 +228,7 @@ export default function HomePage() {
                   className="p-6 md:p-4 group relative overflow-hidden transition-all hover:bg-white/5 border-r border-b border-line min-h-[300px]"
                 >
                   <div className="flex flex-col h-full relative z-10">
-                    <span className="label-mono italic opacity-50 text-white/40">
+                    <span className="label-mono italic text-white/60">
                       #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
                       / {project.tech[0]}
                     </span>
@@ -239,7 +239,7 @@ export default function HomePage() {
                         )}
                         className="text-2xl font-bold uppercase tracking-tight group-hover:text-accent transition-colors"
                       />
-                      <p className="text-sm text-white/40 mt-2">
+                      <p className="text-sm text-white/60 mt-2">
                         {t(
                           `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
                         )}
@@ -279,7 +279,7 @@ export default function HomePage() {
           {/* Contact */}
           <section className="p-6 md:p-4 md:col-span-3 bg-accent text-black relative flex flex-col h-full">
             <div id="contact" className="absolute -top-[73px]" />
-            <span className="label-mono text-black/50!">
+            <span className="label-mono text-black">
               {t("inquiries.label")}
             </span>
             <div className="text-4xl font-black uppercase tracking-tighter leading-none mb-6">

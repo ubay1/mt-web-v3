@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ExternalLink } from "lucide-react";
 import { PROJECTS } from "../../constants";
 import { cn } from "../../lib/utils";
+import Image from "next/image";
 
 export default function ProjectsPage() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export default function ProjectsPage() {
       {/* Sticky Sidebar */}
       <section className="md:col-span-5 lg:col-span-4 md:sticky md:top-[73px] md:h-[calc(100vh-73px)] border-b md:border-b-0 border-line bg-white/5 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 lg:p-10">
-          <span className="label-mono italic text-accent/50">
+          <span className="label-mono italic text-accent/70">
             {t("portfolio.label")}
           </span>
 
@@ -34,7 +35,7 @@ export default function ProjectsPage() {
           </div>
 
           <div className="mb-8 lg:mb-10">
-            <span className="label-mono mb-4! text-white/40">
+            <span className="label-mono mb-4! text-white/60">
               {t("portfolio.filter")}
             </span>
             <div className="flex flex-wrap gap-2">
@@ -44,7 +45,7 @@ export default function ProjectsPage() {
                   "px-3 py-1 border font-mono text-[9px] uppercase tracking-wider transition-all",
                   activeCategory === null
                     ? "bg-accent text-black border-accent"
-                    : "border-line text-white/40 hover:border-accent hover:text-accent",
+                    : "border-line text-white/60 hover:border-accent hover:text-accent",
                 )}
               >
                 {t("portfolio.all")}
@@ -57,7 +58,7 @@ export default function ProjectsPage() {
                     "px-3 py-1 border font-mono text-[9px] uppercase tracking-wider transition-all",
                     activeCategory === cat
                       ? "bg-accent text-black border-accent"
-                      : "border-line text-white/40 hover:border-accent hover:text-accent",
+                      : "border-line text-white/60 hover:border-accent hover:text-accent",
                   )}
                 >
                   {t(`portfolio.categories.${cat}`)}
@@ -66,7 +67,7 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest max-w-xs leading-relaxed opacity-60">
+          <p className="text-white font-mono text-[10px] uppercase tracking-widest max-w-xs leading-relaxed opacity-60">
             {t("portfolio.description")}
           </p>
         </div>
@@ -74,7 +75,7 @@ export default function ProjectsPage() {
         <div className="px-6 md:px-8 lg:px-10 py-6 lg:py-8 border-t border-line bg-white/2">
           <div className="flex justify-between items-end">
             <div>
-              <span className="label-mono mb-1! opacity-30 italic text-white">
+              <span className="label-mono mb-1! italic text-white/50">
                 {t("portfolio.total")}
               </span>
               <span className="text-3xl lg:text-4xl font-black text-accent">
@@ -89,7 +90,7 @@ export default function ProjectsPage() {
       <section className="md:col-span-7 lg:col-span-8 cell-border min-h-screen">
         <AnimatePresence mode="popLayout">
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2">
-            {filteredProjects.map((project, idx) => (
+            {filteredProjects.map((project) => (
               <motion.div
                 layout
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -101,7 +102,7 @@ export default function ProjectsPage() {
               >
                 <div className="p-10 flex flex-col h-full relative z-10">
                   <div className="flex justify-between items-start">
-                    <span className="label-mono italic opacity-50 text-white/40">
+                    <span className="label-mono italic text-white/60">
                       #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
                       / {project.tech[0]}
                     </span>
@@ -112,7 +113,7 @@ export default function ProjectsPage() {
                       `portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`,
                     )}
                   </div>
-                  <p className="text-white/40 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
+                  <p className="text-white/60 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
                     {t(
                       `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
                     )}
@@ -135,11 +136,16 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="absolute inset-0 z-0">
-                  <img
+                  <Image
                     src={project.image}
                     alt={project.title}
+                    width={500}
+                    height={500}
                     className="w-full h-full object-cover opacity-5 group-hover:opacity-30 transition-all duration-700 grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100"
                     referrerPolicy="no-referrer"
+                    priority
+                    fetchPriority="high"
+                    quality={30}
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent opacity-60"></div>
                 </div>
@@ -148,7 +154,7 @@ export default function ProjectsPage() {
 
             {filteredProjects.length % 2 !== 0 && (
               <div className="grid-cell hidden sm:flex border-r border-b border-line justify-center items-center group overflow-hidden">
-                <div className="font-mono text-[8vw] select-none opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12">
+                <div className="font-mono text-[8vw] select-none text-transparent opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12" aria-hidden="true">
                   {activeCategory ? activeCategory.toUpperCase() : "PROJECTS"}
                 </div>
               </div>
@@ -158,7 +164,7 @@ export default function ProjectsPage() {
 
         {filteredProjects.length === 0 && (
           <div className="flex flex-col items-center justify-center py-40">
-            <span className="label-mono opacity-40 italic text-white">
+            <span className="label-mono italic text-white/50">
               {t("portfolio.no_projects")}
             </span>
           </div>

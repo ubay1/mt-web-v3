@@ -40,19 +40,19 @@ export default function NotesPage() {
       {/* Header & Filter */}
       <section className="grid grid-cols-1 md:grid-cols-12 border-b border-line bg-white/5">
         <div className="md:col-span-8 grid-cell justify-center">
-          <span className="label-mono italic text-accent/50">
+          <span className="label-mono italic text-accent/70">
             {t("notes.label")}
           </span>
           <div className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] mt-4 mb-8">
             <Trans i18nKey="notes.title" components={{ br: <br /> }} />
           </div>
-          <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest max-w-md leading-relaxed opacity-60">
+          <p className="text-white/60 font-mono text-[10px] uppercase tracking-widest max-w-md leading-relaxed">
             {t("notes.description")}
           </p>
         </div>
 
         <div className="md:col-span-4 grid-cell bg-accent/5 justify-end">
-          <span className="label-mono opacity-30 mb-4! italic">
+          <span className="label-mono mb-4! italic text-white/60">
             Filter by Tags
           </span>
           <div className="flex flex-wrap gap-2">
@@ -62,7 +62,7 @@ export default function NotesPage() {
                 "px-3 py-1 border font-mono text-[9px] uppercase tracking-wider transition-all",
                 activeTag === null
                   ? "bg-accent text-black border-accent"
-                  : "border-line text-white/40 hover:border-accent hover:text-accent",
+                  : "border-line text-white/60 hover:border-accent hover:text-accent",
               )}
             >
               {t("portfolio.all")}
@@ -75,7 +75,7 @@ export default function NotesPage() {
                   "px-3 py-1 border font-mono text-[9px] uppercase tracking-wider transition-all",
                   activeTag === tag
                     ? "bg-accent text-black border-accent"
-                    : "border-line text-white/40 hover:border-accent hover:text-accent",
+                    : "border-line text-white/60 hover:border-accent hover:text-accent",
                 )}
               >
                 {tag}
@@ -100,7 +100,7 @@ export default function NotesPage() {
                 className="break-inside-avoid group cursor-pointer border border-line p-8 hover:border-accent transition-all bg-white/2 hover:bg-white/5 relative overflow-hidden"
               >
                 <div className="relative z-10">
-                  <span className="font-mono text-[9px] text-accent/50 block mb-4 italic">
+                  <span className="font-mono text-[9px] text-accent/70 block mb-4 italic">
                     {note.date}
                   </span>
                   <div className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-none">
@@ -110,13 +110,13 @@ export default function NotesPage() {
                     {note.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-[8px] px-1.5 py-0.5 border border-line text-white/30 uppercase font-mono tracking-tighter"
+                        className="text-[8px] px-1.5 py-0.5 border border-line text-white/50 uppercase font-mono tracking-tighter"
                       >
                         #{tag}
                       </span>
                     ))}
                   </div>
-                  <div className="text-white/40 text-sm line-clamp-3 font-medium leading-relaxed">
+                  <div className="text-white/60 text-sm line-clamp-3 font-medium leading-relaxed">
                     {getNoteContent(note)
                       .replace(/[#*`>]/g, "")
                       .slice(0, 150)}
@@ -124,7 +124,7 @@ export default function NotesPage() {
                   </div>
                 </div>
                 {/* Decorative Element */}
-                <div className="absolute -bottom-4 -right-2 text-6xl font-black text-white/1 select-none group-hover:text-accent/5 transition-colors leading-none">
+                <div className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none" aria-hidden="true">
                   UB.
                 </div>
               </motion.div>
@@ -186,7 +186,7 @@ export default function NotesPage() {
                   <ReactMarkdown>{getNoteContent(selectedNote)}</ReactMarkdown>
                 </div>
 
-                <div className="mt-20 pt-10 border-t border-line flex justify-between items-center opacity-30">
+                <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">
                   <span className="font-mono text-[10px]">
                     {t("notes.last_updated")}: {selectedNote.date}
                   </span>
