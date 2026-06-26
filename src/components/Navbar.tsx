@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { NAV_LINKS } from "../constants";
-import { motion, AnimatePresence } from "motion/react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -84,27 +83,23 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-bg pt-24 px-6 md:hidden flex flex-col gap-6 items-center justify-center text-center"
-          >
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href.startsWith("#") ? `/${link.href}` : link.href}
-                className="text-4xl font-black uppercase tracking-tighter hover:text-accent transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {t(link.name)}
-              </Link>
-            ))}
-          </motion.div>
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-bg pt-24 px-6 md:hidden flex flex-col gap-6 items-center justify-center text-center transition-opacity duration-200",
+          isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
         )}
-      </AnimatePresence>
+      >
+        {NAV_LINKS.map((link) => (
+          <Link
+            key={link.name}
+            href={link.href.startsWith("#") ? `/${link.href}` : link.href}
+            className="text-4xl font-black uppercase tracking-tighter hover:text-accent transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {t(link.name)}
+          </Link>
+        ))}
+      </div>
     </>
   );
 }

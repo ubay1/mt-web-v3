@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import { NOTES } from "../../constants";
 import { cn } from "../../lib/utils";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 export default function NotesPage() {
   const { t, i18n } = useTranslation();
@@ -124,7 +127,10 @@ export default function NotesPage() {
                   </div>
                 </div>
                 {/* Decorative Element */}
-                <div className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none" aria-hidden="true">
+                <div
+                  className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none"
+                  aria-hidden="true"
+                >
                   UB.
                 </div>
               </motion.div>

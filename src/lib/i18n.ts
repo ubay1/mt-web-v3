@@ -17,7 +17,6 @@ const resources = {
       nav: {
         home: 'Home',
         about: 'About',
-        expertise: 'Expertise',
         skills: 'Skills',
         projects: 'Works',
         notes: 'Notes',
@@ -133,7 +132,6 @@ const resources = {
       nav: {
         home: 'Beranda',
         about: 'Tentang',
-        expertise: 'Keahlian',
         skills: 'Skill',
         projects: 'Karya',
         notes: 'Catatan',

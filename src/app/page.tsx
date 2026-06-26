@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Link from "next/link";
 import { Github, Linkedin, ArrowUpRight } from "lucide-react";
 import { SKILLS, PROJECTS } from "../constants";
 import Image from "next/image";
-import { useRef } from "react";
 
 function PretextTitle({
   text,
@@ -292,8 +291,9 @@ export default function HomePage() {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const name = formData.get("name") as string;
+                const email = formData.get("email") as string;
                 const message = formData.get("message") as string;
-                const text = `Halo Ubay, saya ${name}. ${message}`;
+                const text = `Halo Ubay, saya ${name} (${email}). ${message}`;
                 window.open(
                   `https://wa.me/6281234567890?text=${encodeURIComponent(text)}`,
                   "_blank",
@@ -309,6 +309,7 @@ export default function HomePage() {
               />
               <input
                 type="email"
+                name="email"
                 placeholder={t("inquiries.email")}
                 required
                 className="input-brutal border-black/20 focus:border-black/50"
