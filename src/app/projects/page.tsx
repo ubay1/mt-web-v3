@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import { motion, AnimatePresence } from "motion/react";
 import { ExternalLink } from "lucide-react";
 import { PROJECTS } from "../../constants";
 import { cn } from "../../lib/utils";
@@ -88,79 +87,73 @@ export default function ProjectsPage() {
 
       {/* Projects List */}
       <section className="md:col-span-7 lg:col-span-8 cell-border min-h-screen">
-        <AnimatePresence mode="popLayout">
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2">
-            {filteredProjects.map((project) => (
-              <motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                key={project.title}
-                className="grid-cell p-0 group relative overflow-hidden border-r border-b border-line min-h-[450px]"
-              >
-                <div className="p-10 flex flex-col h-full relative z-10">
-                  <div className="flex justify-between items-start">
-                    <span className="label-mono italic text-white/60">
-                      #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
-                      / {project.tech[0]}
-                    </span>
-                  </div>
-
-                  <div className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
-                    {t(
-                      `portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`,
-                    )}
-                  </div>
-                  <p className="text-white/60 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
-                    {t(
-                      `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
-                    )}
-                  </p>
-
-                  <div className="mt-8 flex items-center gap-6">
-                    <a
-                      href={project.link}
-                      target="_blank"
-                      className="group/link flex items-center gap-2 text-[10px] font-bold uppercase tracking-[2px] hover:text-accent transition-colors"
-                    >
-                      {t("portfolio.visit")}{" "}
-                      <ExternalLink
-                        size={12}
-                        className="group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform"
-                      />
-                    </a>
-                    <div className="h-px flex-1 bg-line/30"></div>
-                  </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2">
+          {filteredProjects.map((project, idx) => (
+            <div
+              key={project.title}
+              className="grid-cell p-0 group relative overflow-hidden border-r border-b border-line min-h-[450px] animate-fade-in"
+              style={{ animationDelay: `${idx * 60}ms` }}
+            >
+              <div className="p-10 flex flex-col h-full relative z-10">
+                <div className="flex justify-between items-start">
+                  <span className="label-mono italic text-white/60">
+                    #{String(PROJECTS.indexOf(project) + 1).padStart(3, "0")}{" "}
+                    / {project.tech[0]}
+                  </span>
                 </div>
 
-                <div className="absolute inset-0 z-0">
-                  <Image
-                    src={project.image}
-                    alt={project.title}
-                    width={500}
-                    height={500}
-                    className="w-full h-full object-cover opacity-5 group-hover:opacity-30 transition-all duration-700 grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100"
-                    referrerPolicy="no-referrer"
-                    priority
-                    fetchPriority="high"
-                    quality={30}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent opacity-60"></div>
+                <div className="text-3xl font-black uppercase tracking-tight mt-auto group-hover:text-accent transition-colors duration-300">
+                  {t(
+                    `portfolio.featured_projects.${PROJECTS.indexOf(project)}.title`,
+                  )}
                 </div>
-              </motion.div>
-            ))}
+                <p className="text-white/60 mt-4 text-sm leading-relaxed max-w-md line-clamp-4">
+                  {t(
+                    `portfolio.featured_projects.${PROJECTS.indexOf(project)}.description`,
+                  )}
+                </p>
 
-            {filteredProjects.length % 2 !== 0 && (
-              <div className="grid-cell hidden sm:flex border-r border-b border-line justify-center items-center group overflow-hidden">
-                <div className="font-mono text-[8vw] select-none text-transparent opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12" aria-hidden="true">
-                  {activeCategory ? activeCategory.toUpperCase() : "PROJECTS"}
+                <div className="mt-8 flex items-center gap-6">
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    className="group/link flex items-center gap-2 text-[10px] font-bold uppercase tracking-[2px] hover:text-accent transition-colors"
+                  >
+                    {t("portfolio.visit")}{" "}
+                    <ExternalLink
+                      size={12}
+                      className="group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform"
+                    />
+                  </a>
+                  <div className="h-px flex-1 bg-line/30"></div>
                 </div>
               </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+
+              <div className="absolute inset-0 z-0">
+                <Image
+                  src={project.image}
+                  alt={project.title}
+                  width={500}
+                  height={500}
+                  className="w-full h-full object-cover opacity-5 group-hover:opacity-30 transition-all duration-700 grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100"
+                  referrerPolicy="no-referrer"
+                  priority
+                  fetchPriority="high"
+                  quality={30}
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent opacity-60"></div>
+              </div>
+            </div>
+          ))}
+
+          {filteredProjects.length % 2 !== 0 && (
+            <div className="grid-cell hidden sm:flex border-r border-b border-line justify-center items-center group overflow-hidden">
+              <div className="font-mono text-[8vw] select-none text-transparent opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-1000 rotate-12" aria-hidden="true">
+                {activeCategory ? activeCategory.toUpperCase() : "PROJECTS"}
+              </div>
+            </div>
+          )}
+        </div>
 
         {filteredProjects.length === 0 && (
           <div className="flex flex-col items-center justify-center py-40">

@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { NOTES } from "../../constants";
@@ -91,117 +90,103 @@ export default function NotesPage() {
       {/* Masonry Grid */}
       <section className="px-6 md:px-10 py-12">
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
-          <AnimatePresence mode="popLayout">
-            {filteredNotes.map((note) => (
-              <motion.div
-                layout
-                key={note.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => setSelectedNote(note)}
-                className="break-inside-avoid group cursor-pointer border border-line p-8 hover:border-accent transition-all bg-white/2 hover:bg-white/5 relative overflow-hidden"
-              >
-                <div className="relative z-10">
-                  <span className="font-mono text-[9px] text-accent/70 block mb-4 italic">
-                    {note.date}
-                  </span>
-                  <div className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-none">
-                    {getNoteTitle(note)}
-                  </div>
-                  <div className="flex gap-2 flex-wrap mb-6">
-                    {note.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[8px] px-1.5 py-0.5 border border-line text-white/50 uppercase font-mono tracking-tighter"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="text-white/60 text-sm line-clamp-3 font-medium leading-relaxed">
-                    {getNoteContent(note)
-                      .replace(/[#*`>]/g, "")
-                      .slice(0, 150)}
-                    ...
-                  </div>
+          {filteredNotes.map((note, idx) => (
+            <div
+              key={note.id}
+              onClick={() => setSelectedNote(note)}
+              className="break-inside-avoid group cursor-pointer border border-line p-8 hover:border-accent transition-all bg-white/2 hover:bg-white/5 relative overflow-hidden animate-fade-in"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              <div className="relative z-10">
+                <span className="font-mono text-[9px] text-accent/70 block mb-4 italic">
+                  {note.date}
+                </span>
+                <div className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-accent transition-colors leading-none">
+                  {getNoteTitle(note)}
                 </div>
-                {/* Decorative Element */}
-                <div
-                  className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none"
-                  aria-hidden="true"
-                >
-                  UB.
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </section>
-
-      {/* Full-screen Modal Detail View */}
-      <AnimatePresence>
-        {selectedNote && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60 bg-bg overflow-y-auto custom-scrollbar overscroll-contain"
-          >
-            {/* Modal Header */}
-            <div className="sticky top-0 left-0 right-0 z-10 bg-bg/80 backdrop-blur-md border-b border-line px-6 py-4 flex items-center justify-between">
-              <span className="label-mono mb-0! italic text-accent">
-                {selectedNote.date}
-              </span>
-              <button
-                onClick={() => setSelectedNote(null)}
-                className="group flex items-center gap-2 text-[10px] font-mono uppercase tracking-[2px] text-white/50 hover:text-white transition-colors"
-              >
-                {i18n.language === "id" ? "TUTUP" : "CLOSE"}{" "}
-                <X
-                  size={20}
-                  className="group-hover:rotate-90 transition-transform duration-300"
-                />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="max-w-4xl mx-auto px-6 py-20 lg:py-32">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                <div className="flex gap-4 mb-8">
-                  {selectedNote.tags.map((tag: string) => (
+                <div className="flex gap-2 flex-wrap mb-6">
+                  {note.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="font-mono text-[10px] px-2 py-1 border border-accent/20 text-accent uppercase tracking-[2px]"
+                      className="text-[8px] px-1.5 py-0.5 border border-line text-white/50 uppercase font-mono tracking-tighter"
                     >
                       #{tag}
                     </span>
                   ))}
                 </div>
-
-                <div className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-12">
-                  {getNoteTitle(selectedNote)}
+                <div className="text-white/60 text-sm line-clamp-3 font-medium leading-relaxed">
+                  {getNoteContent(note)
+                    .replace(/[#*`>]/g, "")
+                    .slice(0, 150)}
+                  ...
                 </div>
-
-                <div className="markdown-content mt-20 border-t border-line pt-20">
-                  <ReactMarkdown>{getNoteContent(selectedNote)}</ReactMarkdown>
-                </div>
-
-                <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">
-                  <span className="font-mono text-[10px]">
-                    {t("notes.last_updated")}: {selectedNote.date}
-                  </span>
-                  <div className="font-black text-2xl italic">UBAY DILLAH</div>
-                </div>
-              </motion.div>
+              </div>
+              {/* Decorative Element */}
+              <div
+                className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none"
+                aria-hidden="true"
+              >
+                UB.
+              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      </section>
+
+      {/* Full-screen Modal Detail View */}
+      {selectedNote && (
+        <div
+          className="fixed inset-0 z-60 bg-bg overflow-y-auto custom-scrollbar overscroll-contain animate-fade-in"
+        >
+          {/* Modal Header */}
+          <div className="sticky top-0 left-0 right-0 z-10 bg-bg/80 backdrop-blur-md border-b border-line px-6 py-4 flex items-center justify-between">
+            <span className="label-mono mb-0! italic text-accent">
+              {selectedNote.date}
+            </span>
+            <button
+              onClick={() => setSelectedNote(null)}
+              className="group flex items-center gap-2 text-[10px] font-mono uppercase tracking-[2px] text-white/50 hover:text-white transition-colors"
+            >
+              {i18n.language === "id" ? "TUTUP" : "CLOSE"}{" "}
+              <X
+                size={20}
+                className="group-hover:rotate-90 transition-transform duration-300"
+              />
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="max-w-4xl mx-auto px-6 py-20 lg:py-32">
+            <div className="animate-slide-up">
+              <div className="flex gap-4 mb-8">
+                {selectedNote.tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="font-mono text-[10px] px-2 py-1 border border-accent/20 text-accent uppercase tracking-[2px]"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] mb-12">
+                {getNoteTitle(selectedNote)}
+              </div>
+
+              <div className="markdown-content mt-20 border-t border-line pt-20">
+                <ReactMarkdown>{getNoteContent(selectedNote)}</ReactMarkdown>
+              </div>
+
+              <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">
+                <span className="font-mono text-[10px]">
+                  {t("notes.last_updated")}: {selectedNote.date}
+                </span>
+                <div className="font-black text-2xl italic">UBAY DILLAH</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
