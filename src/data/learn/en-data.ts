@@ -1,32 +1,32 @@
-import reactLesson1 from './en/react-lesson-1';
-import reactLesson2 from './en/react-lesson-2';
-import reactLesson3 from './en/react-lesson-3';
-import reactLesson4 from './en/react-lesson-4';
+import ReactLesson1 from './en/react-lesson-1.mdx';
+import ReactLesson2 from './en/react-lesson-2.mdx';
+import ReactLesson3 from './en/react-lesson-3.mdx';
+import ReactLesson4 from './en/react-lesson-4.mdx';
 
 export const learnEn = {
   'react-mastery': {
     title: 'Mastering React.js',
-    description: 'Learn React.js fundamentals from scratch to advanced, including components, state, and hooks.',
+    description: 'Learn React.js fundamentals from scratch to advanced, including components, state, & hooks.',
     lessons: [
       {
         id: 'lesson-1',
         title: 'Introduction to React',
-        content: reactLesson1
+        content: ReactLesson1
       },
       {
         id: 'lesson-2',
-        title: 'Components and Props',
-        content: reactLesson2
+        title: 'Event Handlers, Conditional, List Rendering, & useEffect (Data Fetching)',
+        content: ReactLesson2
       },
       {
         id: 'lesson-3',
         title: 'Global State Management (React Context API) & Zustand',
-        content: reactLesson3
+        content: ReactLesson3
       },
       {
         id: 'lesson-4',
-        title: "What's New in React 19 (Actions, useActionState, etc.)",
-        content: reactLesson4
+        title: 'New Features in React 19 (Actions, useActionState, etc)',
+        content: ReactLesson4
       }
     ]
   }

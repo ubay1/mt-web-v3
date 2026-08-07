@@ -1,7 +1,7 @@
-import reactLesson1 from './id/react-lesson-1';
-import reactLesson2 from './id/react-lesson-2';
-import reactLesson3 from './id/react-lesson-3';
-import reactLesson4 from './id/react-lesson-4';
+import ReactLesson1 from './id/react-lesson-1.mdx';
+import ReactLesson2 from './id/react-lesson-2.mdx';
+import ReactLesson3 from './id/react-lesson-3.mdx';
+import ReactLesson4 from './id/react-lesson-4.mdx';
 
 export const learnId = {
   'react-mastery': {
@@ -11,22 +11,22 @@ export const learnId = {
       {
         id: 'lesson-1',
         title: 'Pengenalan React',
-        content: reactLesson1
+        content: ReactLesson1
       },
       {
         id: 'lesson-2',
         title: 'Event Handler, Conditional, List Rendering, & useEffect (Data Fetching)',
-        content: reactLesson2
+        content: ReactLesson2
       },
       {
         id: 'lesson-3',
         title: 'State Management Global (React Context API) & Zustand',
-        content: reactLesson3
+        content: ReactLesson3
       },
       {
         id: 'lesson-4',
-        title: 'Fitur Baru di React 19 (Actions, useActionState, dll)',
-        content: reactLesson4
+        title: 'Fitur Baru di React 19 (Actions, useActionState, use(), dll)',
+        content: ReactLesson4
       }
     ]
   }

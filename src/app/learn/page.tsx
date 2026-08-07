@@ -221,17 +221,25 @@ export default function LearnPage() {
                   ))}
                 </div>
 
-                {selectedLesson && (
-                  <>
-                    <div className="text-4xl md:text-6xl lg:text-7xl font-black tracking-normal mb-8">
-                      {getNoteTitle(selectedLesson)}
-                    </div>
+                {selectedLesson && (() => {
+                  const Content = getNoteContent(selectedLesson);
+                  const isMDXComponent = typeof Content === "function" || (typeof Content === "object" && Content !== null);
+                  return (
+                    <>
+                      <div className="text-4xl md:text-6xl lg:text-7xl font-black tracking-normal mb-8">
+                        {getNoteTitle(selectedLesson)}
+                      </div>
 
-                    <div className="markdown-content mt-12 border-t border-line pt-12">
-                      <MarkdownRenderer content={getNoteContent(selectedLesson)} />
-                    </div>
-                  </>
-                )}
+                      <div className="markdown-content mt-12 border-t border-line pt-12">
+                        {isMDXComponent ? (
+                          <Content />
+                        ) : (
+                          <MarkdownRenderer content={Content} />
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">
                   <span className="font-mono text-[10px]">

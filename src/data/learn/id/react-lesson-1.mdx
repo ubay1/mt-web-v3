@@ -1,4 +1,5 @@
-const content = `
+## Pengenalan React
+
 **React.js** adalah *library* JavaScript open-source yang dibuat oleh Meta (Facebook) untuk membangun antarmuka pengguna (**User Interface / UI**), khususnya untuk **Single Page Applications (SPA)**.
 
 Beda dengan pendekatan tradisional di mana setiap perpindahan halaman memuat ulang (*reload*) seluruh browser, React hanya memperbarui bagian UI yang berubah secara cepat dan efisien.
@@ -21,15 +22,15 @@ Sebelum masuk ke kode, ada tiga konsep pilar yang perlu dipahami:
 
 JSX adalah ekstensi sintaksis JavaScript yang memungkinkan kamu menulis kode menyerupai HTML langsung di dalam berkas JavaScript.
 
-\`\`\`jsx
+```jsx
 // Contoh JSX
 const Greeting = () => {
   const name = "Alex";
   return <h1>Halo, {name}! Selamat datang di React.</h1>;
 };
-\`\`\`
+```
 
-> **Catatan:** Kode di dalam kurung kurawal \`{}\` dianggap sebagai ekspresi JavaScript murni.
+> **Catatan:** Kode di dalam kurung kurawal `{}` dianggap sebagai ekspresi JavaScript murni.
 
 ---
 
@@ -37,7 +38,7 @@ const Greeting = () => {
 
 Komponen di React modern ditulis menggunakan **Functional Components** (fungsi JavaScript biasa yang mengembalikan JSX).
 
-\`\`\`jsx
+```jsx
 // Komponen tombol sederhana
 function PrimaryButton() {
   return (
@@ -46,7 +47,7 @@ function PrimaryButton() {
     </button>
   );
 }
-\`\`\`
+```
 
 ---
 
@@ -54,7 +55,7 @@ function PrimaryButton() {
 
 Props digunakan untuk **mengirimkan data** dari komponen induk (*parent*) ke komponen anak (*child*). Props bersifat *read-only* (tidak boleh diubah oleh komponen penerima).
 
-\`\`\`jsx
+```jsx
 // Komponen Anak
 function UserCard(props) {
   return (
@@ -74,17 +75,17 @@ function App() {
     </div>
   );
 }
-\`\`\`
+```
 
 ---
 
-### 4. State (\`useState\`)
+### 4. State (`useState`)
 
 **State** adalah data internal komponen yang sifatnya dinamis dan bisa berubah seiring interaksi pengguna (seperti klik tombol, input teks, atau data dari API). Ketika State berubah, React akan me-render ulang (*re-render*) komponen tersebut.
 
-React menyediakan *Hook* bernama \`useState\` untuk mengelola state:
+React menyediakan *Hook* bernama `useState` untuk mengelola state:
 
-\`\`\`jsx
+```jsx
 import React, { useState } from 'react';
 
 function Counter() {
@@ -103,7 +104,7 @@ function Counter() {
     </div>
   );
 }
-\`\`\`
+```
 
 ---
 
@@ -113,9 +114,4 @@ function Counter() {
 | --- | --- | --- |
 | **Definisi** | Data yang dikirim dari luar (Parent) | Data internal milik komponen itu sendiri |
 | **Pemicu Re-render** | Jika props yang dikirim dari Parent berubah | Jika state diubah menggunakan fungsi pembaru |
-| **Sifat Data** | Immutable (Read-only) | Mutable (Dapat diubah via \`setState\`) |
-
----
-`;
-
-export default content;
+| **Sifat Data** | Immutable (Read-only) | Mutable (Dapat diubah via `setState`) |

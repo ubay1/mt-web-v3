@@ -113,10 +113,9 @@ export default function NotesPage() {
                   ))}
                 </div>
                 <div className="text-white/60 text-sm line-clamp-3 font-medium leading-relaxed">
-                  {getNoteContent(note)
-                    .replace(/[#*`>]/g, "")
-                    .slice(0, 150)}
-                  ...
+                  {typeof getNoteContent(note) === "string"
+                    ? getNoteContent(note).replace(/[#*`>]/g, "").slice(0, 150) + "..."
+                    : getNoteTitle(note)}
                 </div>
               </div>
               {/* Decorative Element */}
@@ -124,7 +123,7 @@ export default function NotesPage() {
                 className="absolute -bottom-4 -right-2 text-6xl font-black text-transparent select-none group-hover:text-accent/5 transition-colors leading-none"
                 aria-hidden="true"
               >
-                UB.
+                Note.
               </div>
             </div>
           ))}
@@ -172,7 +171,11 @@ export default function NotesPage() {
               </div>
 
               <div className="markdown-content mt-20 border-t border-line pt-20">
-                <MarkdownRenderer content={getNoteContent(selectedNote)} />
+                {(() => {
+                  const Content = getNoteContent(selectedNote);
+                  const isMDXComponent = typeof Content === "function" || (typeof Content === "object" && Content !== null);
+                  return isMDXComponent ? <Content /> : <MarkdownRenderer content={Content} />;
+                })()}
               </div>
 
               <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">

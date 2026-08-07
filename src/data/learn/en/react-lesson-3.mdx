@@ -1,0 +1,35 @@
+## Global State Management (React Context API & Zustand)
+
+By default, data in React flows top-down (Parent to Child) via *Props*. If data is required by components deep in the hierarchy, passing props through intermediary components causes **Prop Drilling**.
+
+**Context API** is React's built-in solution to share global state without manually passing props through every level.
+
+```
+[ Without Context: Prop Drilling ]
+App ---> Layout ---> Sidebar ---> UserProfile (Passing props recursively)
+
+[ With Context API ]
+Context Provider (Holds User state)
+    └── UserProfile (Reads data directly without intermediary components)
+```
+
+### Context API Overview
+1. **createContext**: Defines the context container.
+2. **Provider**: Wraps components and supplies global values.
+3. **useContext**: Hook to access values inside any consumer component.
+
+---
+
+## Zustand: Lightweight Global State
+
+**Zustand** is a fast, unopinionated state management solution built on publish-subscribe architecture with minimal boilerplate.
+
+```js
+import { create } from 'zustand';
+
+export const useCounterStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+}));
+```

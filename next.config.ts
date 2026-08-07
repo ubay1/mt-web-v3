@@ -1,6 +1,8 @@
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   reactStrictMode: true,
   images: {
     remotePatterns: [
@@ -11,8 +13,13 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    inlineCss: true
-  }
+    inlineCss: true,
+  },
 };
 
-export default nextConfig;
+const withMDX = createMDX({
+  // Add markdown plugins here if desired
+});
+
+export default withMDX(nextConfig);
+

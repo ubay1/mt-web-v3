@@ -1,0 +1,64 @@
+## Components, Props & Events
+
+Components let you split the UI into independent, reusable pieces. Conceptually, components are like JavaScript functions. They accept arbitrary inputs (called "props") and return React elements describing what should appear on the screen.
+
+### Functional Components
+The simplest way to define a component is to write a JavaScript function:
+
+```jsx
+function Welcome(props) {
+  return <h1>Hello, {props.name}</h1>;
+}
+```
+
+### Rendering a Component
+When React sees an element representing a user-defined component, it passes JSX attributes and children to this component as a single object called "props".
+
+```jsx
+const element = <Welcome name="Ubay" />;
+```
+
+Always remember that components **must never modify their own props**. Props are *read-only*.
+
+---
+
+## Event Handling & State Updates
+
+In React, events are named using camelCase (e.g. `onClick`, `onChange`) rather than lowercase.
+
+```jsx
+import React, { useState } from 'react';
+
+function EventExample() {
+  const [text, setText] = useState('');
+
+  const handleChange = (e) => {
+    setText(e.target.value);
+  };
+
+  return (
+    <div>
+      <input type="text" value={text} onChange={handleChange} placeholder="Type here..." />
+      <p>Live output: {text}</p>
+    </div>
+  );
+}
+```
+
+---
+
+## List Rendering & Keys
+
+Render lists using standard `.map()` and assign a unique `key` prop to each list item.
+
+```jsx
+function ProductList({ products }) {
+  return (
+    <ul>
+      {products.map((item) => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
