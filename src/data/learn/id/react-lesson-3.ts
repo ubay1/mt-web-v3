@@ -1,0 +1,166 @@
+const content = `
+## State Management Global (React Context API)
+
+secara bawaan, data di React mengalir dari atas ke bawah (Parent ke Child) lewat *Props*. Jika sebuah data dibutuhkan oleh komponen yang terletak jauh di dalam hirarki, kamu harus meneruskannya melewati banyak komponen perantara—masalah ini disebut **Prop Drilling**.
+
+**Context API** adalah solusi bawaan React untuk membuat data tersedia secara global tanpa perlu mengirim props secara manual di setiap level.
+
+\`\`\`tsx
+[ Tanpa Context: Prop Drilling ]
+App ---> Layout ---> Sidebar ---> UserProfile (Props dilempar berantai)
+
+[ Dengan Context API ]
+Context Provider (Menyimpan data User)
+    └── UserProfile (Mengambil data langsung tanpa lewat komponen perantara)
+\`\`\`
+
+### Cara Kerja Context
+- **createContext**: Membuat wadah penampung data.
+- **Provider**: Komponen pembungkus (wrapper) yang menyediakan data ke komponen di dalamnya.
+- **useContext**: Hook untuk mengambil data tersebut di komponen manapun.
+
+Contoh kasus **Dark Mode**:
+
+Langkah 1: Buat Context & Provider
+
+\`\`\`jsx
+// ThemeContext.jsx
+import React, { createContext, useState, useContext } from 'react';
+
+// 1. Buat Context
+const ThemeContext = createContext();
+
+// 2. Buat Provider
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+// 3. Custom Hook untuk mempermudah pemanggilan
+export const useTheme = () => useContext(ThemeContext);
+\`\`\`
+
+Langkah 2: Bungkus Aplikasi (App.jsx)
+
+\`\`\`jsx
+import React from 'react';
+import { ThemeProvider } from './ThemeContext';
+import Home from './Home';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <Home />
+    </ThemeProvider>
+  );
+}
+
+export default App;
+\`\`\`
+
+
+Langkah 3: Gunakan di Komponen Mana Saja misal di Navbar.jsx
+\`\`\`jsx
+import React from 'react';
+import { useTheme } from './ThemeContext';
+
+function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <div style={{ background: theme === 'light' ? '#fff' : '#222', color: theme === 'light' ? '#000' : '#fff' }}>
+      <h1>Tema Saat Ini: {theme}</h1>
+      <button onClick={toggleTheme}>Ganti Tema</button>
+    </div>
+  );
+}
+
+export default Navbar;
+\`\`\`
+
+> **Kekurangan Context API:**
+Ketika state di Context berubah, semua komponen yang membungkus atau memakai context tersebut akan ikut di-render ulang (re-render), meskipun komponen tersebut hanya memakai sebagian kecil datanya.
+
+
+## State Management dengan Zustand
+
+**Zustand** adalah library state management berbasis **publish-subscribe** yang sangat ringan, cepat, dan menggunakan sintaksis yang minim boilerplate (jauh lebih simpel dibanding Redux atau Context).
+
+**Keunggulan Zustand**:
+
+- Tidak butuh Provider: Tidak perlu membungkus <App/> dengan <Provider>.
+- Performa Tinggi: Komponen hanya me-render ulang jika bagian state yang di-select benar-benar berubah.
+- Sangat Simpel: Cukup buat store dan langsung panggil di mana saja.
+
+\`\`\`bash
+npm install zustand
+pnpm add zustand
+bun add zustand
+yarn add zustand
+\`\`\`
+
+Contoh Kasus: Counter & User Auth Store
+
+Langkah 1: Buat Store (useStore.js)
+
+\`\`\`js
+import { create } from 'zustand';
+
+// set() digunakan untuk memperbarui data di dalam store
+export const useCounterStore = create((set) => ({
+  count: 0,
+  // Action untuk mengubah state
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0 }),
+}));
+\`\`\`
+
+Langkah 2: Langsung Gunakan di Komponen (Tanpa Provider!)
+\`\`\`jsx
+import React from 'react';
+import { useCounterStore } from './useStore';
+
+function CounterComponent() {
+  // Ambil state dan action dari store
+  const count = useCounterStore((state) => state.count);
+  const increment = useCounterStore((state) => state.increment);
+  const decrement = useCounterStore((state) => state.decrement);
+
+  return (
+    <div>
+      <h2>Hitungan: {count}</h2>
+      <button onClick={increment}>Tambah</button>
+      <button onClick={decrement}>Kurang</button>
+    </div>
+  );
+}
+
+export default CounterComponent;
+\`\`\`
+
+## Perbandingan: Context API vs Zustand
+
+| Fitur / Perbandingan | React Context API | Zustand |
+| --- | --- | --- |
+|**Instalasi**| Bawaan React (Tidak perlu \`npm i\`) | Perlu install \`zustand\` |
+|**Setup Provider**| Perlu membungkus komponen dengan \`<Provider>\` |**Tidak perlu Provider**|
+|**Performa Re - render**| Bisa memicu re - render tak terduga jika state kompleks |**Sangat optimal** (hanya re - render komponen yang berlangganan field terkait) |
+|**Kompleksitas Kode**| Banyak *boilerplate* (Create, Provider, Custom Hook) | Sangat ringkas (cukup \`create()\`) |
+|**Cocok Untuk**| State global sederhana & jarang berubah (cth: Tema, Bahasa / i18n) | State dinamis, kompleks, atau sering berubah (cth: Keranjang belanja, Auth, Data Form) |
+`
+
+
+export default content;
+
+
+

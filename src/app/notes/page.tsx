@@ -4,11 +4,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { X } from "lucide-react";
-import dynamic from "next/dynamic";
 import { NOTES } from "../../constants";
 import { cn } from "../../lib/utils";
-
-const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
+import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 
 export default function NotesPage() {
   const { t, i18n } = useTranslation();
@@ -174,7 +172,7 @@ export default function NotesPage() {
               </div>
 
               <div className="markdown-content mt-20 border-t border-line pt-20">
-                <ReactMarkdown>{getNoteContent(selectedNote)}</ReactMarkdown>
+                <MarkdownRenderer content={getNoteContent(selectedNote)} />
               </div>
 
               <div className="mt-20 pt-10 border-t border-line flex justify-between items-center text-white/50">

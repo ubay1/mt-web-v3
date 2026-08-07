@@ -1,0 +1,121 @@
+const content = `
+**React.js** adalah *library* JavaScript open-source yang dibuat oleh Meta (Facebook) untuk membangun antarmuka pengguna (**User Interface / UI**), khususnya untuk **Single Page Applications (SPA)**.
+
+Beda dengan pendekatan tradisional di mana setiap perpindahan halaman memuat ulang (*reload*) seluruh browser, React hanya memperbarui bagian UI yang berubah secara cepat dan efisien.
+
+---
+
+## 3 Konsep Utama React
+
+Sebelum masuk ke kode, ada tiga konsep pilar yang perlu dipahami:
+
+1. **Component-Based (Berbasis Komponen):** UI dipecah menjadi potongan-potongan kecil yang independen dan bisa digunakan kembali (*reusable*), seperti tombol, header, atau kartu profil.
+2. **Virtual DOM:** React membuat salinan ringan dari struktur halaman (DOM). Ketika ada perubahan data, React membandingkan salinan ini dengan versi sebelumnya (proses *reconciliation*) dan hanya memperbarui elemen yang benar-benar berubah di browser asli.
+3. **Declarative:** Kamu cukup mendefinisikan *bagaimana tampilan UI seharusnya berdasarkan data/state*, dan React yang akan menangani proses pembaruannya secara otomatis.
+
+---
+
+## Fondasi Dasar React
+
+### 1. JSX (JavaScript XML)
+
+JSX adalah ekstensi sintaksis JavaScript yang memungkinkan kamu menulis kode menyerupai HTML langsung di dalam berkas JavaScript.
+
+\`\`\`jsx
+// Contoh JSX
+const Greeting = () => {
+  const name = "Alex";
+  return <h1>Halo, {name}! Selamat datang di React.</h1>;
+};
+\`\`\`
+
+> **Catatan:** Kode di dalam kurung kurawal \`{}\` dianggap sebagai ekspresi JavaScript murni.
+
+---
+
+### 2. Components
+
+Komponen di React modern ditulis menggunakan **Functional Components** (fungsi JavaScript biasa yang mengembalikan JSX).
+
+\`\`\`jsx
+// Komponen tombol sederhana
+function PrimaryButton() {
+  return (
+    <button className="btn-primary">
+      Klik Saya
+    </button>
+  );
+}
+\`\`\`
+
+---
+
+### 3. Props (Properties)
+
+Props digunakan untuk **mengirimkan data** dari komponen induk (*parent*) ke komponen anak (*child*). Props bersifat *read-only* (tidak boleh diubah oleh komponen penerima).
+
+\`\`\`jsx
+// Komponen Anak
+function UserCard(props) {
+  return (
+    <div className="card">
+      <h3>Nama: {props.name}</h3>
+      <p>Peran: {props.role}</p>
+    </div>
+  );
+}
+
+// Komponen Induk
+function App() {
+  return (
+    <div>
+      <UserCard name="Budi" role="Frontend Developer" />
+      <UserCard name="Siti" role="UI/UX Designer" />
+    </div>
+  );
+}
+\`\`\`
+
+---
+
+### 4. State (\`useState\`)
+
+**State** adalah data internal komponen yang sifatnya dinamis dan bisa berubah seiring interaksi pengguna (seperti klik tombol, input teks, atau data dari API). Ketika State berubah, React akan me-render ulang (*re-render*) komponen tersebut.
+
+React menyediakan *Hook* bernama \`useState\` untuk mengelola state:
+
+\`\`\`jsx
+import React, { useState } from 'react';
+
+function Counter() {
+  // useState merekam nilai saat ini (count) dan fungsi penutupnya (setCount)
+  const [count, setCount] = useState(0);
+
+  return (
+    <div style={{ textAlign: 'center', marginTop: '20px' }}>
+      <h2>Hitungan: {count}</h2>
+      <button onClick={() => setCount(count + 1)}>
+        Tambah 1
+      </button>
+      <button onClick={() => setCount(count - 1)} style={{ marginLeft: '8px' }}>
+        Kurang 1
+      </button>
+    </div>
+  );
+}
+\`\`\`
+
+---
+
+## Ringkasan Perbedaan Props vs State
+
+| Fitur | Props | State |
+| --- | --- | --- |
+| **Definisi** | Data yang dikirim dari luar (Parent) | Data internal milik komponen itu sendiri |
+| **Pemicu Re-render** | Jika props yang dikirim dari Parent berubah | Jika state diubah menggunakan fungsi pembaru |
+| **Sifat Data** | Immutable (Read-only) | Mutable (Dapat diubah via \`setState\`) |
+
+---
+`;
+
+export default content;

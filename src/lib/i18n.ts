@@ -20,6 +20,7 @@ const resources = {
         skills: 'Skills',
         projects: 'Works',
         notes: 'Notes',
+        learn: 'Learn',
         contact: 'Contact',
       },
       hero: {
@@ -113,6 +114,13 @@ const resources = {
         select: 'Select a note to read more',
         last_updated: 'Last Updated'
       },
+      learn: {
+        label: 'Learn',
+        title: 'LEARNING<br />MATERIALS.',
+        description: 'Explore various topics and expand your knowledge.',
+        select: 'Select a material to read more',
+        last_updated: 'Last Updated'
+      },
       inquiries: {
         label: 'Get in Touch',
         title: 'LET\'S<br />COLLAB',
@@ -135,6 +143,7 @@ const resources = {
         skills: 'Skill',
         projects: 'Karya',
         notes: 'Catatan',
+        learn: 'Belajar',
         contact: 'Kontak',
       },
       hero: {
@@ -227,6 +236,13 @@ const resources = {
         title: 'CATATAN<br />SAYA.',
         description: 'Kumpulan catatan teknis, detail implementasi, dan wawasan profesional yang dikumpulkan sepanjang perjalanan saya.',
         select: 'Pilih catatan untuk membaca lebih lanjut',
+        last_updated: 'Terakhir Diperbarui'
+      },
+      learn: {
+        label: 'Belajar',
+        title: 'MATERI<br />BELAJAR.',
+        description: 'Eksplorasi berbagai topik dan perluas pengetahuan Anda.',
+        select: 'Pilih materi untuk membaca lebih lanjut',
         last_updated: 'Terakhir Diperbarui'
       },
       inquiries: {

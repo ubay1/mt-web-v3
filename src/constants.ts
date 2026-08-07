@@ -1,5 +1,7 @@
 import { notesId } from './data/notes/id-data';
 import { notesEn } from './data/notes/en-data';
+import { learnId } from './data/learn/id-data';
+import { learnEn } from './data/learn/en-data';
 
 export const NAV_LINKS = [
   { name: 'nav.home', href: '#home' },
@@ -7,6 +9,7 @@ export const NAV_LINKS = [
   { name: 'nav.skills', href: '#skills' },
   { name: 'nav.projects', href: '#projects' },
   { name: 'nav.notes', href: '/notes' },
+  { name: 'nav.learn', href: '/learn' },
   { name: 'nav.contact', href: '#contact' },
 ];
 
@@ -52,6 +55,21 @@ export const NOTES = [
     tags: ['Architecture', 'Backend'],
     title: { id: notesId['clean-architecture'].title, en: notesEn['clean-architecture'].title },
     content: { id: notesId['clean-architecture'].content, en: notesEn['clean-architecture'].content }
+  }
+];
+
+export const LEARNS = [
+  {
+    id: 'react-mastery',
+    date: '2024-05-10',
+    tags: ['React', 'Frontend'],
+    title: { id: learnId['react-mastery'].title, en: learnEn['react-mastery'].title },
+    description: { id: learnId['react-mastery'].description, en: learnEn['react-mastery'].description },
+    lessons: learnId['react-mastery'].lessons.map((lesson, idx) => ({
+      id: lesson.id,
+      title: { id: lesson.title, en: learnEn['react-mastery'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['react-mastery'].lessons[idx]?.content }
+    }))
   }
 ];
 
