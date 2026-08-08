@@ -8,9 +8,18 @@ import ReactLesson7 from './id/react-lesson-7.mdx';
 import ReactLesson8 from './id/react-lesson-8.mdx';
 import ReactLesson9 from './id/react-lesson-9.mdx';
 import ReactLesson10 from './id/react-lesson-10.mdx';
+import GolangBasics1 from './id/golang-basics-1-package.mdx';
+import GolangBasics2 from './id/golang-basics-2-exported.mdx';
+import GolangBasics3 from './id/golang-basics-3-functions.mdx';
+import GolangBasics4 from './id/golang-basics-4-variables.mdx';
+import GolangBasics5 from './id/golang-basics-5-constants.mdx';
+import GolangLesson2 from './id/golang-lesson-2-flow-control.mdx';
+import GolangLesson3 from './id/golang-lesson-3-tipe-lanjutan.mdx';
+import GolangLesson4 from './id/golang-lesson-4-method-dan-interface.mdx';
 
 export const learnId = {
   'react-mastery': {
+
     title: 'Menguasai React.js',
     description: 'Belajar fundamental React.js dari awal hingga mahir, termasuk komponen, state, & hooks.',
     lessons: [
@@ -63,6 +72,52 @@ export const learnId = {
         id: 'lesson-10',
         title: 'React 19: Server Actions',
         content: ReactLesson10
+      }
+    ]
+  },
+  'golang-mastery': {
+    title: 'Belajar Golang (Go Tour)',
+    description: 'Catatan belajar Golang dari dasar hingga konsep lanjutan seperti method dan interface.',
+    lessons: [
+      {
+        id: 'lesson-1-1',
+        title: 'Golang Basics: Package & Import',
+        content: GolangBasics1
+      },
+      {
+        id: 'lesson-1-2',
+        title: 'Golang Basics: Exported vs Unexported',
+        content: GolangBasics2
+      },
+      {
+        id: 'lesson-1-3',
+        title: 'Golang Basics: Functions',
+        content: GolangBasics3
+      },
+      {
+        id: 'lesson-1-4',
+        title: 'Golang Basics: Variables',
+        content: GolangBasics4
+      },
+      {
+        id: 'lesson-1-5',
+        title: 'Golang Basics: Constants',
+        content: GolangBasics5
+      },
+      {
+        id: 'lesson-2',
+        title: 'Flow Control (Loops & Branches)',
+        content: GolangLesson2
+      },
+      {
+        id: 'lesson-3',
+        title: 'Tipe Lanjutan (Pointer, Struct, Slice, Map)',
+        content: GolangLesson3
+      },
+      {
+        id: 'lesson-4',
+        title: 'Method dan Interface',
+        content: GolangLesson4
       }
     ]
   }

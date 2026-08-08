@@ -1,0 +1,41 @@
+# Exported vs Unexported Names
+
+In Go, there are no complicated keywords like `public`, `private`, or `protected` as seen in Java or C++. Accessibility rules between packages are determined in one very simple way: **Capitalization**.
+
+* **Exported (Accessible from outside):** If a name starts with a Capital letter.
+* **Unexported (Internal to the package only):** If a name starts with a lowercase letter.
+
+**Example:**
+- `Pizza` (Capitalized) → Can be called from another package.
+- `pizza` (Lowercase) → Can only be used in files within the same package.
+
+Here is an example of an exported function from a package named `packages`:
+
+```go
+package packages
+
+import (
+	"fmt"
+	"math/rand"
+)
+
+// This function is exported because it starts with a capital letter (P)
+func Package() {
+	fmt.Println("My favorite number is", rand.Intn(10))
+}
+```
+
+Now you can use the `Package()` function in the `main` package:
+
+```go
+package main
+
+import (
+	packages "2-belajar-go-tour/basics/1-package"
+)
+
+func main() {
+	// The program will run perfectly
+	packages.Package()
+}
+```

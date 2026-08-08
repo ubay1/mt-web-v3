@@ -14,7 +14,7 @@ export default function LearnView() {
   const [selectedLearn, setSelectedLearn] = useState<any>(null);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isReact19Expanded, setIsReact19Expanded] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (selectedLearn) {
@@ -185,15 +185,27 @@ export default function LearnView() {
                 <div className="flex flex-col gap-2">
                   {(() => {
                     const lessons = selectedLearn.lessons || [];
-                    const generalLessons = lessons.map((item: any, idx: number) => ({ item, idx }))
-                      .filter(({ item }: any) => !getNoteTitle(item).startsWith("React 19:"));
-                    const react19Lessons = lessons.map((item: any, idx: number) => ({ item, idx }))
-                      .filter(({ item }: any) => getNoteTitle(item).startsWith("React 19:"));
+                    const generalLessons: any[] = [];
+                    const groupedLessons: Record<string, any[]> = {};
+
+                    lessons.forEach((item: any, idx: number) => {
+                      const title = getNoteTitle(item);
+                      if (title.includes(": ")) {
+                        const parts = title.split(": ");
+                        const groupName = parts[0];
+                        if (!groupedLessons[groupName]) {
+                          groupedLessons[groupName] = [];
+                        }
+                        groupedLessons[groupName].push({ item, idx, displayTitle: parts.slice(1).join(": ") });
+                      } else {
+                        generalLessons.push({ item, idx, displayTitle: title });
+                      }
+                    });
 
                     return (
                       <>
                         {/* General Lessons */}
-                        {generalLessons.map(({ item, idx }: any) => (
+                        {generalLessons.map(({ item, idx, displayTitle }: any) => (
                           <button
                             key={item.id}
                             onClick={() => {
@@ -208,55 +220,59 @@ export default function LearnView() {
                             )}
                           >
                             <div className="text-[10px] font-mono opacity-60 uppercase tracking-wider">Lesson {idx + 1}</div>
-                            <div className="font-bold line-clamp-4">{getNoteTitle(item)}</div>
+                            <div className="font-bold line-clamp-4">{displayTitle}</div>
                           </button>
                         ))}
 
-                        {/* React 19 Accordion Group */}
-                        {react19Lessons.length > 0 && (
-                          <div className="mt-4 flex flex-col gap-3">
-                            <button
-                              onClick={() => setIsReact19Expanded(!isReact19Expanded)}
-                              className="flex items-center justify-between text-left group px-2"
-                            >
-                              <span className="font-bold tracking-tight text-lg font-mono text-white group-hover:text-accent transition-colors">React 19</span>
-                              <svg
-                                className={cn("w-5 h-5 text-white/50 group-hover:text-accent transition-transform duration-200", isReact19Expanded ? "rotate-180" : "")}
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        {/* Accordion Groups */}
+                        {Object.entries(groupedLessons).map(([groupName, groupItems]) => {
+                          const isExpanded = expandedGroups[groupName] !== false;
+                          
+                          return (
+                            <div key={groupName} className="mt-4 flex flex-col gap-3">
+                              <button
+                                onClick={() => setExpandedGroups(prev => ({ ...prev, [groupName]: !isExpanded }))}
+                                className="flex items-center justify-between text-left group px-2"
                               >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
+                                <span className="font-bold tracking-tight text-lg font-mono text-white group-hover:text-accent transition-colors">{groupName}</span>
+                                <svg
+                                  className={cn("w-5 h-5 text-white/50 group-hover:text-accent transition-transform duration-200", isExpanded ? "rotate-180" : "")}
+                                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
 
-                            <div
-                              className={cn(
-                                "flex flex-col gap-2 overflow-hidden transition-all duration-300",
-                                isReact19Expanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-                              )}
-                            >
-                              <div className="bg-white/5 border border-line p-2 rounded-lg flex flex-col gap-1">
-                                {react19Lessons.map(({ item, idx }: any) => (
-                                  <button
-                                    key={item.id}
-                                    onClick={() => {
-                                      setSelectedLesson(item);
-                                      if (window.innerWidth < 768) setIsSidebarOpen(false);
-                                    }}
-                                    className={cn(
-                                      "text-left px-3 py-3 border text-sm transition-all flex flex-col gap-1 rounded-md",
-                                      selectedLesson?.id === item.id
-                                        ? "bg-accent/20 border-accent text-accent"
-                                        : "border-transparent text-white/70 hover:bg-white/10"
-                                    )}
-                                  >
-                                    <div className="text-[10px] font-mono opacity-60 uppercase tracking-wider">Lesson {idx + 1}</div>
-                                    <div className="font-bold line-clamp-4">{getNoteTitle(item)}</div>
-                                  </button>
-                                ))}
+                              <div
+                                className={cn(
+                                  "flex flex-col gap-2 overflow-hidden transition-all duration-300",
+                                  isExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                                )}
+                              >
+                                <div className="bg-white/5 border border-line p-2 rounded-lg flex flex-col gap-1">
+                                  {groupItems.map(({ item, idx, displayTitle }: any) => (
+                                    <button
+                                      key={item.id}
+                                      onClick={() => {
+                                        setSelectedLesson(item);
+                                        if (window.innerWidth < 768) setIsSidebarOpen(false);
+                                      }}
+                                      className={cn(
+                                        "text-left px-3 py-3 border text-sm transition-all flex flex-col gap-1 rounded-md",
+                                        selectedLesson?.id === item.id
+                                          ? "bg-accent/20 border-accent text-accent"
+                                          : "border-transparent text-white/70 hover:bg-white/10"
+                                      )}
+                                    >
+                                      <div className="text-[10px] font-mono opacity-60 uppercase tracking-wider">Lesson {idx + 1}</div>
+                                      <div className="font-bold line-clamp-4">{displayTitle}</div>
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })}
                       </>
                     );
                   })()}

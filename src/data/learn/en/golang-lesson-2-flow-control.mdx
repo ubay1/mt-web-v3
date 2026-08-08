@@ -1,0 +1,219 @@
+# Chapter 2: Flow Control (Loops & Branches)
+
+After understanding how to declare variables and functions in Chapter 1, it's time to make our programs smarter. 
+
+In this chapter, we will learn how to control the flow of the program using loops and branching (If-Else). Let's dive into them one by one!
+
+---
+
+## 1. The `for` Loop
+
+If you want to **repeat something multiple times** in Golang, you will use `for`. 
+
+Actually, Golang only has **one type of loop command**, which is `for`. There is no `while` or `do-while` like in other programming languages. But don't worry, the `for` loop in Go is incredibly flexible.
+
+### Basic Structure of `for`
+
+Similar to C or Java, the `for` loop in Go has **3 main components** separated by semicolons (`;`). The difference is, in Go you **do not need to wrap them in parentheses `()`**.
+
+```go
+for i := 0; i < 5; i++ {
+    fmt.Println(i)
+}
+```
+
+**Component Explanation:**
+1. `i := 0` *(Init Statement)*: Executed exactly **once** before the loop begins.
+2. `i < 5` *(Condition)*: Evaluated before **every iteration**. If `false`, the loop stops immediately.
+3. `i++` *(Post Statement)*: Executed at the **end** of every iteration.
+
+> [!IMPORTANT]
+> **Curly Braces `{}` are Required**
+> Even though the condition part is not wrapped in parentheses `()`, the code block that will be executed **must** use curly braces `{}`.
+
+### `for` Loop Simulation
+
+To make it easier to visualize, let's look at this loop simulation:
+
+```go
+sum := 0
+for i := 0; i < 4; i++ {
+  sum += i
+}
+fmt.Println(sum) // The result is 6
+```
+
+Why is the result 6? The process goes like this:
+
+| Iteration | Current `i` value | Operation `sum + i` | `sum` becomes |
+| :---: | :---: | :--- | :---: |
+| 1 | `0` | `0 + 0` | 0 |
+| 2 | `1` | `0 + 1` | 1 |
+| 3 | `2` | `1 + 2` | 3 |
+| 4 | `3` | `3 + 3` | 6 |
+
+---
+
+## 2. `for` as a `while` Replacement
+
+Did you know? The init and post statements in the `for` block are actually optional. 
+
+If you remove them, `for` in Go will behave **exactly like a `while` loop** in other programming languages!
+
+```go
+// The Go Way (using for)
+i := 0
+for i < 5 {
+    fmt.Println(i)
+    i++
+}
+```
+
+As a comparison in JavaScript:
+```js
+// The JavaScript Way (using while)
+let i = 0;
+while (i < 5) {
+  console.log(i);
+  i++;
+}
+```
+
+Very clean and minimalist, right?
+
+---
+
+## 3. Basic Branching: `if`
+
+The `if` command is used when we only want to run a line of code when a certain condition is met (evaluates to `true`).
+
+Just like `for`, writing `if` in Go **does not require parentheses `()`**, but **still strictly requires curly braces `{}`**.
+
+```go
+x := 10
+
+if x > 5 {
+    fmt.Println("x is greater than 5")
+}
+```
+
+---
+
+## 4. `if` with a Short Statement
+
+There is a unique and highly useful feature in Go: You can insert a **short statement** right before the condition is evaluated!
+
+This is very often used to declare a variable that is *only needed inside that `if` block*.
+
+```go
+if v := 10; v > 5 {
+    fmt.Println(v)
+}
+```
+
+**How does it work?**
+1. The command `v := 10` is executed first.
+2. The condition `v > 5` is evaluated.
+3. Because it's true, the `fmt.Println(v)` command is executed.
+
+> [!WARNING]
+> **Variable Scope**
+> The variable `v` created in the `if` block above **will only exist and can only be used inside that `if` block**. If you try to call it outside the `if`, the program will error!
+>
+> ```go
+> if v := 10; v > 5 {
+>     fmt.Println(v) // ✅ Safe
+> }
+> fmt.Println(v) // ❌ ERROR: undefined: v
+> ```
+
+---
+
+## 5. Using `switch`
+
+When you are faced with too many `if - else if - else if` chains, the code will look messy. The solution is to use **`switch`**.
+
+Go evaluates `switch` cases from top to bottom, and will stop immediately when it finds a matching `case`.
+
+```go
+score := 2
+
+switch score {
+case 1:
+    fmt.Println("One")
+case 2:
+    fmt.Println("Two") // Go will execute this line
+case 3:
+    fmt.Println("Three")
+}
+```
+
+> [!NOTE]
+> **No `break` Needed!**
+> For those of you who have learned C, Java, or JavaScript: In Go, you **do not need to write the `break` keyword** at the end of every `case`. Go is smart enough to immediately break out of the `switch` block after executing the correct case.
+
+### `switch` Without a Condition
+
+Did you know that `switch` can be used without having to compare an initial value? If you leave the condition empty, it's equivalent to writing `switch true`.
+
+This style is highly favored by Go programmers because it is **a much neater and cleaner way** compared to chaining many `if - else` conditions.
+
+```go
+score := 7
+
+switch {
+case score < 6:
+    fmt.Println("Poor")
+case score < 8:
+    fmt.Println("Fair") // This will be printed because score (7) is less than 8
+default:
+    fmt.Println("Good")
+}
+```
+
+---
+
+## 6. Deferring Execution (`defer`)
+
+Have you ever wanted to execute a piece of code later, **right before a function ends**? In Golang, there is a special syntax to do just that: **`defer`**.
+
+```go
+func main() {
+    defer fmt.Println("World") // Deferred!
+    fmt.Println("Hello")
+}
+```
+
+**Output:**
+```
+Hello
+World
+```
+
+Even though the `Println("World")` command is written on top, it is executed at the end of the `main()` function. This feature is usually very handy when we open a database connection or read a file, and we want to ensure we *close* it at the end of the operation.
+
+### Stacking `defer` (Multiple Defers)
+
+So what if we write multiple `defers` inside a single function?
+
+If there is more than one deferred function, the system uses the **LIFO (Last In, First Out)** principle, basically a stack. **The defer written at the very bottom (last), will be executed first!**
+
+```go
+func main() {
+	defer fmt.Println("One")
+	defer fmt.Println("Two")
+	defer fmt.Println("Three")
+
+	fmt.Println("Start...")
+}
+```
+
+**Output:**
+```
+Start...
+Three
+Two
+One
+```
+
+That's it! You now have full control over the logical flow of your program. In the next chapter, brace yourself because we will get into **Advanced Data Types** like Pointers and Structs!

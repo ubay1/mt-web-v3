@@ -1,0 +1,266 @@
+# Bab 3: Tipe Lanjutan (Pointer, Struct, Slice, Map)
+
+Di bab sebelumnya, kita sudah bermain dengan tipe data dasar dan struktur perulangan. Kini saatnya kita menjelajahi tipe-tipe data lanjutan di Golang yang akan menjadi pondasi utama dalam membangun sistem yang kompleks.
+
+Kita akan mempelajari mulai dari *Pointer*, struktur data kustom dengan *Struct*, koleksi data fleksibel dengan *Slice* dan *Map*, hingga konsep fungsional seperti *Closure*. Mari bersiap!
+
+---
+
+## 1. Pointers (Penunjuk Memori)
+
+**Pointer** adalah konsep yang sering menakutkan bagi pemula, tapi sebenarnya sangat sederhana: Pointer hanyalah variabel yang **menyimpan alamat memori dari variabel lain**, bukan nilainya secara langsung.
+
+### Konsep Dasar Pointer
+Mari kita lihat deklarasinya:
+```go
+i := 42
+p := &i  // p menyimpan ALAMAT dari memori variabel i
+```
+
+**Penjelasan Simbol:**
+- `&` (Ampersand): Digunakan untuk **mengambil alamat** sebuah variabel.
+- `*` (Asterisk): Digunakan untuk **membaca atau mengubah nilai** pada alamat yang ditunjuk oleh pointer.
+
+Jika kita ingin melihat isi nilainya:
+```go
+fmt.Println(*p) // Output: 42
+```
+
+Dan jika kita ingin mengubah nilainya melalui pointer:
+```go
+*p = 21
+```
+Sekarang, nilai variabel `i` yang asli ikut berubah menjadi **21**.
+
+> [!NOTE]
+> **Tidak Ada Aritmatika Pointer di Go!**
+> Di bahasa C, pointer bisa digeser layaknya angka (`p = p + 1` untuk pindah ke alamat memori sebelah). Di Go, memanipulasi alamat memori seperti itu sangat dilarang demi keamanan program.
+
+---
+
+## 2. Struct (Struktur Data Kustom)
+
+`struct` adalah pondasi utama dalam membuat data yang kompleks di Golang (setara dengan *Class* di Java atau *Object* di JavaScript).
+
+Bayangkan sebuah **kotak penyimpanan** 📦. Di dalam kotak itu, kamu bisa menyimpan berbagai barang dengan label dan tipe data yang berbeda-beda. Kumpulan barang inilah yang membentuk suatu *Struct*.
+
+Misalnya, kita membuat struct untuk data `User`:
+
+```go
+type User struct {
+	Name string
+	Age  int
+}
+```
+Kita baru saja membuat tipe data baru bernama `User`! Cara menggunakannya:
+
+```go
+u := User{
+  Name: "Tom",
+  Age:  20,
+}
+
+// Mengambil nilai
+fmt.Println(u.Name) // Output: Tom
+```
+
+### Struct Digabung dengan Pointer
+Bagaimana jika kita menggunakan pointer menunjuk ke sebuah struct?
+```go
+p := Person{"Budi", 20}
+ptr := &p // ptr adalah alamat dari p
+```
+Secara teori, untuk mengakses nama, kita harus menulis `(*ptr).Name`. Namun, karena ini terlalu merepotkan, Go mempermudahnya. Kamu bisa langsung menuliskannya secara instan:
+```go
+fmt.Println(ptr.Name) // Sama saja, Go otomatis menjadikannya (*ptr).Name di belakang layar!
+```
+
+---
+
+## 3. Array dan Slice
+
+Terkadang kita perlu menyimpan banyak data yang bertipe sama. Di sinilah koleksi berperan. Go membaginya menjadi dua bentuk: **Array** (Kaku) dan **Slice** (Fleksibel).
+
+### Mengapa Array Jarang Digunakan?
+Array memiliki batasan yang fatal: **Ukurannya tidak bisa diubah**.
+
+```go
+// Membuat Array berukuran maksimal 3
+var a [3]int
+a[0] = 10
+a[1] = 20
+a[2] = 30
+```
+Kita tidak bisa menjejalkan data ke-4 ke dalam array di atas. Oleh karena itu, kita hampir selalu menggunakan saudaranya: **Slice**.
+
+### Slice: Array yang Super Fleksibel
+*Slice* adalah array yang tidak didefinisikan secara kaku batas maksimal panjang datanya.
+
+```go
+// Penulisan Slice tidak memiliki angka di dalam tanda kurungnya
+nums := []int{10, 20, 30}
+```
+
+Daya tarik utama Slice adalah fungsi bawaan **`append`**, yang mengizinkan Slice untuk bertambah panjang secara dinamis:
+```go
+nums = append(nums, 40) // Array lama akan diperluas untuk menampung angka 40
+// nums sekarang: [10, 20, 30, 40]
+```
+
+### Mengambil Sebagian (Slicing the Slice)
+Kamu juga bisa memotong Slice dengan mudah. Format potongannya adalah `slice[awal:akhir]`, di mana `akhir` tidak termasuk ke dalam hasil.
+
+```go
+nums := []int{10, 20, 30, 40, 50}
+
+fmt.Println(nums[1:4]) // Ambil dari index 1 sampai sebelum 4
+// Output: [20 30 40]
+```
+
+**Nilai Bawaan Batas Slice:**
+Go cukup cerdas untuk mengisi batas potongan jika kamu tidak menuliskannya:
+- `[:3]` sama dengan `[0:3]` (Ambil dari paling awal hingga sebelum index 3)
+- `[2:]` sama dengan `[2:len(nums)]` (Ambil dari index 2 hingga indeks paling akhir)
+- `[:]` akan menyalin keseluruhan isi Slice.
+
+---
+
+### Bikin Slice Pakai `make`
+Di kasus penggunaan data besar, pembuatan Slice sering dilakukan memakai perintah bawaan `make`. Ini ditujukan agar mesin bisa menyiapkan **Kapasitas** slot kosong terlebih dahulu demi performa.
+
+```go
+b := make([]int, 0, 5)
+```
+- Parameter ke-1: Tipe Slice `[]int`.
+- Parameter ke-2: *Length* (Berapa data yang aktif saat ini, contoh: `0`).
+- Parameter ke-3: *Capacity* (Kapasitas total yang disiapkan, contoh: `5` slot).
+
+> [!TIP]
+> **Kapasitas vs Panjang**
+> Bayangkan sebuah meja bundar. *Kapasitas (cap)* adalah total kursi yang tersedia di meja itu (misal 5 kursi). *Panjang (len)* adalah berapa orang yang saat ini sedang duduk di kursi tersebut. Saat kursinya penuh dan kamu mau menambah orang, Go akan mengganti mejamu dengan meja yang lebih besar (biasanya dua kali lipat) secara otomatis di belakang layar!
+
+---
+
+## 4. Perulangan dengan `range`
+
+Untuk melompati/membaca seluruh isi Slice satu persatu, cara paling bersih adalah memadukan perulangan `for` bersama keyword `range`.
+
+Setiap iterasi, `range` akan menembakkan dua variabel kepadamu: **Index (Posisi)** dan **Value (Nilai/Isi)**.
+
+```go
+nums := []int{10, 20, 30}
+
+for i, v := range nums {
+    fmt.Println("Index:", i, "Nilai:", v)
+}
+```
+
+> [!WARNING]
+> Nilai `v` yang kamu terima dari `range` adalah sekadar **salinan/copy**. Mengubah nilai `v` di dalam loop **TIDAK AKAN** mengubah nilai yang ada di Slice asli. Jika kamu ingin mengubah nilai aslinya, ubahlah via indexnya: `nums[i] *= 2`.
+
+Jika kamu hanya butuh salah satunya, gunakan operator buang `_` (underscore).
+```go
+// Jika tidak butuh index
+for _, v := range nums { ... }
+```
+
+---
+
+## 5. Map (Kamus Data)
+
+Apa itu *Map*? Bayangkan struktur kamus bahasa, di mana ada "Kata Asing" (*Key*) dan "Terjemahan" (*Value*). Atau jika kamu terbiasa dengan JavaScript, Map adalah versi Go yang sangat setara dengan *Object*.
+
+Di Map, kunci pencarian (*key*) tidak harus berupa angka berurut seperti di dalam Slice. Kamu bebas memakai String, dsb.
+
+### Contoh Pembuatan Map
+
+```go
+// Map dengan Key bertipe String, dan Value bertipe Int
+m := map[string]int{
+	"apel":  10,
+	"jeruk": 5,
+}
+
+// Tambah / Update data
+m["pisang"] = 7
+m["apel"] = 20
+
+// Hapus data
+delete(m, "jeruk")
+```
+
+### Amankan Pencarianmu!
+Mencari nilai menggunakan *Key* yang tidak ada di dalam Map tidak akan membuat programmu meledak. Go akan mengembalikan **Zero Value** (contoh: 0 untuk integer). 
+
+Oleh karena itu, cara paling aman memverifikasi keberadaan suatu nilai adalah:
+
+```go
+value, ok := m["mangga"]
+
+if ok {
+	fmt.Println("Datanya ada:", value)
+} else {
+	fmt.Println("Data mangga tidak ditemukan!")
+}
+```
+
+> [!IMPORTANT]
+> **Selalu Inisiasi Map!**
+> Ingat, sebuah Map yang cuma dideklarasikan (tanpa nilai) akan bernilai `nil`. Kamu tidak bisa menambah data ke `nil` Map! Selalu gunakan `make(map[tipeK]tipeV)` jika ingin membuat Map kosong.
+
+---
+
+## 6. Closure & First-Class Functions
+
+Di penghujung bab ini, kita akan menyentuh sisi fungsional Golang. Di Go, fungsi bukanlah warga kelas dua. Fungsi diperlakukan sama kerennya seperti variabel bertipe integer atau string. 
+
+Artinya, fungsi bisa:
+1. Disimpan ke dalam sebuah variabel.
+2. Dikirim masuk (*passed*) sebagai argumen ke fungsi lain.
+3. Dikembalikan (*returned*) dari dalam fungsi lain.
+
+Perhatikan keunikan ini:
+
+```go
+func tambah(a, b int) int {
+	return a + b
+}
+
+func main() {
+	f := tambah // Menyimpan fungsi ke variabel f
+	fmt.Println(f(2, 3)) // Memanggil fungsi via variabel
+}
+```
+
+### Keajaiban Closure
+
+Dari fitur fungsional di atas, lahirlah sebuah efek canggih bernama **Closure**. 
+
+*Closure* secara harfiah adalah keadaan di mana sebuah fungsi "mengingat" dan terus mengikat variabel yang ada di lingkungan luarnya, bahkan setelah fungsi luarnya sudah selesai tereksekusi.
+
+Mari kita analogikan dengan "celengan":
+
+```go
+func celengan() func(int) int {
+	uang := 0 // Ini variabel luarnya
+
+	// Ini fungsi closure yang dikembalikan
+	return func(x int) int {
+		uang += x
+		return uang
+	}
+}
+
+func main() {
+	celenganA := celengan()
+	
+	fmt.Println(celenganA(10)) // Output: 10
+	fmt.Println(celenganA(5))  // Output: 15 (dia mengingat nilai 10 sebelumnya!)
+	
+	// Jika kita buat closure baru, ia punya ruang lingkup yang berbeda
+	celenganB := celengan()
+	fmt.Println(celenganB(20)) // Output: 20
+}
+```
+
+Closure membuat fungsi tersebut seperti memiliki ingatan tak berkesudahan terhadap data yang berada di lingkup asalnya. Ini sangat berguna untuk skenario pemrosesan data tertentu atau saat kita akan membangun antarmuka secara dinamis nantinya!

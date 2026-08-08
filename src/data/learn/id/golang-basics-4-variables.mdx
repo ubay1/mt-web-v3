@@ -1,0 +1,51 @@
+# Variabel
+
+Di Go, ada beberapa gaya untuk mendeklarasikan variabel. Pilih yang paling sesuai dengan kondisinya!
+
+### Cara 1: Deklarasi Dasar (`var`)
+Cara paling eksplisit, menggunakan kata kunci `var`.
+
+```go
+var nama string = "Tom"
+var umur int = 25
+```
+
+Kamu juga bisa membiarkan Go **menebak tipe datanya** secara otomatis tanpa menulis `string`:
+```go
+var kota = "Bekasi"
+```
+
+### Cara 2: Deklarasi Singkat (`:=`)
+Ini adalah cara yang **paling favorit dan sering dipakai** karena sangat praktis.
+
+```go
+nama := "Tom"
+umur := 25
+```
+Go akan langsung paham bahwa `"Tom"` adalah string dan `25` adalah integer.
+
+> [!IMPORTANT]
+> **Aturan Deklarasi Singkat:**
+> Sintaks `:=` **hanya bisa digunakan di dalam tubuh fungsi**. Kamu tidak bisa menggunakannya untuk membuat variabel global di level *package*.
+
+### Cara 3: Deklarasi Blok
+Untuk merapikan banyak variabel, kamu bisa membungkusnya dalam satu blok `var`.
+
+```go
+var (
+    nama string = "Tom"
+    umur int = 25
+    kota string = "Bekasi"
+)
+```
+
+### Zero Value (Nilai Kosong)
+Apa jadinya jika kamu membuat variabel tapi tidak memberinya nilai awal?
+
+```go
+var angka int
+```
+Berbeda dengan beberapa bahasa yang memberinya nilai `undefined` atau `null`, Go secara aman memberikan **Zero Value (nilai bawaan yang kosong)**:
+- Numerik (`int`, `float64`) otomatis menjadi `0`
+- `bool` otomatis menjadi `false`
+- `string` otomatis menjadi `""` (string kosong)

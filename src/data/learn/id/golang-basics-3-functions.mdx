@@ -1,0 +1,71 @@
+# Functions (Fungsi)
+
+Fungsi di Go bisa menerima nol argumen atau banyak argumen. 
+Penting untuk diingat bahwa di Go, **tipe data selalu ditulis setelah nama variabel**.
+
+Perhatikan fungsi `add` berikut yang memiliki dua parameter `a` dan `b` bertipe integer (`int`):
+
+```go
+func add(a int, b int) int {
+	return a + b
+}
+```
+Tanda `int` setelah kurung penutup parameter menandakan bahwa fungsi ini juga **mengembalikan nilai berupa `int`**.
+
+### Menyingkat Parameter Tipe Sama
+Jika ada dua atau lebih parameter bersebelahan yang memiliki tipe data yang **sama**, kamu bisa menyingkatnya dengan hanya menuliskan tipe datanya satu kali di parameter terakhir.
+
+Alih-alih menulis begini:
+```go
+func add(x int, y int) int { ... }
+```
+
+Kamu bisa menulisnya secara lebih bersih:
+```go
+func add(x, y int) int {
+	return x + y
+}
+```
+
+---
+
+### Multiple Returns (Kembalian Banyak Nilai)
+
+Fitur yang paling sering dipakai di Go adalah kemampuannya untuk mengembalikan **lebih dari satu nilai** sekaligus dalam satu fungsi.
+
+```go
+// Mengembalikan dua string sekaligus
+func swap(x, y string) (string, string) {
+	return y, x
+}
+
+func main() {
+	a, b := swap("hello", "world")
+	fmt.Println(a, b) // Output: world hello
+}
+```
+> [!NOTE]
+> Fitur ini sangat populer digunakan untuk mengembalikan pasangan nilai `(result, error)`.
+
+---
+
+### Named Return Values & Naked Returns
+
+Kamu juga bisa **memberi nama pada nilai kembalian** di definisi fungsi. 
+Nilai-nilai ini akan diperlakukan seolah-olah sebagai variabel lokal yang didefinisikan di awal fungsi.
+
+Tujuannya agar fungsi yang kompleks lebih mudah dipahami maksud nilai kembaliannya.
+
+```go
+// Kita tahu fungsi ini akan mengembalikan variabel bernama 'luas'
+func hitungPersegi(panjang int, lebar int) (luas int) {
+    luas = panjang * lebar
+    return
+}
+```
+
+Perhatikan bahwa di dalam blok fungsi, kita hanya menulis `return` saja tanpa menyebut `luas`. Ini disebut **Naked Return**.
+
+> [!WARNING]
+> **Hati-Hati dengan Naked Return!**
+> Sebaiknya gunakan Naked Return hanya pada fungsi-fungsi yang **sangat pendek**. Pada fungsi yang panjang, *naked return* akan membuat orang bingung mencari apa saja variabel yang sebenarnya dikembalikan. Secara umum, lebih baik menulis return secara eksplisit: `return luas`.

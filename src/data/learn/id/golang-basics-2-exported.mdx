@@ -1,0 +1,41 @@
+# Exported vs Unexported Names
+
+Di Go, tidak ada kata kunci rumit seperti `public`, `private`, atau `protected` seperti di Java/C++. Aturan aksesibilitas antar-paket ditentukan dengan satu cara yang sangat sederhana: **Huruf Kapital**.
+
+* **Diekspor (Bisa diakses dari luar):** Jika sebuah nama diawali huruf besar.
+* **Tidak Diekspor (Hanya internal paket):** Jika sebuah nama diawali huruf kecil.
+
+**Contoh:**
+- `Pizza` (Huruf besar) → Bisa dipanggil dari paket lain.
+- `pizza` (Huruf kecil) → Hanya bisa dipakai di file dalam paket yang sama.
+
+Ini adalah contoh fungsi yang diekspor dari paket `packages`:
+
+```go
+package packages
+
+import (
+	"fmt"
+	"math/rand"
+)
+
+// Fungsi ini diekspor karena diawali huruf besar (P)
+func Package() {
+	fmt.Println("Bilangan kesukaan saya adalah", rand.Intn(10))
+}
+```
+
+Sekarang kamu bisa menggunakan fungsi `Package()` tersebut di paket `main`:
+
+```go
+package main
+
+import (
+	packages "2-belajar-go-tour/basics/1-package"
+)
+
+func main() {
+	// Program akan berjalan dengan baik
+	packages.Package()
+}
+```

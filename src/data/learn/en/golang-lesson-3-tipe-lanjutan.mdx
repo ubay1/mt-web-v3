@@ -1,0 +1,266 @@
+# Chapter 3: Advanced Types (Pointers, Structs, Slices, Maps)
+
+In the previous chapters, we played around with basic data types and loop structures. Now it's time to explore the advanced data types in Golang that will serve as the primary foundation for building complex systems.
+
+We will learn everything starting from *Pointers*, custom data structures with *Structs*, flexible collections with *Slices* and *Maps*, to functional concepts like *Closures*. Get ready!
+
+---
+
+## 1. Pointers (Memory Indicators)
+
+**Pointers** are a concept that often scares beginners, but it's actually very simple: A pointer is just a variable that **stores the memory address of another variable**, not its value directly.
+
+### Basic Pointer Concepts
+Let's look at the declaration:
+```go
+i := 42
+p := &i  // p stores the ADDRESS of variable i's memory
+```
+
+**Symbol Explanation:**
+- `&` (Ampersand): Used to **get the address** of a variable.
+- `*` (Asterisk): Used to **read or change the value** at the address pointed to by the pointer.
+
+If we want to see its value:
+```go
+fmt.Println(*p) // Output: 42
+```
+
+And if we want to change its value through the pointer:
+```go
+*p = 21
+```
+Now, the original value of the variable `i` is also changed to **21**.
+
+> [!NOTE]
+> **No Pointer Arithmetic in Go!**
+> In C, pointers can be shifted like numbers (`p = p + 1` to move to the next memory address). In Go, manipulating memory addresses like that is strictly forbidden for program security.
+
+---
+
+## 2. Structs (Custom Data Structures)
+
+A `struct` is the main foundation for creating complex data in Golang (equivalent to a *Class* in Java or an *Object* in JavaScript).
+
+Imagine a **storage box** 📦. Inside that box, you can store various items with different labels and data types. This collection of items is what forms a *Struct*.
+
+For example, let's create a struct for `User` data:
+
+```go
+type User struct {
+	Name string
+	Age  int
+}
+```
+We just created a new data type named `User`! Here's how to use it:
+
+```go
+u := User{
+  Name: "Tom",
+  Age:  20,
+}
+
+// Getting a value
+fmt.Println(u.Name) // Output: Tom
+```
+
+### Structs Combined with Pointers
+What if we use a pointer to point to a struct?
+```go
+p := User{"Budi", 20}
+ptr := &p // ptr is the address of p
+```
+Theoretically, to access the name, we should write `(*ptr).Name`. However, because this is too cumbersome, Go simplifies it. You can just write it instantly:
+```go
+fmt.Println(ptr.Name) // The same, Go automatically turns it into (*ptr).Name behind the scenes!
+```
+
+---
+
+## 3. Arrays and Slices
+
+Sometimes we need to store a lot of data of the same type. This is where collections come in. Go divides them into two forms: **Arrays** (Rigid) and **Slices** (Flexible).
+
+### Why are Arrays Rarely Used?
+Arrays have a fatal limitation: **Their size cannot be changed**.
+
+```go
+// Creating an Array with a maximum size of 3
+var a [3]int
+a[0] = 10
+a[1] = 20
+a[2] = 30
+```
+We cannot stuff a 4th piece of data into the array above. Therefore, we almost always use its sibling: **Slice**.
+
+### Slices: Super Flexible Arrays
+A *Slice* is an array that is not rigidly defined by its maximum length boundary.
+
+```go
+// Slice syntax does not have a number inside its brackets
+nums := []int{10, 20, 30}
+```
+
+The main appeal of a Slice is the built-in **`append`** function, which allows a Slice to grow in length dynamically:
+```go
+nums = append(nums, 40) // The old array will be expanded to accommodate the number 40
+// nums is now: [10, 20, 30, 40]
+```
+
+### Getting a Portion (Slicing the Slice)
+You can also cut a Slice easily. The cutting format is `slice[start:end]`, where `end` is not included in the result.
+
+```go
+nums := []int{10, 20, 30, 40, 50}
+
+fmt.Println(nums[1:4]) // Get from index 1 up to before 4
+// Output: [20 30 40]
+```
+
+**Default Slice Boundaries:**
+Go is smart enough to fill in the slice boundaries if you don't write them:
+- `[:3]` is the same as `[0:3]` (Get from the very beginning up to before index 3)
+- `[2:]` is the same as `[2:len(nums)]` (Get from index 2 up to the very last index)
+- `[:]` will copy the entire contents of the Slice.
+
+---
+
+### Creating Slices using `make`
+In large data use cases, creating a Slice is often done using the built-in `make` command. This is intended so the machine can prepare empty **Capacity** slots in advance for performance.
+
+```go
+b := make([]int, 0, 5)
+```
+- 1st Parameter: Slice Type `[]int`.
+- 2nd Parameter: *Length* (How much data is currently active, example: `0`).
+- 3rd Parameter: *Capacity* (Total capacity prepared, example: `5` slots).
+
+> [!TIP]
+> **Capacity vs Length**
+> Imagine a round table. *Capacity (cap)* is the total number of chairs available at that table (e.g., 5 chairs). *Length (len)* is how many people are currently sitting in those chairs. When the chairs are full and you want to add people, Go will replace your table with a bigger one (usually double the size) automatically behind the scenes!
+
+---
+
+## 4. Looping with `range`
+
+To jump through/read the entire contents of a Slice one by one, the cleanest way is to combine the `for` loop with the `range` keyword.
+
+Every iteration, `range` will fire two variables at you: **Index (Position)** and **Value (Content)**.
+
+```go
+nums := []int{10, 20, 30}
+
+for i, v := range nums {
+    fmt.Println("Index:", i, "Value:", v)
+}
+```
+
+> [!WARNING]
+> The `v` value you receive from `range` is just a **copy**. Changing the value of `v` inside the loop **WILL NOT** change the existing value in the original Slice. If you want to change the original value, change it via its index: `nums[i] *= 2`.
+
+If you only need one of them, use the discard operator `_` (underscore).
+```go
+// If you don't need the index
+for _, v := range nums { ... }
+```
+
+---
+
+## 5. Maps (Data Dictionaries)
+
+What is a *Map*? Imagine the structure of a language dictionary, where there is a "Foreign Word" (*Key*) and a "Translation" (*Value*). Or if you are used to JavaScript, a Map is Go's version that is very equivalent to an *Object*.
+
+In a Map, the search key doesn't have to be a sequential number like in a Slice. You are free to use Strings, etc.
+
+### Map Creation Example
+
+```go
+// A Map with String Keys and Int Values
+m := map[string]int{
+	"apple":  10,
+	"orange": 5,
+}
+
+// Add / Update data
+m["banana"] = 7
+m["apple"] = 20
+
+// Delete data
+delete(m, "orange")
+```
+
+### Secure Your Searches!
+Searching for a value using a *Key* that doesn't exist in the Map won't make your program explode. Go will return a **Zero Value** (for example: 0 for an integer). 
+
+Therefore, the safest way to verify the existence of a value is:
+
+```go
+value, ok := m["mango"]
+
+if ok {
+	fmt.Println("The data exists:", value)
+} else {
+	fmt.Println("Mango data not found!")
+}
+```
+
+> [!IMPORTANT]
+> **Always Initialize Maps!**
+> Remember, a Map that is just declared (without a value) will evaluate to `nil`. You cannot add data to a `nil` Map! Always use `make(map[keyType]valueType)` if you want to create an empty Map.
+
+---
+
+## 6. Closures & First-Class Functions
+
+At the end of this chapter, we will touch on the functional side of Golang. In Go, functions are not second-class citizens. Functions are treated just as cool as variables of type integer or string. 
+
+This means functions can be:
+1. Stored inside a variable.
+2. Passed as arguments into other functions.
+3. Returned from inside other functions.
+
+Look at this uniqueness:
+
+```go
+func add(a, b int) int {
+	return a + b
+}
+
+func main() {
+	f := add // Storing the function in variable f
+	fmt.Println(f(2, 3)) // Calling the function via variable
+}
+```
+
+### The Magic of Closures
+
+From the functional features above, a sophisticated effect called a **Closure** is born. 
+
+A *Closure* is literally a state where a function "remembers" and continues to bind to variables in its outer environment, even after the outer function has finished executing.
+
+Let's analogize it with a "piggy bank":
+
+```go
+func piggyBank() func(int) int {
+	money := 0 // This is the outer variable
+
+	// This is the returned closure function
+	return func(x int) int {
+		money += x
+		return money
+	}
+}
+
+func main() {
+	bankA := piggyBank()
+	
+	fmt.Println(bankA(10)) // Output: 10
+	fmt.Println(bankA(5))  // Output: 15 (it remembers the previous value of 10!)
+	
+	// If we create a new closure, it has a different scope
+	bankB := piggyBank()
+	fmt.Println(bankB(20)) // Output: 20
+}
+```
+
+Closures make the function seem like it has endless memory of the data in its original scope. This is very useful for certain data processing scenarios or when we will build dynamic interfaces later on!

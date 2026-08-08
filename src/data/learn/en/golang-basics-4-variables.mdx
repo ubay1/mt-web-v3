@@ -1,0 +1,51 @@
+# Variables
+
+In Go, there are several styles for declaring variables. Pick the one that best suits the situation!
+
+### Method 1: Basic Declaration (`var`)
+The most explicit way, using the `var` keyword.
+
+```go
+var name string = "Tom"
+var age int = 25
+```
+
+You can also let Go **automatically guess the data type** without writing `string`:
+```go
+var city = "Bekasi"
+```
+
+### Method 2: Short Declaration (`:=`)
+This is the **most favorite and widely used** method because it is highly practical.
+
+```go
+name := "Tom"
+age := 25
+```
+Go will instantly understand that `"Tom"` is a string and `25` is an integer.
+
+> [!IMPORTANT]
+> **Short Declaration Rule:**
+> The `:=` syntax **can only be used inside a function body**. You cannot use it to create global variables at the *package* level.
+
+### Method 3: Block Declaration
+To organize multiple variables neatly, you can wrap them in a single `var` block.
+
+```go
+var (
+    name string = "Tom"
+    age  int    = 25
+    city string = "Bekasi"
+)
+```
+
+### Zero Value
+What happens if you create a variable but don't give it an initial value?
+
+```go
+var number int
+```
+Unlike some languages that give it an `undefined` or `null` value, Go safely assigns it a **Zero Value (default empty value)**:
+- Numerics (`int`, `float64`) automatically become `0`
+- `bool` automatically becomes `false`
+- `strings` automatically become `""` (empty string)

@@ -1,0 +1,21 @@
+# Constants
+
+If the value of a variable *must not change* while the program is running, use **`const`**.
+
+```go
+const pi = 3.14
+const name = "Tom"
+```
+
+Constants can hold character, string, boolean, or numeric values.
+
+> [!WARNING]
+> You **cannot** declare constants using the short syntax `:=`. That syntax is strictly for dynamic variables only!
+
+```go
+// ❌ Wrong
+const pi := 3.14
+
+// ✅ Correct
+const pi = 3.14
+```

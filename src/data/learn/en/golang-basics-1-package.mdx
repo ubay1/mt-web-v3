@@ -1,0 +1,56 @@
+# Package & Import
+
+Every Go program is essentially built from building blocks called **packages**. 
+
+The main program that will be executed by Go always starts from the **`main` package**, specifically from a function named `main()`.
+
+Take a look at this very simple example:
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello World")
+}
+```
+
+### Using Other Packages
+Besides `main`, you certainly won't write all the code from scratch. You will use many built-in features or code from other packages using the **`import`** command.
+
+For example:
+
+```go
+import "math/rand"
+```
+
+> **The Golden Naming Rule:**
+> The package name is usually the same as the *last* element of its import path.
+
+For instance:
+- Path `math/rand` → The package name is **`rand`**
+- Path `net/http` → The package name is **`http`**
+- Path `encoding/json` → The package name is **`json`**
+
+So, even though you import `math/rand`, when you call a function inside it, you simply call it using `rand`.
+
+---
+
+## Import Structure
+
+There are two ways to write `import` blocks in Go. The first way is to list them one by one:
+
+```go
+import "fmt"
+import "math"
+```
+
+However, it is **highly recommended** to group `import` statements inside parentheses to keep the code neat (this is called a *factored import*):
+
+```go
+import (
+	"fmt"
+	"math"
+)
+```

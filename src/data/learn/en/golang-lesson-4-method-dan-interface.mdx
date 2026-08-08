@@ -1,0 +1,181 @@
+# Chapter 4: Methods and Interfaces
+
+Congratulations! We have arrived at a crucial chapter in learning the "Object-Oriented Programming" style in Golang. 
+
+You should know that Go **does not have** the concept of *classes* like Java or Python. Instead, Go gives us *Methods* on structs, and *Interfaces* as the magic glue. Let's peel this apart entirely.
+
+---
+
+## 1. What is a Method?
+
+A *Method* is essentially just a regular function. The difference is, a method is specifically attached to a certain data type, usually a `struct`.
+
+> **The Simple Formula:** 
+> Method = Function + Receiver
+
+To understand the difference, let's look at a comparison between a regular function and a method.
+
+### ❌ Using a Regular Function
+When using a regular function, we pass the struct as a normal parameter:
+
+```go
+type Vertex struct { X, Y float64 }
+
+func Abs(v Vertex) float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(Abs(v)) // The function is called, v is passed as an argument
+}
+```
+
+### ✅ Turning it into a Method
+We simply move the data type (called the **Receiver**) from inside the parameter to the left of the function name:
+
+```go
+type Vertex struct { X, Y float64 }
+
+// Notice the "(v Vertex)" BEFORE the function name
+func (v Vertex) Abs() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(v.Abs()) // The method is called as a "property" of v
+}
+```
+
+---
+
+## 2. Star Wars: Value Receiver vs Pointer Receiver
+
+This is one of the topics that often confuses beginners, but it's actually very logical.
+
+There are two ways a *Receiver* can accept struct data:
+- **Value Receiver (`v Vertex`)**: Works with a **copy** of the data.
+- **Pointer Receiver (`v *Vertex`)**: Works with the **original data (reference)**.
+
+Let's prove it with examples!
+
+### 🔵 Scenario 1: Value Receiver
+When we use a *value receiver*, Go will copy the original data. This means whatever we change inside the method will not affect the original data outside the method.
+
+```go
+type Counter struct {
+	value int
+}
+
+func (c Counter) Add() {
+	c.value++ // This ONLY changes the copied version
+}
+
+func main() {
+	c := Counter{value: 0}
+	c.Add()
+	fmt.Println(c.value) // Output: 0 ❌ Original data is unchanged!
+}
+```
+
+### 🔴 Scenario 2: Pointer Receiver
+By adding a star `*` to the receiver type, we provide the "address" of the original data. 
+
+```go
+type Counter struct {
+	value int
+}
+
+func (c *Counter) Add() {
+	c.value++ // Changes the original data directly
+}
+
+func main() {
+	c := Counter{value: 0}
+	c.Add()
+	fmt.Println(c.value) // Output: 1 ✅ Successfully changed!
+}
+```
+
+> [!TIP]
+> Even though technically we call `c.Add()` when we should be using a pointer `(&c).Add()`, Golang is smart enough to figure this out automatically for us!
+
+---
+
+### When to Choose Pointer vs Value?
+
+Use a **Pointer Receiver (`*Struct`)** if:
+1. You plan to **change the contents** of the struct.
+2. The struct size is **very large** (to avoid the heavy memory cost of copying).
+3. You want to follow the most common *best practice* in Golang (consistency).
+
+Use a **Value Receiver (`Struct`)** if:
+1. You are only reading data without needing to modify it.
+2. The struct is small and lightweight.
+
+> [!WARNING]
+> **The Golden Rule of Consistency!**
+> If one *method* on your struct already uses a *Pointer Receiver*, make sure **all other methods on the same struct also use Pointers**. Don't mix them up! This will minimize a lot of weird *bugs* in the future.
+
+---
+
+## 3. Interfaces (Behavior Contracts)
+
+What happens when we want to create a function that can accept a `User` type, but can also accept an `Admin` type? This is where **Interfaces** shine.
+
+Simply put, an Interface is a **contract containing a list of method declarations**.
+
+If a `struct` has the exact same methods (name, arguments, and return types) as those described in an Interface contract, then that struct is automatically considered to implement that Interface!
+
+Unlike other languages that use specific keywords (like `class X implements Y`), **in Go this happens implicitly and automatically.**
+
+### A Concrete Interface Example
+
+Let's say we have a logging contract (*Logger*):
+
+```go
+// 1. Define the Interface Contract
+type Logger interface {
+	Log(message string)
+}
+```
+
+Then we create 2 different structs:
+```go
+// First Struct
+type ConsoleLogger struct{}
+
+func (c ConsoleLogger) Log(message string) {
+	fmt.Println("Console:", message)
+}
+
+// Second Struct
+type FileLogger struct{}
+
+func (f FileLogger) Log(message string) {
+	fmt.Println("File:", message)
+}
+```
+Because both structs above have the `Log(message string)` method, they are both officially called a `Logger`.
+
+### Why is this useful?
+Because now we can create one function that simply accepts the Interface type! 
+
+```go
+// This function accepts ANYTHING as long as it's a "Logger"
+func ProcessTask(l Logger) {
+	l.Log("Task completed successfully!")
+}
+
+func main() {
+	console := ConsoleLogger{}
+	file := FileLogger{}
+
+	// Both are accepted because they match the "Logger" specification
+	ProcessTask(console) 
+	ProcessTask(file)
+}
+```
+
+Interfaces free you from being tied to specific types. Understanding Interfaces is the key to leveling up and becoming a true Golang developer!

@@ -8,6 +8,14 @@ import ReactLesson7 from './en/react-lesson-7.mdx';
 import ReactLesson8 from './en/react-lesson-8.mdx';
 import ReactLesson9 from './en/react-lesson-9.mdx';
 import ReactLesson10 from './en/react-lesson-10.mdx';
+import GolangBasics1 from './en/golang-basics-1-package.mdx';
+import GolangBasics2 from './en/golang-basics-2-exported.mdx';
+import GolangBasics3 from './en/golang-basics-3-functions.mdx';
+import GolangBasics4 from './en/golang-basics-4-variables.mdx';
+import GolangBasics5 from './en/golang-basics-5-constants.mdx';
+import GolangLesson2 from './en/golang-lesson-2-flow-control.mdx';
+import GolangLesson3 from './en/golang-lesson-3-tipe-lanjutan.mdx';
+import GolangLesson4 from './en/golang-lesson-4-method-dan-interface.mdx';
 
 export const learnEn = {
   'react-mastery': {
@@ -16,53 +24,99 @@ export const learnEn = {
     lessons: [
       {
         id: 'lesson-1',
-        title: 'Introduction to React',
+        title: 'React Fundamentals',
         content: ReactLesson1
       },
       {
         id: 'lesson-2',
-        title: 'Event Handlers, Conditional, List Rendering, & useEffect (Data Fetching)',
+        title: 'Component & Props',
         content: ReactLesson2
       },
       {
         id: 'lesson-3',
-        title: 'Global State Management (React Context API) & Zustand',
+        title: 'State & Lifecycle',
         content: ReactLesson3
       },
       {
         id: 'lesson-4',
-        title: 'React 19: Actions, useActionState & useFormStatus',
+        title: 'Handling Events',
         content: ReactLesson4
       },
       {
         id: 'lesson-5',
-        title: 'React 19: Optimistic UI (useOptimistic)',
+        title: 'Conditional Rendering & Lists',
         content: ReactLesson5
       },
       {
         id: 'lesson-6',
-        title: 'React 19: Async Data Reading with use() Hook',
+        title: 'Forms & Controlled Components',
         content: ReactLesson6
       },
       {
         id: 'lesson-7',
-        title: 'React 19: Static Site Generation (SSG) vs Streaming SSR',
+        title: 'Hooks (useState, useEffect)',
         content: ReactLesson7
       },
       {
         id: 'lesson-8',
-        title: 'React 19: Server Components, ref Prop & <Context>',
+        title: 'React 19: Actions, useActionState & useFormStatus',
         content: ReactLesson8
       },
       {
         id: 'lesson-9',
-        title: 'React 19: React Server Component (RSC), Client vs Server, & When to Use Them',
+        title: 'React 19: Optimistic UI (useOptimistic)',
         content: ReactLesson9
       },
       {
         id: 'lesson-10',
-        title: 'React 19: Server Actions',
+        title: 'React 19: Async Data Reading with use() Hook',
         content: ReactLesson10
+      }
+    ]
+  },
+  'golang-mastery': {
+    title: 'Learn Golang (Go Tour)',
+    description: 'Golang learning notes from basics to advanced concepts like methods and interfaces.',
+    lessons: [
+      {
+        id: 'lesson-1-1',
+        title: 'Golang Basics: Package & Import',
+        content: GolangBasics1
+      },
+      {
+        id: 'lesson-1-2',
+        title: 'Golang Basics: Exported vs Unexported',
+        content: GolangBasics2
+      },
+      {
+        id: 'lesson-1-3',
+        title: 'Golang Basics: Functions',
+        content: GolangBasics3
+      },
+      {
+        id: 'lesson-1-4',
+        title: 'Golang Basics: Variables',
+        content: GolangBasics4
+      },
+      {
+        id: 'lesson-1-5',
+        title: 'Golang Basics: Constants',
+        content: GolangBasics5
+      },
+      {
+        id: 'lesson-2',
+        title: 'Flow Control (Loops & Branches)',
+        content: GolangLesson2
+      },
+      {
+        id: 'lesson-3',
+        title: 'Advanced Types (Pointers, Structs, Slices, Maps)',
+        content: GolangLesson3
+      },
+      {
+        id: 'lesson-4',
+        title: 'Methods and Interfaces',
+        content: GolangLesson4
       }
     ]
   }

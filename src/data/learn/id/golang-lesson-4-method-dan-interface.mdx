@@ -1,0 +1,181 @@
+# Bab 4: Method dan Interface
+
+Selamat! Kita sudah tiba di bab krusial dalam mempelajari gaya "Pemrograman Berorientasi Objek" (*Object-Oriented*) ala Golang. 
+
+Perlu kamu ketahui, Go **tidak memiliki** konsep *class* seperti Java atau Python. Sebagai gantinya, Go memberikan kita *Method* pada struct, dan *Interface* sebagai perekat ajaibnya. Mari kita kupas tuntas.
+
+---
+
+## 1. Apa Itu Method?
+
+*Method* sejatinya adalah fungsi biasa. Bedanya, method secara khusus ditempelkan ("*attached*") ke suatu tipe data tertentu, biasanya sebuah `struct`.
+
+> **Formula Sederhana:** 
+> Method = Fungsi + Receiver
+
+Untuk mengerti bedanya, mari kita lihat perbandingan fungsi biasa dan method.
+
+### ❌ Menggunakan Fungsi Biasa
+Saat menggunakan fungsi biasa, kita akan mengoper struct sebagai parameter biasa:
+
+```go
+type Vertex struct { X, Y float64 }
+
+func Abs(v Vertex) float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(Abs(v)) // Fungsi dipanggil, v dimasukkan sebagai argumen
+}
+```
+
+### ✅ Mengubahnya Menjadi Method
+Kita tinggal memindahkan posisi tipe datanya (disebut **Receiver**) dari dalam parameter, ke sebelah kiri nama fungsi:
+
+```go
+type Vertex struct { X, Y float64 }
+
+// Perhatikan "(v Vertex)" yang berada SEBELUM nama fungsi
+func (v Vertex) Abs() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(v.Abs()) // Method dipanggil sebagai "milik" dari v
+}
+```
+
+---
+
+## 2. Perang Bintang: Value Receiver vs Pointer Receiver
+
+Ini adalah salah satu topik yang sering membuat pemula kebingungan, namun sebenarnya sangat logis.
+
+Ada dua cara sebuah *Receiver* menerima data struct:
+- **Value Receiver (`v Vertex`)**: Bekerja dengan **salinan (copy)** dari data.
+- **Pointer Receiver (`v *Vertex`)**: Bekerja dengan **data asli (referensi)**.
+
+Mari kita buktikan dengan contoh!
+
+### 🔵 Skenario 1: Value Receiver
+Saat kita menggunakan *value receiver*, Go akan menyalin data aslinya. Artinya, apapun yang kita ubah di dalam method tidak akan mempengaruhi data aslinya di luar method.
+
+```go
+type Counter struct {
+	value int
+}
+
+func (c Counter) Add() {
+	c.value++ // Ini HANYA mengubah versi salinan
+}
+
+func main() {
+	c := Counter{value: 0}
+	c.Add()
+	fmt.Println(c.value) // Output: 0 ❌ Data asli tidak berubah!
+}
+```
+
+### 🔴 Skenario 2: Pointer Receiver
+Dengan memberikan bintang `*` pada tipe receiver, kita memberikan "alamat" dari data asli. 
+
+```go
+type Counter struct {
+	value int
+}
+
+func (c *Counter) Add() {
+	c.value++ // Mengubah data asli secara langsung
+}
+
+func main() {
+	c := Counter{value: 0}
+	c.Add()
+	fmt.Println(c.value) // Output: 1 ✅ Berhasil diubah!
+}
+```
+
+> [!TIP]
+> Walaupun secara teknis kita memanggil `c.Add()` padahal harusnya memakai pointer `(&c).Add()`, Golang cukup pintar untuk membedakannya secara otomatis untuk kita!
+
+---
+
+### Kapan Memilih Pointer vs Value?
+
+Gunakan **Pointer Receiver (`*Struct`)** jika:
+1. Kamu berencana **mengubah isi** dari struct tersebut.
+2. Struct tersebut ukurannya **sangat besar** (menghindari proses salin data yang berat di memori).
+3. Kamu ingin mengikuti *best practice* paling umum di Golang (konsistensi).
+
+Gunakan **Value Receiver (`Struct`)** jika:
+1. Kamu hanya membaca data tanpa perlu mengubahnya.
+2. Struct tersebut berukuran kecil dan ringan.
+
+> [!WARNING]
+> **Aturan Emas Konsistensi!**
+> Jika satu *method* pada struct mu sudah menggunakan *Pointer Receiver*, pastikan **semua method lainnya pada struct yang sama juga menggunakan *Pointer***. Jangan mencampurnya! Ini akan meminimalisir banyak *bug* aneh di masa depan.
+
+---
+
+## 3. Interface (Kontrak Perilaku)
+
+Apa yang terjadi ketika kita ingin membuat sebuah fungsi yang bisa menerima tipe data `User`, tapi juga bisa menerima `Admin`? Di sinilah **Interface** bersinar.
+
+Secara sederhana, Interface adalah sebuah **kontrak yang berisikan daftar deklarasi method**.
+
+Jika sebuah `struct` memiliki method-method yang sama persis (nama, argumen, dan kembalian) dengan yang dijabarkan dalam kontrak sebuah Interface, maka struct tersebut otomatis dianggap mengimplementasikan Interface tersebut!
+
+Tidak seperti bahasa lain yang menggunakan kata kunci spesifik (seperti `class X implements Y`), **di Go hal ini terjadi secara implisit dan otomatis.**
+
+### Contoh Konkret Interface
+
+Misalkan kita punya kontrak pencatatan (*Logger*):
+
+```go
+// 1. Definisikan Kontrak Interface
+type Logger interface {
+	Log(message string)
+}
+```
+
+Kita lalu membuat 2 struct berbeda:
+```go
+// Struct Pertama
+type ConsoleLogger struct{}
+
+func (c ConsoleLogger) Log(message string) {
+	fmt.Println("Console:", message)
+}
+
+// Struct Kedua
+type FileLogger struct{}
+
+func (f FileLogger) Log(message string) {
+	fmt.Println("File:", message)
+}
+```
+Karena kedua struct di atas memiliki method `Log(message string)`, keduanya resmi disebut sebagai `Logger`.
+
+### Mengapa ini berguna?
+Karena sekarang kita bisa membuat satu fungsi yang cukup menerima tipe Interface! 
+
+```go
+// Fungsi ini menerima APAPUN yang penting "Logger"
+func ProcessTask(l Logger) {
+	l.Log("Proses berhasil diselesaikan!")
+}
+
+func main() {
+	console := ConsoleLogger{}
+	file := FileLogger{}
+
+	// Keduanya diterima karena sesuai dengan spesifikasi "Logger"
+	ProcessTask(console) 
+	ProcessTask(file)
+}
+```
+
+Antarmuka (*Interface*) membebaskan kamu dari keterikatan tipe spesifik. Memahami Interface adalah kunci untuk naik level menuju developer Golang sejati!

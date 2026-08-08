@@ -1,0 +1,56 @@
+# Package & Import
+
+Setiap program Go pada dasarnya dibangun dari balok-balok susun yang disebut **package (paket)**. 
+
+Program utama yang akan dijalankan oleh Go selalu berawal dari **package `main`**, tepatnya dari sebuah fungsi bernama `main()`.
+
+Perhatikan contoh paling sederhana berikut:
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello World")
+}
+```
+
+### Menggunakan Paket Lain
+Selain `main`, kamu tentu tidak akan menulis semua kode dari nol. Kamu akan menggunakan banyak fitur bawaan atau kode dari paket lain menggunakan perintah **`import`**.
+
+Contohnya:
+
+```go
+import "math/rand"
+```
+
+> **Aturan Emas Penamaan:**
+> Nama paket biasanya sama dengan bagian *terakhir* dari jalur (path) import-nya.
+
+Misalnya:
+- Path `math/rand` → Nama paketnya adalah **`rand`**
+- Path `net/http` → Nama paketnya adalah **`http`**
+- Path `encoding/json` → Nama paketnya adalah **`json`**
+
+Jadi, meskipun kamu mengimpor `math/rand`, ketika kamu memanggil fungsi di dalamnya, kamu cukup memanggilnya menggunakan `rand`.
+
+---
+
+## Struktur Import
+
+Ada dua cara menulis blok `import` di Go. Cara pertama adalah mendaftarkannya satu per satu:
+
+```go
+import "fmt"
+import "math"
+```
+
+Namun, **sangat disarankan** untuk mengelompokkan `import` di dalam tanda kurung agar kode lebih rapi (disebut sebagai *factored import*):
+
+```go
+import (
+	"fmt"
+	"math"
+)
+```

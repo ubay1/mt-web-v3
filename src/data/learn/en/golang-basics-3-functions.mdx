@@ -1,0 +1,71 @@
+# Functions
+
+Functions in Go can take zero or multiple arguments. 
+It is important to remember that in Go, **the data type is always written after the variable name**.
+
+Take a look at the `add` function below which has two parameters `a` and `b` of type integer (`int`):
+
+```go
+func add(a int, b int) int {
+	return a + b
+}
+```
+The `int` after the parameter closing parenthesis indicates that this function also **returns a value of type `int`**.
+
+### Shortening Parameters of the Same Type
+If there are two or more consecutive parameters that share the **same** data type, you can shorten it by writing the data type just once at the last parameter.
+
+Instead of writing this:
+```go
+func add(x int, y int) int { ... }
+```
+
+You can write it much cleaner:
+```go
+func add(x, y int) int {
+	return x + y
+}
+```
+
+---
+
+### Multiple Returns
+
+One of the most frequently used features in Go is its ability to return **more than one value** at once in a single function.
+
+```go
+// Returning two strings at once
+func swap(x, y string) (string, string) {
+	return y, x
+}
+
+func main() {
+	a, b := swap("hello", "world")
+	fmt.Println(a, b) // Output: world hello
+}
+```
+> [!NOTE]
+> This feature is very popular for returning pairs of values, typically `(result, error)`.
+
+---
+
+### Named Return Values & Naked Returns
+
+You can also **name your return values** in the function definition. 
+These values are treated as if they were local variables defined at the top of the function.
+
+The goal is to make complex functions easier to understand in terms of what values are being returned.
+
+```go
+// We know this function will return a variable named 'area'
+func calculateArea(length int, width int) (area int) {
+    area = length * width
+    return
+}
+```
+
+Notice that inside the function block, we only write `return` without mentioning `area`. This is called a **Naked Return**.
+
+> [!WARNING]
+> **Be Careful with Naked Returns!**
+> You should use Naked Returns only in **very short** functions. In longer functions, *naked returns* can confuse people trying to figure out what exactly is being returned. Generally, it's better to explicitly write the return statement: `return area`.

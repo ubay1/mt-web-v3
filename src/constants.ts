@@ -66,6 +66,18 @@ export const LEARNS = [
       title: { id: lesson.title, en: learnEn['react-mastery'].lessons[idx]?.title },
       content: { id: lesson.content, en: learnEn['react-mastery'].lessons[idx]?.content }
     }))
+  },
+  {
+    id: 'golang-mastery',
+    date: '2024-06-15',
+    tags: ['Golang', 'Backend'],
+    title: { id: learnId['golang-mastery'].title, en: learnEn['golang-mastery'].title },
+    description: { id: learnId['golang-mastery'].description, en: learnEn['golang-mastery'].description },
+    lessons: learnId['golang-mastery'].lessons.map((lesson, idx) => ({
+      id: lesson.id,
+      title: { id: lesson.title, en: learnEn['golang-mastery'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['golang-mastery'].lessons[idx]?.content }
+    }))
   }
 ];
 

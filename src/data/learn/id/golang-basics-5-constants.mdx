@@ -1,0 +1,21 @@
+# Konstanta
+
+Jika nilai sebuah variabel *tidak boleh diubah* sepanjang program berjalan, gunakan **`const`**.
+
+```go
+const pi = 3.14
+const nama = "Tom"
+```
+
+Konstanta bisa menampung nilai bertipe karakter, string, boolean, atau numerik.
+
+> [!WARNING]
+> Kamu **tidak bisa** mendeklarasikan konstanta menggunakan sintaks pendek `:=`. Sintaks tersebut murni hanya untuk variabel dinamis!
+
+```go
+// ❌ Salah
+const pi := 3.14
+
+// ✅ Benar
+const pi = 3.14
+```
