@@ -1,0 +1,105 @@
+## Server Actions di React 19
+
+**Server Actions** adalah salah satu fitur paling revolusioner di ekosistem React 19 (dan Next.js App Router). Fitur ini memungkinkan kamu untuk **menulis fungsi yang berjalan eksklusif di server**, tetapi dapat dipanggil langsung dari komponen klien (_Client Components_) maupun komponen server (_Server Components_) tanpa perlu membuat _endpoint_ API (seperti rute REST atau GraphQL) secara manual.
+
+### Mengapa Server Actions Sangat Membantu?
+
+1. **Tanpa API Boilerplate**: Kamu tidak perlu lagi membuat file `route.ts` atau `controller`, mengatur CORS, lalu memanggil `fetch()` di sisi klien hanya untuk menyimpan data ke _database_.
+2. **Keamanan Bawaan**: Kode di dalam Server Action dijamin tidak akan pernah bocor ke browser (aman untuk rahasia API, interaksi _database_ langsung, dsb).
+3. **Progressive Enhancement**: Jika disematkan pada tag `<form action={...}>`, fungsi ini bisa tetap bekerja meskipun JavaScript di browser pengguna sedang dimatikan atau belum selesai dimuat (_hydrated_).
+
+---
+
+### Cara Menggunakan Server Actions
+
+Kamu mendefinisikan sebuah Server Action dengan menambahkan direktif `"use server"` di awal fungsi atau di bagian atas file.
+
+#### 1. Cara Lama (Membutuhkan API Route)
+
+```tsx
+// ❌ CARA LAMA (React 18 / Tradisional)
+// Klien harus memanggil API
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  const res = await fetch("/api/users", {
+    method: "POST",
+    body: JSON.stringify({ name: "Ubay" }),
+  });
+  const data = await res.json();
+};
+```
+
+#### 2. Cara Baru dengan Server Action
+
+Ini adalah contoh bagaimana kita langsung mengubah data di _database_ dari fungsi yang bisa dipanggil oleh form.
+
+```tsx
+// ✅ CARA BARU: actions.ts (File terpisah untuk Server Actions)
+"use server"; // Menandakan semua fungsi di file ini berjalan di server
+
+import { db } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+
+export async function createPost(formData: FormData) {
+  // 1. Ambil data dari form
+  const title = formData.get("title");
+  const content = formData.get("content");
+
+  // 2. Simpan langsung ke database (aman, ini jalan di server)
+  await db.post.create({
+    data: { title, content },
+  });
+
+  // 3. Beritahu Next.js untuk memperbarui halaman agar data terbaru muncul
+  revalidatePath("/posts");
+}
+```
+
+Lalu panggil aksi tersebut di komponen kamu:
+
+```tsx
+// Client atau Server Component
+import { createPost } from "./actions";
+
+export default function PostForm() {
+  return (
+    // React 19 mendukun form action yang menerima fungsi asinkron!
+    <form action={createPost} className="flex flex-col gap-4">
+      <input type="text" name="title" placeholder="Judul Post" />
+      <textarea name="content" placeholder="Isi Post" />
+      <button type="submit">Simpan ke Database</button>
+    </form>
+  );
+}
+```
+
+### Menggabungkan Server Actions dengan `useActionState`
+
+Di React 19, ada hook baru bernama `useActionState` yang sangat cocok disandingkan dengan Server Actions untuk menangani status (loading) dan pesan _error_ atau sukses dari server.
+
+```tsx
+"use client";
+import { useActionState } from "react";
+// Misal createPost mengembalikan { error: string } atau { success: string }
+import { createPost } from "./actions";
+
+export default function EnhancedForm() {
+  const [state, formAction, isPending] = useActionState(createPost, null);
+
+  return (
+    <form action={formAction} className="flex flex-col gap-2">
+      <input type="text" name="title" disabled={isPending} />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Menyimpan..." : "Kirim"}
+      </button>
+
+      {/* Menampilkan pesan dari server */}
+      {state?.error && <p className="text-red-500">{state.error}</p>}
+      {state?.success && <p className="text-green-500">{state.success}</p>}
+    </form>
+  );
+}
+```
+
+**Kesimpulan:**
+Server Actions menghapus kerumitan membuat API manual untuk operasi sederhana (seperti form _submit_ atau mutasi data). Cukup buat fungsi di server, berikan `"use server"`, dan panggil dari komponenmu!

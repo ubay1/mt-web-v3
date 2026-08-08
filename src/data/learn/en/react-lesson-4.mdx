@@ -1,128 +1,55 @@
-import { React19Demo } from '@/components/learn/React19Demo';
+import {
+  UseTransitionDemo,
+  FormActionDemo,
+} from "@/components/learn/React19Demo";
 
-## What's New in React 19
+## React 19: Actions, `useActionState` & `useFormStatus`
 
-React 19 brings massive changes that make writing code much cleaner, centering around **Server Components** and **Actions**. This release also deprecates or phases out several old APIs (like `useMemo` and `useCallback`, which are largely replaced by the upcoming *React Compiler*).
+React 19 introduces **Actions**, `useActionState`, and `useFormStatus` to simplify form handling and asynchronous transitions.
 
-<React19Demo />
+---
 
-Here are the key features in React 19 that you need to know:
+### 1a. Actions & `useTransition`
 
-### 1. Actions & `useActionState`
-
-Previously, to handle form submissions, you had to use `e.preventDefault()`, manage *loading states*, *errors*, and *data* manually. In React 19, this functionality is built-in natively using **Actions**.
+Use `useTransition` to track pending state automatically for async functions without manually setting `useState` loading states.
 
 ```jsx
-import { useActionState } from 'react';
+"use client";
+import { useState, useTransition } from "react";
 
-async function ping() {
-  const { data, error } = await fetch('/api/ping').then(res => res.json());
-  if (error) return { error };
-  return { success: true, data };
-}
+function UpdateNameStartTransition() {
+  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
 
-function FormPing() {
-  const [state, submitAction, isPending] = useActionState(ping, { error: null });
+  const handleSubmit = () => {
+    startTransition(async () => {
+      const { error, data } = await ping();
+      if (error) {
+        setError(error);
+        return;
+      }
+      setName(data);
+    });
+  };
 
   return (
-    <form action={submitAction} className='p-4 flex flex-col gap-2 w-1/2'>
-      <label htmlFor="name">Name</label>
-      <input type="text" name="name" disabled={isPending} className="bg-white text-black p-2" placeholder='enter name...' />
-      <button type="submit" disabled={isPending} className='bg-accent text-black p-2'>
-        {isPending ? 'Saving...' : 'Save'}
+    <div>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <button onClick={handleSubmit} disabled={isPending}>
+        {isPending ? "Saving..." : "Save via Transition"}
       </button>
-      {state.error && <p className="error text-red-500">{state.error}</p>}
-      {state.success && <p className="text-green-500">{state.data}</p>}
-    </form>
-  );
-}
-
-export default FormPing;
-```
-
----
-
-### 2. `useFormStatus`
-
-This new hook allows child components inside a `<form>` to know the status of that form without needing to pass down *props* manually.
-
-```jsx
-import { useFormStatus } from 'react-dom';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button type="submit" disabled={pending} className='bg-accent text-black p-2'>
-      {pending ? 'Submitting...' : 'Submit'}
-    </button>
+    </div>
   );
 }
 ```
 
----
-
-### 3. The `use` Hook
-
-The `use` hook is a new way to read asynchronous resources (*Promises*) or *Context* directly, even inside *conditional statements* (like `if`), which was previously forbidden with React Hooks!
-
-```jsx
-'use client'
-import { use, Suspense, useState } from 'react';
-
-function MessageComponent({ promise }) {
-  const message = use(promise);
-  return <p className="text-green-500 font-bold">{message.data}</p>;
-}
-```
-
-> **Important Note:** The `use` hook must be paired with `<Suspense>`. While the *Promise* is *pending*, the component will "suspend" and display the *fallback* UI from `<Suspense>`.
+<UseTransitionDemo />
 
 ---
 
-### 4. React Server Components (RSC)
+### 1b. Actions & `useActionState`
 
-Although introduced earlier (alongside Next.js), React 19 cements *Server Components* natively. By default, if you use a *framework* like Next.js, components are rendered on the server.
+`useActionState` manages form submission state updates automatically based on the action function's return value.
 
-- **Pros**: Reduces the JavaScript bundle size sent to the client (dependencies stay on the server) and accelerates data access (you can query databases directly in components).
-- Components that need interactivity (like *onClick* or *useState*) must be marked with the `"use client"` directive.
-
----
-
-### 5. `ref` as a Regular Prop
-
-Previously, if you wanted to pass a `ref` to a custom component, you were forced to wrap it with `forwardRef`. In React 19, `ref` is just a regular *prop*!
-
-```jsx
-// BEFORE (React 18):
-const MyInput = forwardRef((props, ref) => <input ref={ref} {...props} />);
-
-// NOW (React 19):
-function MyInput({ ref, ...props }) {
-  return <input ref={ref} {...props} />
-}
-```
-
----
-
-### 6. `<Context>` as a Provider
-
-You no longer need to write `<ThemeContext.Provider>`. In React 19, you can just use the *Context* object directly as a tag.
-
-```jsx
-const ThemeContext = createContext('light');
-
-function App() {
-  return (
-    <ThemeContext value="dark">
-      <Main />
-    </ThemeContext>
-  );
-}
-```
-
----
-
-## Conclusion
-
-React 19 focuses heavily on **Simplification** (removing `forwardRef`, `.Provider`, `useMemo`/React Compiler) and **Accelerating Data Fetching/Forms** (`useActionState`, `use`, *Server Components*).
+<FormActionDemo />

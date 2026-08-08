@@ -1,0 +1,63 @@
+import { UsePromiseDemo } from "@/components/learn/React19Demo";
+
+## React 19: Pembaca Async Data dengan Hook `use()`
+
+Hook **`use`** adalah cara baru di React 19 untuk membaca sumber daya asinkron (_Promises_) atau _Context_ secara langsung, bahkan di dalam _conditional statement_ (seperti `if`), sesuatu yang sebelumnya dilarang dalam aturan React Hooks!
+
+---
+
+### Konsep Dasar `use()`
+
+```jsx
+"use client";
+import { use, Suspense, useState } from "react";
+
+const apiPong = async () => {
+  const { data, error } = await fetch("/api/ping").then((res) => res.json());
+  if (error) return { error };
+  return { success: true, data };
+};
+
+let cachedPongPromise: Promise<any> | null = null;
+const getPongPromise = () => {
+  if (!cachedPongPromise) {
+    cachedPongPromise = apiPong();
+  }
+  return cachedPongPromise;
+};
+
+// Komponen Pembaca Promise
+function MessageComponent({ promise }) {
+  // Membaca Promise secara langsung dengan use()
+  const result = use(promise);
+
+  if (result?.error) {
+    return <p className="text-red-500 font-bold">{result.error}</p>;
+  }
+
+  return <p className="text-green-500 font-bold">{result?.data}</p>;
+}
+
+// Komponen Induk dengan Refetching
+export function MessageContainer() {
+  const [pongPromise, setPongPromise] = useState(() => getPongPromise());
+
+  const handleRefetch = () => {
+    setPongPromise(apiPong());
+  };
+
+  return (
+    <div>
+      <Suspense fallback={<p>Memuat data via Suspense...</p>}>
+        <MessageComponent promise={pongPromise} />
+      </Suspense>
+
+      <button onClick={handleRefetch}>Refetch Data</button>
+    </div>
+  );
+}
+```
+
+> **Catatan Penting:** Hook `use` harus digabungkan dengan `<Suspense>`. Saat _Promise_ sedang berjalan (_pending_), komponen akan "ditangguhkan" (suspend) dan menampilkan antarmuka _loading_ dari `<Suspense>`.
+
+<UsePromiseDemo />

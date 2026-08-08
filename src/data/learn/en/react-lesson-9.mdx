@@ -1,0 +1,74 @@
+## When to Use Server Components vs `"use client"`
+
+In the era of React Server Components (RSC) such as in the Next.js App Router, understanding when to keep components on the Server and when to add `"use client"` is highly critical for your website's performance.
+
+### 🛑 `"use client"` DOES NOT Mean "Only Rendered in the Browser"
+
+This is one of the most common misconceptions. Despite its name, a `"use client"` component **is still rendered on the server** to produce the initial HTML (whether statically via SSG or dynamically via SSR).
+
+The main difference lies in the **JavaScript**:
+- **Server Component (Default)**: Only pure HTML is sent to the browser. Its JavaScript code is completely removed from the bundle downloaded by the user.
+- **Client Component (`"use client"`)**: Its JavaScript code is sent along to the browser. The browser then performs _Hydration_ so the component can come alive and respond to clicks, typing, etc.
+
+---
+
+### When Should You Add `"use client"`?
+
+Add `"use client"` at the very top of the file (before any _import_ statements) **ONLY IF** the component requires:
+
+1. **Interactivity (User Events)**: Contains `onClick`, `onChange`, `onSubmit`, or _drag-and-drop_ functionality.
+2. **State & Lifecycle Hooks**: Uses `useState()`, `useEffect()`, `useRef()`, `useReducer()`, or a *Custom Hook* that utilizes them.
+3. **Browser APIs**: The component interacts with APIs that only exist in the browser, such as `window`, `document`, `localStorage`, or Geolocation.
+
+---
+
+### When to Keep Server Components (Default)?
+
+Do not add `"use client"`. Leave the file as a Server Component **IF** the component only:
+
+1. **Displays Static UI**: Consists purely of text, images, layouts, or static articles.
+2. **Fetches Server Data**: Queries a database directly or calls internal secret APIs using the `async/await` keyword.
+3. **Requires Server Modules (Node.js)**: Uses OS-level packages like `fs` (file system), `crypto` for advanced security encryption (like HPKE), or accesses secret `.env` variables.
+
+---
+
+### 💡 Best Practice: Moving Client Components Down the Tree
+
+For maximum performance, the official Next.js documentation recommends this pattern: **Do not use `"use client"` at the top page or layout level (like `page.tsx` or `layout.tsx`).** 
+
+Keep your main `page.tsx` as a Server Component to fetch data as fast as possible and generate ultra-lightweight HTML. Then, isolate interactive parts into smaller, separate components.
+
+**The Wrong Way ❌:**
+Adding `"use client"` to the entire `Layout.tsx` file just because there is a single Search Bar at the top that uses `useState`. As a result, the entire layout and its contents are forced to become client-side JavaScript.
+
+**The Right Way ✅:**
+Extract the search logic into a dedicated file named `SearchBar.tsx`. Add `"use client"` **only inside that small file**. Then, import `<SearchBar />` into your `Layout.tsx`, which remains a pure Server Component.
+
+```tsx
+// 1. SearchBar.tsx (Client Component - At the leaf)
+"use client";
+import { useState } from "react";
+
+export default function SearchBar() {
+  const [query, setQuery] = useState("");
+  return <input onChange={(e) => setQuery(e.target.value)} placeholder="Search..." />;
+}
+
+// 2. Layout.tsx (Server Component - The main trunk)
+import SearchBar from "./SearchBar";
+import StaticLogo from "./StaticLogo";
+
+export default function Layout({ children }) {
+  return (
+    <div>
+      <nav>
+        <StaticLogo />
+        <SearchBar /> {/* Only this component loads JS */}
+      </nav>
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+By pushing _Client Components_ as far down to the "leaves" of your UI tree as possible, the size of the JavaScript Bundle sent to your users will be drastically smaller, making your website significantly faster!

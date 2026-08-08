@@ -1,0 +1,82 @@
+## React Server Components (RSC), Klien vs Server, & Kapan Menggunakannya
+
+Meskipun diperkenalkan sebelumnya (bersama Next.js), React 19 mengukuhkan _Server Components_ secara _native_. Secara default, jika kamu menggunakan _framework_ seperti Next.js, komponen dirender di server.
+
+- **Kelebihan**: Mengurangi ukuran _bundle_ JavaScript yang dikirim ke client (karena _dependencies_ tetap di server) dan mempercepat akses data (bisa langsung akses database di komponen).
+- Komponen yang butuh interaksi (seperti _onClick_ atau _useState_) harus ditandai dengan direktif `"use client"`.
+
+Di era React Server Components (RSC) seperti pada Next.js App Router, memahami kapan harus membiarkan komponen tetap di Server dan kapan harus menambahkan `"use client"` sangatlah krusial untuk performa website.
+
+### 🛑 `"use client"` BUKAN Berarti "Hanya Dirender di Browser"
+
+Ini adalah salah satu kesalahpahaman yang paling umum. Meskipun namanya `"use client"`, komponen ini **tetap di-render di server** untuk menghasilkan HTML awal (baik secara statis/SSG maupun dinamis/SSR).
+
+Perbedaan utamanya terletak pada **JavaScript**:
+
+- **Server Component (Default)**: Hanya HTML mati yang dikirim ke browser. Kode JavaScript-nya dibuang sepenuhnya dari paket (_bundle_) yang diunduh pengguna.
+- **Client Component (`"use client"`)**: Kode JavaScript-nya ikut dikirimkan ke browser. Browser lalu melakukan proses _Hydration_ agar komponen tersebut bisa hidup dan merespons interaksi klik, ketikan, dsb.
+
+---
+
+### Kapan Harus Menambahkan `"use client"`?
+
+Tambahkan `"use client"` di baris paling atas (sebelum baris _import_) **HANYA JIKA** komponen tersebut membutuhkan:
+
+1. **Interaktivitas (User Event)**: Terdapat `onClick`, `onChange`, `onSubmit`, atau fungsionalitas _drag-and-drop_.
+2. **State & Lifecycle Hooks**: Menggunakan `useState()`, `useEffect()`, `useRef()`, `useReducer()`, atau _Custom Hook_ yang memanggilnya.
+3. **Browser API**: Komponen berinteraksi dengan API yang hanya ada di browser, seperti `window`, `document`, `localStorage`, atau Geolocation.
+
+---
+
+### Kapan Mempertahankan Server Component (Default)?
+
+Jangan tambahkan `"use client"`. Biarkan file tersebut sebagai Server Component **JIKA** komponen tersebut hanya:
+
+1. **Menampilkan UI Statis**: Hanya berupa teks, gambar, tata letak (_layout_), atau artikel mati.
+2. **Melakukan Fetch Data Server**: Memanggil _query_ database secara langsung atau memanggil API internal rahasia menggunakan kata kunci `async/await`.
+3. **Membutuhkan Modul Server (Node.js)**: Menggunakan package yang bekerja di level OS seperti `fs` (file system), `crypto` untuk enkripsi keamanan tingkat lanjut (seperti HPKE), atau mengakses `.env` rahasia.
+
+---
+
+### 💡 Best Practice: Memindahkan Client Component ke Bawah ("Moving Client Components Down the Tree")
+
+Untuk performa maksimal, dokumentasi resmi Next.js menyarankan pola ini: **Jangan berikan `"use client"` pada level komponen utama/layout (seperti `page.tsx` atau `layout.tsx`).**
+
+Biarkan `page.tsx` utamamu tetap menjadi Server Component untuk mengambil data secepat mungkin dan menghasilkan HTML super ringan. Lalu, isolasi bagian interaktif ke dalam komponen terpisah yang lebih kecil.
+
+**Contoh Kasus yang Salah ❌:**
+Memberikan `"use client"` pada seluruh file `Layout.tsx` hanya karena ada satu kotak pencarian (Search Bar) di bagian atas yang menggunakan `useState`. Akibatnya, seluruh isi layout dan halamannya dipaksa menjadi JavaScript sisi klien.
+
+**Contoh Kasus yang Benar ✅:**
+Pisahkan logika pencarian ke file khusus bernama `SearchBar.tsx`. Berikan `"use client"` **hanya di file kecil tersebut**. Lalu, _import_ `<SearchBar />` ke dalam `Layout.tsx` yang tetap dijaga kemurniannya sebagai Server Component.
+
+```tsx
+// 1. SearchBar.tsx (Client Component - Di ujung ranting)
+"use client";
+import { useState } from "react";
+
+export default function SearchBar() {
+  const [query, setQuery] = useState("");
+  return (
+    <input onChange={(e) => setQuery(e.target.value)} placeholder="Cari..." />
+  );
+}
+
+// 2. Layout.tsx (Server Component - Batang pohon utama)
+import SearchBar from "./SearchBar";
+import LogoStatik from "./LogoStatik";
+
+export default function Layout({ children }) {
+  return (
+    <div>
+      <nav>
+        <LogoStatik />
+        <SearchBar /> {/* Hanya komponen ini yang memuat JS */}
+      </nav>
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+Dengan memindahkan _Client Component_ sejauh mungkin ke "ujung ranting" pohon UI, ukuran paket JavaScript (JS Bundle) yang dikirim ke pengguna akan sangat kecil dan website-mu akan jauh lebih cepat!

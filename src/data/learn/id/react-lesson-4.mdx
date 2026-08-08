@@ -1,128 +1,174 @@
-import { React19Demo } from '@/components/learn/React19Demo';
+import {
+  UseTransitionDemo,
+  FormActionDemo,
+} from "@/components/learn/React19Demo";
 
-## Fitur Baru di React 19
+## React 19: Actions, `useActionState` & `useFormStatus`
 
-React 19 membawa banyak perubahan besar yang membuat penulisan kode menjadi lebih ringkas dan berpusat pada **Server Components** serta **Actions**. Rilis ini juga menghentikan penggunaan beberapa API lama (seperti `useMemo` dan `useCallback` yang sekarang sebagian besar digantikan oleh *React Compiler*).
+React 19 membawa perubahan besar dalam pengolahan data dan pengiriman form melalui konsep **Actions** serta hook baru seperti `useActionState` dan `useFormStatus`.
 
-<React19Demo />
+---
 
-Berikut adalah fitur-fitur kunci di React 19 yang perlu kamu ketahui:
+### 1a. Actions & `useTransition`
 
-### 1. Actions & `useActionState`
+Kita tidak perlu lagi mengelola _state loading_ secara manual menggunakan `useState`. Sekarang kita dapat memanfaatkan `useTransition` untuk mengelola status _pending_ secara otomatis saat proses asinkron berjalan.
 
-Dulu, untuk menangani pengiriman form (form submission), kamu harus menggunakan `e.preventDefault()`, mengelola *state loading*, *error*, dan *data* secara manual. Di React 19, fitur ini dibangun secara bawaan (*native*) menggunakan **Actions**.
+> **Catatan Penanganan Error:** `useTransition` hanya mengelola status `isPending` dan tidak menyediakan variabel `error` secara otomatis dari tuple-nya. Penanganan error dilakukan di dalam callback `startTransition` dengan menyimpan pesan ke `useState` lokal atau membiarkan error ditangkap oleh **Error Boundary**.
 
 ```jsx
-import { useActionState } from 'react';
+"use client";
+import { useState, useTransition } from "react";
 
-async function ping() {
-  const { data, error } = await fetch('/api/ping').then(res => res.json());
-  if (error) return { error };
-  return { success: true, data };
+function UpdateNameStartTransition() {
+  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = () => {
+    startTransition(async () => {
+      const { error, data } = await ping();
+      if (error) {
+        setError(error);
+        return;
+      }
+      setName(data);
+    });
+  };
+
+  return (
+    <div>
+      <input
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Ketik sesuatu..."
+      />
+      <button onClick={handleSubmit} disabled={isPending}>
+        {isPending ? "Menyimpan..." : "Simpan via Transition"}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+```
+
+<UseTransitionDemo />
+
+---
+
+### 1b. Actions & `useActionState`
+
+Sebelumnya, untuk menangani pengiriman form (_form submission_), kita harus memanggil `e.preventDefault()`, mengelola status _loading_, _error_, dan _data_ secara manual.
+
+Di React 19, hook **`useActionState`** mempermudah skenario ini dengan mengelola pembaruan status berdasarkan hasil eksekusi fungsi Action secara otomatis.
+
+> **Catatan Penanganan Error:** `useActionState` mengembalikan tuple `[state, formAction, isPending]`. Pesan _error_ atau indikator sukses dikembalikan sebagai bagian dari objek `state` oleh fungsi Action.
+
+```jsx
+import { useActionState } from "react";
+
+// Fungsi Action menerima state sebelumnya dan formData
+async function pingAction(previousState, formData) {
+  const { data, error } = await fetch("/api/ping").then((res) => res.json());
+  if (error) {
+    return { error, success: false };
+  }
+  return { data, error: null, success: true };
 }
 
 function FormPing() {
-  const [state, submitAction, isPending] = useActionState(ping, { error: null });
+  // state menyimpan return value dari pingAction
+  const [state, submitAction, isPending] = useActionState(pingAction, {
+    error: null,
+    success: false,
+  });
 
   return (
-    <form action={submitAction} className='p-4 flex flex-col gap-2 w-1/2'>
-      <label htmlFor="name">Name</label>
-      <input type="text" name="name" disabled={isPending} className="bg-white text-black p-2" placeholder='masukan nama...' />
-      <button type="submit" disabled={isPending} className='bg-accent text-black p-2'>
-        {isPending ? 'Menyimpan...' : 'Simpan'}
+    <form action={submitAction}>
+      <label htmlFor="name">Nama</label>
+      <input
+        type="text"
+        name="name"
+        disabled={isPending}
+        placeholder="Masukkan nama..."
+      />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Menyimpan..." : "Simpan"}
       </button>
-      {state.error && <p className="error text-red-500">{state.error}</p>}
-      {state.success && <p className="text-green-500">{state.data}</p>}
+      {state?.error && <p className="error">{state.error}</p>}
+      {state?.success && <p className="success">{state.data}</p>}
     </form>
   );
 }
-
-export default FormPing;
 ```
+
+<FormActionDemo />
+
+#### Perbandingan: `useTransition` vs `useActionState`
+
+Meskipun keduanya digunakan untuk menangani proses asinkron dan melacak status _pending_, masing-masing memiliki fokus dan karakteristik yang berbeda:
+
+| Fitur                      | `useTransition`                                              | `useActionState`                                        |
+| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| **Fokus Utama**            | Proses asinkron & mutasi umum (event handler/non-form)       | Pengelolaan _state_ pengiriman Form (_Form Submission_) |
+| **Return Value**           | `[isPending, startTransition]`                               | `[state, formAction, isPending]`                        |
+| **Pengelolaan Data/Error** | Manual (perlu `useState` terpisah jika ingin menyimpan data) | Otomatis (dikembalikan langsung via objek `state`)      |
+| **Integrasi Tag `<form>`** | Membutuhkan penanganan manual di event handler               | Langsung dipasang ke prop `<form action={formAction}>`  |
+
+##### 💡 Kelebihan & Kekurangan `useTransition`
+
+- **Kelebihan**:
+  - **Sangat Fleksibel**: Dapat digunakan di event handler mana saja (`onClick`, `onChange`, `onBlur`) tanpa harus menggunakan elemen `<form>`.
+  - **Bukan Cuma Form**: Cocok untuk pembaruan UI non-blocking seperti filter data, pergantian tab, atau _search input_.
+- **Kekurangan**:
+  - Tidak menyimpan hasil kembalian (_return value_) atau pesan _error_ secara otomatis.
+
+##### 💡 Kelebihan & Kekurangan `useActionState`
+
+- **Kelebihan**:
+  - **Sangat Ringkas untuk Form**: Mengembalikan fungsi `formAction` yang siap dipakai pada prop `<form action={formAction}>`.
+  - **Manajemen State Terpadu**: Otomatis menyimpan _response_ data maupun pesan _error_ dari fungsi Action ke variabel `state`.
+  - **Kompatibel dengan Server Actions**: Sangat optimal saat digunakan bersama React Server Components (RSC).
+- **Kekurangan**:
+  - Lebih kaku jika digunakan pada komponen interaktif biasa di luar alur pengolahan form.
+
+##### 🎯 Rekomendasi Use Case (Kapan Pakai Yang Mana?)
+
+- **Gunakan `useTransition` jika:**
+  1. **Filtering & Search Real-time**: Mengetik di kolom pencarian/filter data berat tanpa membuat UI input terasa lambat.
+  2. **Pergantian Tab / View Switching**: Berpindah antar halaman/tab interaktif yang merender komponen berat.
+  3. **Aksi Tombol Non-Form**: Klik tombol sederhana seperti _"Refresh Data"_, _"Follow/Unfollow"_, atau _"Load More"_.
+
+- **Gunakan `useActionState` jika:**
+  1. **Form Login & Autentikasi**: Mengirim email/password dan menampilkan pesan error validasi dari server (`state.error`).
+  2. **Form Input / Edit Data**: Form ubah profil, pengaturan akun, atau checkout belanja yang menghasilkan _response_ data baru.
+  3. **Pengiriman Form berbasis Server Actions / RSC**: Form di React Server Components yang mengirimkan data langsung ke server.
 
 ---
 
 ### 2. `useFormStatus`
 
-Hook baru ini memungkinkan komponen anak (child) di dalam sebuah `<form>` untuk mengetahui status form tersebut tanpa perlu menerima *props* tambahan.
+Hook baru ini memungkinkan komponen anak (_child component_) di dalam sebuah `<form>` untuk mengetahui status form tersebut (seperti status _pending_) secara otomatis tanpa perlu menerima _props_ tambahan (_props drilling_).
 
 ```jsx
-import { useFormStatus } from 'react-dom';
+import { useFormStatus } from "react-dom";
 
 function SubmitButton() {
+  // Membaca status form induk terdekat secara otomatis
   const { pending } = useFormStatus();
 
   return (
-    <button type="submit" disabled={pending} className='bg-accent text-black p-2'>
-      {pending ? 'Menyimpan...' : 'Simpan'}
+    <button type="submit" disabled={pending}>
+      {pending ? "Menyimpan..." : "Simpan"}
     </button>
   );
 }
-```
 
----
-
-### 3. Hook `use`
-
-Hook `use` adalah cara baru untuk membaca sumber daya asinkron (*Promises*) atau *Context* secara langsung, bahkan di dalam *conditional statement* (seperti `if`), sesuatu yang sebelumnya dilarang dalam React Hooks!
-
-```jsx
-'use client'
-import { use, Suspense, useState } from 'react';
-
-function MessageComponent({ promise }) {
-  const message = use(promise);
-  return <p className="text-green-500 font-bold">{message.data}</p>;
-}
-```
-
-> **Catatan Penting:** Hook `use` harus digabungkan dengan `<Suspense>`. Saat *Promise* sedang berjalan (*pending*), komponen akan "ditangguhkan" (suspend) dan menampilkan antarmuka *loading* dari `<Suspense>`.
-
----
-
-### 4. React Server Components (RSC)
-
-Meskipun diperkenalkan sebelumnya (bersama Next.js), React 19 mengukuhkan *Server Components* secara *native*. Secara default, jika kamu menggunakan *framework* seperti Next.js, komponen dirender di server.
-
-- **Kelebihan**: Mengurangi ukuran *bundle* JavaScript yang dikirim ke client (karena *dependencies* tetap di server) dan mempercepat akses data (bisa langsung akses database di komponen).
-- Komponen yang butuh interaksi (seperti *onClick* atau *useState*) harus ditandai dengan direktif `"use client"`.
-
----
-
-### 5. `ref` sebagai Prop Biasa
-
-Sebelumnya, jika kamu ingin meneruskan `ref` ke komponen kustom, kamu wajib membungkusnya dengan `forwardRef`. Di React 19, `ref` menjadi *prop* biasa!
-
-```jsx
-// DULU (React 18):
-const MyInput = forwardRef((props, ref) => <input ref={ref} {...props} />);
-
-// SEKARANG (React 19):
-function MyInput({ ref, ...props }) {
-  return <input ref={ref} {...props} />
-}
-```
-
----
-
-### 6. `<Context>` sebagai Provider
-
-Tidak perlu lagi menulis `<ThemeContext.Provider>`. Di React 19, kamu cukup menggunakan objek *Context* langsung sebagai tag.
-
-```jsx
-const ThemeContext = createContext('light');
-
-function App() {
+function FormContainer() {
   return (
-    <ThemeContext value="dark">
-      <Main />
-    </ThemeContext>
+    <form action={async (formData) => await submitAction(formData)}>
+      <input name="username" />
+      <SubmitButton />
+    </form>
   );
 }
 ```
-
----
-
-## Kesimpulan
-
-React 19 sangat fokus pada **Penyederhanaan** (menghilangkan `forwardRef`, `.Provider`, `useMemo`/React Compiler) dan **Akselerasi Data Fetching/Form** (`useActionState`, `use`, *Server Components*).

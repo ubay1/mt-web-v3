@@ -1,0 +1,74 @@
+## React 19: `ref` Prop & `<Context>`
+
+### 1. `ref` sebagai Prop Biasa
+
+Sebelumnya, jika kamu ingin meneruskan `ref` ke komponen kustom, kamu wajib membungkusnya dengan fungsi `forwardRef` yang merepotkan. Di React 19, `ref` menjadi _prop_ biasa!
+
+**Contoh Kode Praktis:**
+```jsx
+import { useRef } from "react";
+
+// ❌ DULU (React 18): Harus dibungkus forwardRef yang membingungkan
+// const InputCustom = forwardRef((props, ref) => <input ref={ref} className="border p-2" {...props} />);
+
+// ✅ SEKARANG (React 19): Cukup terima 'ref' seperti prop biasa!
+function InputCustom({ ref, placeholder }) {
+  return <input ref={ref} placeholder={placeholder} className="border p-2 rounded" />;
+}
+
+export default function FormKita() {
+  const inputRef = useRef(null);
+
+  const fokusKeInput = () => {
+    inputRef.current.focus(); // Mengaktifkan kursor ke input
+  };
+
+  return (
+    <div className="p-4 flex gap-2">
+      <InputCustom ref={inputRef} placeholder="Ketik nama..." />
+      <button onClick={fokusKeInput} className="bg-blue-500 text-white px-3 py-1 rounded">
+        Fokus
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### 2. `<Context>` sebagai Provider
+
+Tidak perlu lagi menulis akhiran `.Provider` yang panjang (seperti `<ThemeContext.Provider>`). Di React 19, kamu cukup menggunakan objek _Context_ itu sendiri langsung sebagai tag pelindung komponen.
+
+**Contoh Kode Praktis:**
+```jsx
+import { createContext, useContext, useState } from "react";
+
+// 1. Buat Context
+const TemaContext = createContext("light");
+
+// 2. Komponen Anak yang memakai Context
+function TombolTema() {
+  const tema = useContext(TemaContext);
+  return (
+    <button className={tema === "dark" ? "bg-black text-white" : "bg-white text-black"}>
+      Tema Saat Ini: {tema}
+    </button>
+  );
+}
+
+// 3. Komponen Induk (Provider)
+export default function Aplikasi() {
+  const [tema, setTema] = useState("dark");
+
+  return (
+    // ✅ SEKARANG (React 19): Gunakan TemaContext langsung sebagai tag,
+    // tidak perlu lagi menulis <TemaContext.Provider>!
+    <TemaContext value={tema}>
+      <div className="p-4 border rounded bg-gray-100">
+        <TombolTema />
+      </div>
+    </TemaContext>
+  );
+}
+```

@@ -1,0 +1,74 @@
+## React 19: `ref` Prop & `<Context>`
+
+### 1. `ref` as a Regular Prop
+
+Previously, if you wanted to forward a `ref` to a custom component, you were required to wrap it with the cumbersome `forwardRef` function. In React 19, `ref` becomes a regular _prop_!
+
+**Practical Code Example:**
+```jsx
+import { useRef } from "react";
+
+// ❌ BEFORE (React 18): Had to be wrapped in a confusing forwardRef
+// const CustomInput = forwardRef((props, ref) => <input ref={ref} className="border p-2" {...props} />);
+
+// ✅ NOW (React 19): Simply accept 'ref' like a regular prop!
+function CustomInput({ ref, placeholder }) {
+  return <input ref={ref} placeholder={placeholder} className="border p-2 rounded" />;
+}
+
+export default function OurForm() {
+  const inputRef = useRef(null);
+
+  const focusInput = () => {
+    inputRef.current.focus(); // Set focus to the input
+  };
+
+  return (
+    <div className="p-4 flex gap-2">
+      <CustomInput ref={inputRef} placeholder="Type a name..." />
+      <button onClick={focusInput} className="bg-blue-500 text-white px-3 py-1 rounded">
+        Focus
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### 2. `<Context>` as a Provider
+
+You no longer need to write the long `.Provider` suffix (like `<ThemeContext.Provider>`). In React 19, you can simply use the _Context_ object itself directly as the wrapper tag for your components.
+
+**Practical Code Example:**
+```jsx
+import { createContext, useContext, useState } from "react";
+
+// 1. Create the Context
+const ThemeContext = createContext("light");
+
+// 2. Child Component consuming the Context
+function ThemeButton() {
+  const theme = useContext(ThemeContext);
+  return (
+    <button className={theme === "dark" ? "bg-black text-white" : "bg-white text-black"}>
+      Current Theme: {theme}
+    </button>
+  );
+}
+
+// 3. Parent Component (Provider)
+export default function App() {
+  const [theme, setTheme] = useState("dark");
+
+  return (
+    // ✅ NOW (React 19): Use ThemeContext directly as a tag,
+    // no need to write <ThemeContext.Provider> anymore!
+    <ThemeContext value={theme}>
+      <div className="p-4 border rounded bg-gray-100">
+        <ThemeButton />
+      </div>
+    </ThemeContext>
+  );
+}
+```

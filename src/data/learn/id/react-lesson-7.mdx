@@ -1,0 +1,84 @@
+## React 19: react-dom/static untuk Static Site Generation (SSG)
+
+React 19 memperkenalkan package API baru bernama **`react-dom/static`** yang menyediakan fungsi `prerender` dan `prerenderToNodeStream` khusus untuk pembuatan halaman statis (**Static Site Generation / SSG**).
+
+---
+
+### Mengapa API Ini Dibuat?
+
+- **Masalah Metode SSG Lama (`renderToString`)**: `renderToString` dari `react-dom/server` **tidak mendukung Suspense**. Jika ada komponen asinkron (`use(promise)` atau Suspense), `renderToString` langsung mengeluarkan HTML fallback tanpa menunggu data selesai dimuat.
+- **Solusi `react-dom/static`**: Fungsi `prerender` **menunggu seluruh data asinkron & Suspense selesai dimuat (_all Suspense boundaries resolve_)** sebelum mengembalikan stream HTML statis secara utuh yang siap disimpan sebagai file HTML statis (SSG) atau di-cache di CDN.
+
+---
+
+### Panduan Lengkap: CSR, SSR, Streaming SSR, SSG, dan ISR
+
+![Diagram Perbandingan 5 Strategi Rendering](/images/rendering-strategies.png)
+
+Untuk memilih strategi _rendering_ yang tepat, mari kita pelajari perbedaan 5 strategi utama di web modern:
+
+### 1. CSR (Client-Side Rendering)
+
+- **Penjelasan**: Server hanya mengirim berkas HTML kosong (`<div id="root"></div>`). Logika render UI dan pemanggilan API sepenuhnya dilakukan oleh browser pengguna via JavaScript.
+- **Analogi**: Membeli bahan makanan mentah — Pembeli harus memasak sendiri di rumah.
+- **Website yang Cocok**: Aplikasi web di balik login/dashboard internal (Jira, Trello, Google Docs, Dashboard Analytics).
+- **Beban & Biaya Server**: 🟢 **Sangat Murah / Gratis**. Server hanya menyajikan berkas JavaScript statis tanpa proses rendering di server.
+
+### 2. SSR (Server-Side Rendering)
+
+- **Penjelasan**: Setiap ada request dari pengguna, server langsung mengambil data dan merender HTML baru secara _live_ saat itu juga (_on the fly_).
+- **Analogi**: Memesan makanan di restoran (_Cook-to-Order_) — Makanan baru dimasak saat pesanan datang.
+- **Website yang Cocok**: Web dengan data _real-time_ yang cepat berubah & butuh SEO (Feed Twitter/X, Dashboard Saham, Toko Online dengan harga/stok yang berubah tiap detik).
+- **Beban & Biaya Server**: 🔴 **Tinggi & Mahal**. Setiap request memakan CPU/RAM server dan query database. Membutuhkan server kapasitas tinggi agar tidak _down_ saat _traffic spike_.
+
+### 3. Streaming SSR (Server-Side Streaming & Selective Hydration)
+
+- **Penjelasan**: Evolusi dari SSR. Server tidak menunggu seluruh halaman selesai dirender. Server langsung mengalirkan (_streaming_) kerangka HTML utama (Navbar, Footer, Skeleton) seketika ke browser. Komponen asinkron yang lambat akan dikirim menyusul secara independen (_per slice_) begitu siap. React lalu me-hydrate slice tersebut tanpa menunggu yang lain (_Selective Hydration_).
+- **Analogi**: Restoran _Fine Dining_ — Minuman dan makanan pembuka dihidangkan duluan ke meja agar pelanggan tidak bosan menunggu hidangan utama yang masih dimasak.
+- **Website yang Cocok**: Web dinamis kompleks yang lambat jika di-render sekaligus secara tradisional (Dashboard Enterprise, Portal dengan banyak API lambat pihak ketiga).
+- **Beban & Biaya Server**: 🔴 **Tinggi & Mahal**. Beban komputasinya sama seperti SSR biasa, bahkan bisa menahan koneksi HTTP agar terbuka lebih lama saat mengalirkan data ke klien.
+
+### 4. SSG (Static Site Generation)
+
+- **Penjelasan**: HTML di-render dan dibuat **1 kali saja saat Build Time / Deployment**. Berkas HTML statis disajikan secara instan via CDN.
+- **Analogi**: Makanan Katering / Prasmanan — Makanan sudah siap saji, pembeli tinggal ambil.
+- **Website yang Cocok**: Blog, situs dokumentasi (React Docs), landing page perusahaan, portofolio.
+- **Beban & Biaya Server**: 🟢 **Sangat Hemat & Beban 0 saat Runtime**. Dilayani oleh Edge CDN gratis/murah (Cloudflare / Vercel), tahan jutaan request tanpa _crash_.
+
+### 5. ISR (Incremental Static Regeneration)
+
+- **Penjelasan**: Perpaduan SSG + SSR. Halaman di-build secara statis (SSG), tetapi di-refresh di _background_ secara berkala (misal setiap 60 detik) tanpa perlu _rebuild_ seluruh website.
+- **Analogi**: Restoran Fast Food — Makanan di-stock hangat di rak, lalu di-refresh secara berkala jika sudah dingin.
+- **Website yang Cocok**: E-commerce skala besar dengan ratusan ribu produk (Tokopedia, Amazon) atau portal berita online.
+- **Beban & Biaya Server**: 🟡 **Sangat Efisien (Biaya Moderat)**. Beban jauh lebih hemat dibanding SSR karena server hanya merender ulang jika timer batas waktu habis.
+
+---
+
+### Tabel Perbandingan Singkat:
+
+| Fitur                      | CSR                      | SSR (Tradisional)    | Streaming SSR               | SSG                           | ISR                              |
+| -------------------------- | ------------------------ | -------------------- | --------------------------- | ----------------------------- | -------------------------------- |
+| **Waktu Rendering**        | Browser (Client)         | Server (Per Request) | Server (Per Request Stream) | Build Time (Deploy)           | Build Time + Background Interval |
+| **Kecepatan Initial Load** | Lambat (Loading Spinner) | Sedang               | ⚡ **Sangat Cepat**         | ⚡ **Sangat Cepat (Instan)**  | ⚡ **Sangat Cepat**              |
+| **SEO & Meta Tag**         | Buruk                    | 🟢 Sangat Baik       | 🟢 Sangat Baik              | 🟢 Sangat Baik                | 🟢 Sangat Baik                   |
+| **Beban Server & Biaya**   | 🟢 Sangat Murah          | 🔴 Mahal & Tinggi    | 🔴 Mahal & Tinggi           | 🟢 **Sangat Murah (Beban 0)** | 🟡 Efisien & Moderat             |
+
+---
+
+### Keuntungan Utama SSG (Static Site Generation):
+
+1. **Performa Kilat (Ultra-Fast Initial Load)**:
+   Browser menerima berkas HTML yang **sudah berisi konten utuh** di milidetik pertama. Pengguna tidak perlu melihat layar putih (_loading spinner_) untuk menunggu API dipanggil di client.
+2. **SEO & Social Media Preview Sempurna**:
+   Mesin pencari (Googlebot, Bing) dan bot preview (WhatsApp, Twitter/X) dapat langsung membaca tag `<h1>`, paragraf, dan metadata halaman dari HTML statis tanpa perlu mengeksekusi JavaScript.
+3. **Efisiensi Server & Caching CDN**:
+   Berkas HTML statis hasil `prerender()` dapat disimpan di Edge CDN (Cloudflare, Vercel). Saat ada jutaan pengunjung, server tidak perlu merender ulang komponen atau query database.
+
+---
+
+### 🔍 Perbedaan Response HTML di DevTools (SSG vs Streaming SSR):
+
+- **SSG (`react-dom/static`)**: Server menunggu seluruh data & Suspense selesai sebelum mengirim HTML. Hasilnya, saat dicek di tab _Network Response_ DevTools, **seluruh struktur UI & data artikel tercetak utuh**.
+- **Streaming SSR (`react-dom/server`)**: Server mengirimkan dokumen awal berisi _Shell/Fallback skeleton_ terlebih dahulu, lalu di-stream secara bertahap. Hasilnya, dokumen HTML awal di DevTools belum memuat data artikel utuh.
+
+🔗 **[Buka Halaman Live Demo react-dom/static (SSG)](/learn/ssg-demo)**

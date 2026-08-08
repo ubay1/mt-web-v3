@@ -21,6 +21,29 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     pre({ children }) {
       return <>{children}</>;
     },
+    table({ children, ...rest }) {
+      return (
+        <div className="overflow-x-auto my-8 border border-line rounded-lg">
+          <table className="w-full border-collapse text-left text-sm" {...rest}>
+            {children}
+          </table>
+        </div>
+      );
+    },
+    th({ children, ...rest }) {
+      return (
+        <th className="border-b border-r border-line last:border-r-0 px-4 py-3 bg-white/5 font-bold uppercase tracking-wider text-xs text-white" {...rest}>
+          {children}
+        </th>
+      );
+    },
+    td({ children, ...rest }) {
+      return (
+        <td className="border-b border-r border-line last:border-r-0 px-4 py-3 text-white/70" {...rest}>
+          {children}
+        </td>
+      );
+    },
     ...components,
   };
 }

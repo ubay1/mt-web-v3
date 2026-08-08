@@ -2,6 +2,12 @@ import ReactLesson1 from './id/react-lesson-1.mdx';
 import ReactLesson2 from './id/react-lesson-2.mdx';
 import ReactLesson3 from './id/react-lesson-3.mdx';
 import ReactLesson4 from './id/react-lesson-4.mdx';
+import ReactLesson5 from './id/react-lesson-5.mdx';
+import ReactLesson6 from './id/react-lesson-6.mdx';
+import ReactLesson7 from './id/react-lesson-7.mdx';
+import ReactLesson8 from './id/react-lesson-8.mdx';
+import ReactLesson9 from './id/react-lesson-9.mdx';
+import ReactLesson10 from './id/react-lesson-10.mdx';
 
 export const learnId = {
   'react-mastery': {
@@ -25,8 +31,38 @@ export const learnId = {
       },
       {
         id: 'lesson-4',
-        title: 'Fitur Baru di React 19 (Actions, useActionState, use(), dll)',
+        title: 'React 19: Actions, useActionState & useFormStatus',
         content: ReactLesson4
+      },
+      {
+        id: 'lesson-5',
+        title: 'React 19: Optimistic UI (useOptimistic)',
+        content: ReactLesson5
+      },
+      {
+        id: 'lesson-6',
+        title: 'React 19: Pembaca Async Data dengan Hook use()',
+        content: ReactLesson6
+      },
+      {
+        id: 'lesson-7',
+        title: 'React 19: API baru react-dom/static untuk SSG dan perbandingan beberapa strategi rendering',
+        content: ReactLesson7
+      },
+      {
+        id: 'lesson-8',
+        title: 'React 19: ref Prop & <Context>',
+        content: ReactLesson8
+      },
+      {
+        id: 'lesson-9',
+        title: 'React 19: React Server Component (RSC), Klien vs Server, & Kapan Menggunakannya',
+        content: ReactLesson9
+      },
+      {
+        id: 'lesson-10',
+        title: 'React 19: Server Actions',
+        content: ReactLesson10
       }
     ]
   }

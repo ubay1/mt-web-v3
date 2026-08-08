@@ -1,0 +1,121 @@
+import { UseOptimisticDemo } from "@/components/learn/React19Demo";
+
+## React 19: Optimistic UI (`useOptimistic`)
+
+**`useOptimistic`** adalah hook di React 19 yang digunakan untuk menerapkan **Optimistic UI Updates** yaitu menampilkan perubahan data di antarmuka (UI) secara instan (_seolah-olah request ke server sudah sukses_) selagi proses asinkron/request server sedang berlangsung.
+
+Begitu proses asinkron di server selesai (atau gagal), React secara otomatis menyinkronkan tampilan UI dengan _state_ resmi dari server.
+
+---
+
+### Kegunaan Utama
+
+- **Responsivitas Tinggi**: Pengguna tidak perlu menunggu _network roundtrip_ (loading spinner) hanya untuk melihat hasil aksi sederhana.
+- **Pengalaman Pengguna (UX) Mulus**: Cocok untuk fitur seperti pengiriman pesan chat, tombol _Like_, komentar, atau item keranjang belanja.
+
+```jsx
+import { useOptimistic, useState } from "react";
+
+function UseOptimisticDemo() {
+  const [messages, setMessages] = useState<Array<{ text: string; sending?: boolean }>>([
+    { text: "Pesan 1 (Server Synced)" },
+  ]);
+  const [simulateError, setSimulateError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+    messages,
+    (currentState, newMessage: string) => [
+      ...currentState,
+      { text: newMessage, sending: true },
+    ]
+  );
+
+  const sendMessageAction = async (formData: FormData) => {
+    const text = formData.get("message") as string;
+    if (!text || text.trim() === "") return;
+
+    setErrorMessage(null);
+    // 1. Tampilkan secara optimistik langsung di UI
+    addOptimisticMessage(text);
+
+    // 2. Simulasi delay API (1.5 detik)
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 3. Jika simulasi error aktif
+    if (simulateError) {
+      setErrorMessage("❌ Server Gagal! Pesan dibatalkan (Automatic Rollback).");
+      return;
+    }
+
+    // Sukses -> Update state resmi
+    setMessages((prev) => [...prev, { text, sending: false }]);
+  };
+
+  return (
+    <div className="my-6 p-4 border border-line rounded-md bg-white/5 flex flex-col gap-3 w-full">
+      <div className="flex flex-col justify-between items-start gap-2">
+        <label className="flex items-center gap-1.5 cursor-pointer text-xs text-red-400 font-mono">
+          <input
+            type="checkbox"
+            checked={simulateError}
+            onChange={(e) => setSimulateError(e.target.checked)}
+            className="accent-red-500 cursor-pointer"
+          />
+          Simulasi Server Error
+        </label>
+      </div>
+
+      <div className="space-y-1.5 max-h-40 overflow-y-auto font-mono text-xs">
+        {optimisticMessages.map((msg, index) => (
+          <div
+            key={index}
+            className={`p-2 rounded flex justify-between items-center ${msg.sending
+              ? "bg-accent/10 border border-accent/30 text-accent"
+              : "bg-white/10 text-white"
+              }`}
+          >
+            <span>{msg.text}</span>
+            {msg.sending && <span className="text-[10px] animate-pulse">(Sending...)</span>}
+          </div>
+        ))}
+      </div>
+
+      {errorMessage && (
+        <span className="text-red-400 text-xs font-mono bg-red-500/10 p-2 border border-red-500/20 rounded-sm">
+          {errorMessage}
+        </span>
+      )}
+
+      <form action={sendMessageAction} className="flex gap-2 mt-1">
+        <input
+          name="message"
+          type="text"
+          placeholder="Ketik pesan..."
+          className="bg-white text-black p-2 text-xs rounded-sm flex-1 font-mono"
+        />
+        <button
+          type="submit"
+          className="bg-accent text-black font-semibold px-3 py-1.5 text-xs rounded-sm"
+        >
+          Kirim
+        </button>
+      </form>
+    </div>
+  );
+}
+```
+
+---
+
+### Bagaimana Jika Request Server Gagal? Jawabannya yaitu Akan (_Automatic Rollback_)
+
+Jika request ke server mengalami kegagalan/error:
+
+1. **Otomatis Rollback (Pembatalan State)**:
+   State optimistik dari `useOptimistic` **hanya hidup selama _Action_ sedang berjalan (_pending_)**. Ketika fungsi _Action_ selesai, React akan me-render ulang komponen berdasarkan _state_ resmi (`messages`). Jika server gagal dan `setMessages` tidak dipanggil, maka data sementara tadi **otomatis hilang dari tampilan UI**.
+
+2. **Menampilkan Pesan Error ke Pengguna**:
+   Gunakan blok `try...catch` di dalam fungsi _Action_. Ketika error ditangkap di `catch`, kamu tinggal mengeset pesan error (misalnya via `setError(...)`) agar pengguna tahu bahwa aksinya gagal.
+
+<UseOptimisticDemo />

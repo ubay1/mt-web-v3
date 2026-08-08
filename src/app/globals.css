@@ -108,6 +108,10 @@
     }
   }
 
+  hr {
+    color: #474747;
+  }
+
   .animate-fade-in {
     animation: fade-in 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
   }

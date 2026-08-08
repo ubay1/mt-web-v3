@@ -4,13 +4,10 @@ import { learnId } from './data/learn/id-data';
 import { learnEn } from './data/learn/en-data';
 
 export const NAV_LINKS = [
-  { name: 'nav.home', href: '#home' },
-  { name: 'nav.about', href: '#about' },
-  { name: 'nav.skills', href: '#skills' },
-  { name: 'nav.projects', href: '#projects' },
+  { name: 'nav.home', href: '/' },
+  { name: 'nav.projects', href: '/projects' },
   { name: 'nav.notes', href: '/notes' },
   { name: 'nav.learn', href: '/learn' },
-  { name: 'nav.contact', href: '#contact' },
 ];
 
 export const NOTES = [

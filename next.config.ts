@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
         hostname: "picsum.photos",
       },
     ],
+    qualities: [30, 75]
   },
   experimental: {
     inlineCss: true,
@@ -18,8 +19,12 @@ const nextConfig: NextConfig = {
 };
 
 const withMDX = createMDX({
-  // Add markdown plugins here if desired
+  options: {
+    remarkPlugins: ["remark-gfm"],
+    rehypePlugins: [],
+  },
 });
 
 export default withMDX(nextConfig);
+
 
