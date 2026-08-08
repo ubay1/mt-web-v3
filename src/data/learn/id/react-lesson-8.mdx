@@ -36,7 +36,52 @@ export default function FormKita() {
 
 ---
 
-### 2. `<Context>` sebagai Provider
+### 2. Cleanup Functions untuk Refs
+
+Di React 19, saat kamu menggunakan *callback ref*, kamu bisa mengembalikan (_return_) sebuah fungsi pembersih (_cleanup function_). Fungsi ini akan otomatis dipanggil oleh React ketika komponen di-_unmount_ atau ketika ref tersebut berubah. Fitur ini sangat berguna untuk mencegah kebocoran memori (_memory leak_) saat kamu perlu membuat instance eksternal (misalnya library _chart_ pihak ketiga) yang harus dihancurkan saat komponen hilang.
+
+**Contoh Kode Praktis:**
+```jsx
+function InputDenganCleanup() {
+  // ❌ DULU (React 18): Harus menggunakan if-else untuk mengecek null saat elemen di-unmount
+  /*
+  return (
+    <input
+      ref={(elemenDOM) => {
+        if (elemenDOM) {
+          console.log("Elemen input siap digunakan:", elemenDOM);
+        } else {
+          // elemenDOM bernilai null saat unmount
+          console.log("Membersihkan ref (komponen di-unmount)");
+        }
+      }}
+    />
+  );
+  */
+
+  // ✅ SEKARANG (React 19): Cukup kembalikan (return) fungsi pembersih!
+  return (
+    <input
+      ref={(elemenDOM) => {
+        // ref dibuat (komponen terpasang ke DOM)
+        console.log("Elemen input siap digunakan:", elemenDOM);
+
+        // kembalikan fungsi pembersih
+        return () => {
+          // Fungsi ini dijalankan otomatis saat komponen dicopot dari DOM
+          console.log("Membersihkan ref (komponen di-unmount)");
+        };
+      }}
+      placeholder="Ketik sesuatu..."
+      className="border p-2 rounded"
+    />
+  );
+}
+```
+
+---
+
+### 3. `<Context>` sebagai Provider
 
 Tidak perlu lagi menulis akhiran `.Provider` yang panjang (seperti `<ThemeContext.Provider>`). Di React 19, kamu cukup menggunakan objek _Context_ itu sendiri langsung sebagai tag pelindung komponen.
 

@@ -31,71 +31,85 @@ const handleSubmit = async (e) => {
 
 #### 2. Cara Baru dengan Server Action
 
-Ini adalah contoh bagaimana kita langsung mengubah data di _database_ dari fungsi yang bisa dipanggil oleh form.
+Ini adalah contoh bagaimana kita langsung memproses form dan mengembalikan respon dari server tanpa membuat API route terpisah.
 
 ```tsx
-// ✅ CARA BARU: actions.ts (File terpisah untuk Server Actions)
+//  actions.ts (File terpisah untuk Server Actions)
 "use server"; // Menandakan semua fungsi di file ini berjalan di server
 
-import { db } from "@/lib/db";
-import { revalidatePath } from "next/cache";
+export async function myServerAction(prevState: any, formData: FormData) {
+  // Simulasi waktu proses di server (delay 1.5 detik)
+  await new Promise((resolve) => setTimeout(resolve, 1500));
 
-export async function createPost(formData: FormData) {
-  // 1. Ambil data dari form
-  const title = formData.get("title");
-  const content = formData.get("content");
+  const name = formData.get("name")?.toString();
 
-  // 2. Simpan langsung ke database (aman, ini jalan di server)
-  await db.post.create({
-    data: { title, content },
-  });
+  // Validasi input
+  if (!name || name.trim() === "") {
+    return { error: "Nama tidak boleh kosong!", success: false };
+  }
 
-  // 3. Beritahu Next.js untuk memperbarui halaman agar data terbaru muncul
-  revalidatePath("/posts");
+  // Simulasi fatal error (Uncaught Exception)
+  if (name.toLowerCase() === "crash") {
+    throw new Error("💥 BAM! Server mengalami fatal error (Exception).");
+  }
+
+  // Simulasi jika terjadi error logika bisnis di server
+  if (name.toLowerCase() === "error") {
+    return { error: "Ups! Simulasi error logika dari server.", success: false };
+  }
+
+  // Berhasil
+  return {
+    message: `Halo ${name}, Server Action berhasil memproses datamu secara langsung tanpa API Route!`,
+    success: true,
+  };
 }
 ```
 
-Lalu panggil aksi tersebut di komponen kamu:
+### Menggabungkan Server Actions dengan `useActionState` & `useFormStatus`
+
+Di React 19, hook `useActionState` sangat cocok disandingkan dengan Server Actions untuk menangani status dan pesan balasan dari server. Digabungkan dengan `useFormStatus`, kita bisa dengan mudah membuat tombol loading.
 
 ```tsx
-// Client atau Server Component
-import { createPost } from "./actions";
+// Komponen Klien (page.tsx)
+"use client";
 
-export default function PostForm() {
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { myServerAction } from "./actions";
+
+// Komponen tombol submit yang otomatis mendeteksi status "loading" form
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
   return (
-    // React 19 mendukun form action yang menerima fungsi asinkron!
-    <form action={createPost} className="flex flex-col gap-4">
-      <input type="text" name="title" placeholder="Judul Post" />
-      <textarea name="content" placeholder="Isi Post" />
-      <button type="submit">Simpan ke Database</button>
-    </form>
+    <button type="submit" disabled={pending}>
+      {pending ? "Memproses di Server..." : "Eksekusi Server Action"}
+    </button>
   );
 }
-```
 
-### Menggabungkan Server Actions dengan `useActionState`
-
-Di React 19, ada hook baru bernama `useActionState` yang sangat cocok disandingkan dengan Server Actions untuk menangani status (loading) dan pesan _error_ atau sukses dari server.
-
-```tsx
-"use client";
-import { useActionState } from "react";
-// Misal createPost mengembalikan { error: string } atau { success: string }
-import { createPost } from "./actions";
-
-export default function EnhancedForm() {
-  const [state, formAction, isPending] = useActionState(createPost, null);
+export default function TestActionPage() {
+  // useActionState menggantikan useFormState di React 19
+  // Menerima (actionFunction, initial_state)
+  const [state, formAction] = useActionState(myServerAction, null);
 
   return (
-    <form action={formAction} className="flex flex-col gap-2">
-      <input type="text" name="title" disabled={isPending} />
-      <button type="submit" disabled={isPending}>
-        {isPending ? "Menyimpan..." : "Kirim"}
-      </button>
+    // Perhatikan bahwa kita melewatkan formAction ke properti action form
+    <form action={formAction} className="flex flex-col gap-6">
+      <input
+        type="text"
+        name="name"
+        placeholder="Ketik namamu (Coba ketik 'error' atau 'crash')..."
+      />
 
-      {/* Menampilkan pesan dari server */}
+      <SubmitButton />
+
+      {/* Menampilkan pesan error dari server */}
       {state?.error && <p className="text-red-500">{state.error}</p>}
-      {state?.success && <p className="text-green-500">{state.success}</p>}
+
+      {/* Menampilkan pesan sukses dari server */}
+      {state?.success && <p className="text-green-500">{state.message}</p>}
     </form>
   );
 }

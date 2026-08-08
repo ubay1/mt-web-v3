@@ -2,6 +2,62 @@ import { UsePromiseDemo } from "@/components/learn/React19Demo";
 
 ## React 19: Async Data Reading with `use()` Hook
 
-The `use()` hook reads Promises or Context directly inside components, including inside conditional statements.
+The **`use`** hook is a new way in React 19 to read asynchronous resources (_Promises_) or _Context_ directly, even inside _conditional statements_ (like `if`), which was previously forbidden by the Rules of Hooks!
+
+---
+
+### Core Concept of `use()`
+
+```jsx
+"use client";
+import { use, Suspense, useState } from "react";
+
+const apiPong = async () => {
+  const { data, error } = await fetch("/api/ping").then((res) => res.json());
+  if (error) return { error };
+  return { success: true, data };
+};
+
+let cachedPongPromise: Promise<any> | null = null;
+const getPongPromise = () => {
+  if (!cachedPongPromise) {
+    cachedPongPromise = apiPong();
+  }
+  return cachedPongPromise;
+};
+
+// Promise Reader Component
+function MessageComponent({ promise }) {
+  // Reading the Promise directly with use()
+  const result = use(promise);
+
+  if (result?.error) {
+    return <p className="text-red-500 font-bold">{result.error}</p>;
+  }
+
+  return <p className="text-green-500 font-bold">{result?.data}</p>;
+}
+
+// Parent Component with Refetching
+export function MessageContainer() {
+  const [pongPromise, setPongPromise] = useState(() => getPongPromise());
+
+  const handleRefetch = () => {
+    setPongPromise(apiPong());
+  };
+
+  return (
+    <div>
+      <Suspense fallback={<p>Loading data via Suspense...</p>}>
+        <MessageComponent promise={pongPromise} />
+      </Suspense>
+
+      <button onClick={handleRefetch}>Refetch Data</button>
+    </div>
+  );
+}
+```
+
+> **Important Note:** The `use` hook must be paired with `<Suspense>`. While the _Promise_ is running (_pending_), the component will "suspend" and display the _loading_ interface from `<Suspense>`.
 
 <UsePromiseDemo />

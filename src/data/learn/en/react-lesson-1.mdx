@@ -1,26 +1,26 @@
 ## Introduction to React
 
-**React.js** is an open-source *library* created by Meta (Facebook) for building user interfaces (**UI**), specifically for **Single Page Applications (SPA)**.
+**React.js** is an open-source JavaScript library created by Meta (Facebook) for building user interfaces (**UI**), specifically for **Single Page Applications (SPA)**.
 
-Unlike the traditional approach where every page navigation reloads the entire browser, React only updates the parts of the UI that change, quickly and efficiently.
+Unlike traditional approaches where every page transition reloads the entire browser, React only updates the parts of the UI that change quickly and efficiently.
 
 ---
 
 ## 3 Core Concepts of React
 
-Before diving into code, there are three key concepts to understand:
+Before diving into code, there are three pillar concepts you need to understand:
 
-1. **Component-Based:** The UI is broken into small, independent, and reusable pieces — such as buttons, headers, or profile cards.
-2. **Virtual DOM:** React creates a lightweight copy of the page structure (DOM). When data changes, React compares this copy with the previous version (a process called *reconciliation*) and only updates the elements that actually changed in the real browser.
-3. **Declarative:** You simply define *how the UI should look based on data/state*, and React handles the update process automatically.
+1. **Component-Based:** The UI is broken down into small, independent, and reusable pieces, such as buttons, headers, or profile cards.
+2. **Virtual DOM:** React creates a lightweight copy of the page structure (DOM). When data changes, React compares this copy with the previous version (the *reconciliation* process) and only updates the elements that actually changed in the real browser.
+3. **Declarative:** You simply define *how the UI should look based on the data/state*, and React handles the updating process automatically.
 
 ---
 
-## React Fundamentals
+## Basic React Foundation
 
 ### 1. JSX (JavaScript XML)
 
-JSX is a syntax extension for JavaScript that lets you write HTML-like code directly inside JavaScript files.
+JSX is a syntax extension for JavaScript that allows you to write HTML-like code directly within your JavaScript files.
 
 ```jsx
 // JSX Example
@@ -30,16 +30,16 @@ const Greeting = () => {
 };
 ```
 
-> **Note:** Code inside curly braces `{}` is treated as a pure JavaScript expression.
+> **Note:** Code inside curly braces `{}` is evaluated as pure JavaScript expressions.
 
 ---
 
 ### 2. Components
 
-In modern React, components are written as **Functional Components** (regular JavaScript functions that return JSX).
+Modern React components are written using **Functional Components** (regular JavaScript functions that return JSX).
 
 ```jsx
-// A simple button component
+// Simple button component
 function PrimaryButton() {
   return (
     <button className="btn-primary">
@@ -81,14 +81,15 @@ function App() {
 
 ### 4. State (`useState`)
 
-**State** is internal component data that is dynamic and can change in response to user interactions (like button clicks, text input, or API data). When state changes, React re-renders the component.
+**State** is internal component data that is dynamic and can change over time due to user interactions (like button clicks, text inputs, or data from APIs). When the state changes, React will *re-render* that component.
 
-React provides a Hook called `useState` to manage state:
+React provides a *Hook* called `useState` to manage state:
 
 ```jsx
 import React, { useState } from 'react';
 
 function Counter() {
+  // useState keeps track of the current value (count) and the setter function (setCount)
   const [count, setCount] = useState(0);
 
   return (
@@ -107,10 +108,10 @@ function Counter() {
 
 ---
 
-## Props vs State Summary
+## Summary: Props vs State
 
 | Feature | Props | State |
 | --- | --- | --- |
-| **Definition** | Data passed from outside (Parent) | Internal data belonging to the component itself |
-| **Triggers Re-render** | When props from Parent change | When state is updated via setter function |
-| **Mutability** | Immutable (Read-only) | Mutable (Can be changed via `setState`) |
+| **Definition** | Data passed from the outside (Parent) | Internal data belonging to the component itself |
+| **Triggers Re-render** | If the props sent by the Parent change | If the state is modified using the updater function |
+| **Data Mutability** | Immutable (Read-only) | Mutable (Can be changed via `setState`) |

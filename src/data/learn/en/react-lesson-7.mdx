@@ -1,3 +1,84 @@
-## React 19: Static Site Generation (SSG) vs Streaming SSR
+## React 19: react-dom/static for Static Site Generation (SSG)
 
-`react-dom/static` provides `prerender()` which awaits all async Promises and Suspense boundaries before returning full static HTML for SSG.
+React 19 introduces a new API package called **`react-dom/static`** that provides `prerender` and `prerenderToNodeStream` functions specifically designed for creating static pages (**Static Site Generation / SSG**).
+
+---
+
+### Why Was This API Created?
+
+- **The Problem with the Old SSG Method (`renderToString`)**: `renderToString` from `react-dom/server` **does not support Suspense**. If there's an asynchronous component (`use(promise)` or Suspense), `renderToString` immediately outputs the fallback HTML without waiting for the data to finish loading.
+- **The `react-dom/static` Solution**: The `prerender` function **waits for all asynchronous data and Suspense boundaries to resolve** before returning the complete static HTML stream, which is ready to be saved as a static HTML file (SSG) or cached on a CDN.
+
+---
+
+### Comprehensive Guide: CSR, SSR, Streaming SSR, SSG, and ISR
+
+![Diagram Comparing 5 Rendering Strategies](/images/rendering-strategies.png)
+
+To choose the right _rendering_ strategy, let's explore the differences between the 5 primary strategies in modern web development:
+
+### 1. CSR (Client-Side Rendering)
+
+- **Explanation**: The server only sends an empty HTML file (`<div id="root"></div>`). The UI rendering logic and API calls are entirely executed by the user's browser via JavaScript.
+- **Analogy**: Buying raw ingredients — The buyer has to cook their own food at home.
+- **Ideal Websites**: Web apps behind a login or internal dashboards (Jira, Trello, Google Docs, Analytics Dashboards).
+- **Server Load & Cost**: 🟢 **Very Cheap / Free**. The server merely serves static JavaScript files without rendering anything.
+
+### 2. SSR (Server-Side Rendering)
+
+- **Explanation**: For every user request, the server immediately fetches data and renders new HTML _live_ on the fly.
+- **Analogy**: Ordering food at a restaurant (Cook-to-Order) — The food is only cooked when the order arrives.
+- **Ideal Websites**: Sites with rapidly changing real-time data that require SEO (Twitter/X Feed, Stock Dashboards, E-commerce with prices/stock changing every second).
+- **Server Load & Cost**: 🔴 **High & Expensive**. Every request consumes server CPU/RAM and database queries. Requires high-capacity servers to avoid crashing during traffic spikes.
+
+### 3. Streaming SSR (Server-Side Streaming & Selective Hydration)
+
+- **Explanation**: An evolution of SSR. The server doesn't wait for the entire page to finish rendering. It immediately streams the main HTML skeleton (Navbar, Footer, Skeleton) to the browser. Slow asynchronous components are streamed sequentially (_per slice_) as soon as they are ready. React then hydrates that slice without waiting for the others (Selective Hydration).
+- **Analogy**: Fine Dining Restaurant — Drinks and appetizers are served to the table first so customers don't get bored waiting for the main course that is still cooking.
+- **Ideal Websites**: Complex dynamic sites that would be too slow if rendered all at once traditionally (Enterprise Dashboards, Portals with many slow third-party APIs).
+- **Server Load & Cost**: 🔴 **High & Expensive**. The computational load is similar to regular SSR, and it even holds HTTP connections open longer while streaming data to the client.
+
+### 4. SSG (Static Site Generation)
+
+- **Explanation**: HTML is rendered and created **only once at Build Time / Deployment**. The static HTML files are served instantly via CDN.
+- **Analogy**: Catering / Buffet Food — The food is already cooked and ready to eat; customers just take it.
+- **Ideal Websites**: Blogs, documentation sites (React Docs), company landing pages, portfolios.
+- **Server Load & Cost**: 🟢 **Extremely Cheap & 0 Runtime Load**. Served by free/cheap Edge CDNs (Cloudflare / Vercel), can handle millions of requests without crashing.
+
+### 5. ISR (Incremental Static Regeneration)
+
+- **Explanation**: A blend of SSG + SSR. Pages are built statically (SSG) but are refreshed in the _background_ periodically (e.g., every 60 seconds) without needing to rebuild the entire website.
+- **Analogy**: Fast Food Restaurant — Food is kept warm on the rack and refreshed periodically if it gets cold.
+- **Ideal Websites**: Large-scale E-commerce with hundreds of thousands of products (Amazon) or online news portals.
+- **Server Load & Cost**: 🟡 **Very Efficient (Moderate Cost)**. The load is significantly lighter compared to SSR because the server only re-renders when the timer expires.
+
+---
+
+### Quick Comparison Table:
+
+| Feature | CSR | SSR (Traditional) | Streaming SSR | SSG | ISR |
+| --- | --- | --- | --- | --- | --- |
+| **Rendering Time** | Browser (Client) | Server (Per Request) | Server (Per Request Stream) | Build Time (Deploy) | Build Time + Background Interval |
+| **Initial Load Speed** | Slow (Loading Spinner) | Medium | ⚡ **Very Fast** | ⚡ **Very Fast (Instant)** | ⚡ **Very Fast** |
+| **SEO & Meta Tags** | Poor | 🟢 Excellent | 🟢 Excellent | 🟢 Excellent | 🟢 Excellent |
+| **Server Load & Cost** | 🟢 Very Cheap | 🔴 Expensive & High | 🔴 Expensive & High | 🟢 **Very Cheap (0 Load)** | 🟡 Efficient & Moderate |
+
+---
+
+### Main Advantages of SSG (Static Site Generation):
+
+1. **Lightning Fast Performance (Ultra-Fast Initial Load)**:
+   The browser receives an HTML file that **already contains the full content** within the first milliseconds. Users don't have to look at a white screen (loading spinner) waiting for client-side API calls.
+2. **Perfect SEO & Social Media Previews**:
+   Search engines (Googlebot, Bing) and preview bots (WhatsApp, Twitter/X) can immediately read `<h1>` tags, paragraphs, and page metadata from the static HTML without needing to execute JavaScript.
+3. **Server Efficiency & CDN Caching**:
+   The static HTML output of `prerender()` can be stored on Edge CDNs (Cloudflare, Vercel). Even with millions of visitors, the server doesn't need to re-render components or query the database.
+
+---
+
+### 🔍 Difference in HTML Response in DevTools (SSG vs Streaming SSR):
+
+- **SSG (`react-dom/static`)**: The server waits for all data & Suspense to resolve before sending HTML. As a result, when checking the _Network Response_ tab in DevTools, **the entire UI structure & article data is printed fully**.
+- **Streaming SSR (`react-dom/server`)**: The server first sends an initial document containing a _Shell/Fallback skeleton_, then streams the rest gradually. As a result, the initial HTML document in DevTools does not yet contain the full article data.
+
+🔗 **[Open the Live Demo for react-dom/static (SSG)](/learn/ssg-demo)**

@@ -1,35 +1,159 @@
-## Global State Management (React Context API & Zustand)
+## Global State Management (React Context API)
 
-By default, data in React flows top-down (Parent to Child) via *Props*. If data is required by components deep in the hierarchy, passing props through intermediary components causes **Prop Drilling**.
+By default, data in React flows from top to bottom (Parent to Child) via *Props*. If data is needed by a component nested deeply in the hierarchy, you have to pass it through many intermediate components—this problem is known as **Prop Drilling**.
 
-**Context API** is React's built-in solution to share global state without manually passing props through every level.
+The **Context API** is React's built-in solution to make data globally available without manually passing props at every level.
 
 ```
 [ Without Context: Prop Drilling ]
-App ---> Layout ---> Sidebar ---> UserProfile (Passing props recursively)
+App ---> Layout ---> Sidebar ---> UserProfile (Props passed down a chain)
 
 [ With Context API ]
-Context Provider (Holds User state)
-    └── UserProfile (Reads data directly without intermediary components)
+Context Provider (Holds User data)
+    └── UserProfile (Retrieves data directly bypassing intermediate components)
 ```
 
-### Context API Overview
-1. **createContext**: Defines the context container.
-2. **Provider**: Wraps components and supplies global values.
-3. **useContext**: Hook to access values inside any consumer component.
+### How Context Works
+- **createContext**: Creates a container for the data.
+- **Provider**: A wrapper component that supplies data to the components inside it.
+- **useContext**: A hook to consume that data in any component.
+
+**Dark Mode** Example:
+
+Step 1: Create Context & Provider
+
+```jsx
+// ThemeContext.jsx
+import React, { createContext, useState, useContext } from 'react';
+
+// 1. Create Context
+const ThemeContext = createContext();
+
+// 2. Create Provider
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+// 3. Custom Hook for easier access
+export const useTheme = () => useContext(ThemeContext);
+```
+
+Step 2: Wrap the Application (App.jsx)
+
+```jsx
+import React from 'react';
+import { ThemeProvider } from './ThemeContext';
+import Home from './Home';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <Home />
+    </ThemeProvider>
+  );
+}
+
+export default App;
+```
+
+Step 3: Use it anywhere, e.g., Navbar.jsx
+
+```jsx
+import React from 'react';
+import { useTheme } from './ThemeContext';
+
+function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <div style={{ background: theme === 'light' ? '#fff' : '#222', color: theme === 'light' ? '#000' : '#fff' }}>
+      <h1>Current Theme: {theme}</h1>
+      <button onClick={toggleTheme}>Toggle Theme</button>
+    </div>
+  );
+}
+
+export default Navbar;
+```
+
+> **Drawbacks of Context API:**
+> Whenever the state in Context changes, all components that wrap or consume the context will re-render, even if they only need a small portion of the data.
 
 ---
 
-## Zustand: Lightweight Global State
+## State Management with Zustand
 
-**Zustand** is a fast, unopinionated state management solution built on publish-subscribe architecture with minimal boilerplate.
+**Zustand** is a **publish-subscribe** based state management library that is extremely lightweight, fast, and uses minimal boilerplate (much simpler than Redux or Context).
+
+**Advantages of Zustand**:
+
+- No Provider needed: You don't have to wrap `<App/>` with a `<Provider>`.
+- High Performance: Components only re-render if the specifically selected part of the state actually changes.
+- Very Simple: Just create a store and call it anywhere directly.
+
+```bash
+npm install zustand
+```
+
+Use Case Example: Counter & User Auth Store
+
+Step 1: Create the Store (useStore.js)
 
 ```js
 import { create } from 'zustand';
 
+// set() is used to update data in the store
 export const useCounterStore = create((set) => ({
   count: 0,
+  // Action to change state
   increment: () => set((state) => ({ count: state.count + 1 })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0 }),
 }));
 ```
+
+Step 2: Use directly in a Component (No Provider!)
+
+```jsx
+import React from 'react';
+import { useCounterStore } from './useStore';
+
+function CounterComponent() {
+  // Select state and actions from the store
+  const count = useCounterStore((state) => state.count);
+  const increment = useCounterStore((state) => state.increment);
+  const decrement = useCounterStore((state) => state.decrement);
+
+  return (
+    <div>
+      <h2>Count: {count}</h2>
+      <button onClick={increment}>Add</button>
+      <button onClick={decrement}>Subtract</button>
+    </div>
+  );
+}
+
+export default CounterComponent;
+```
+
+---
+
+## Comparison: Context API vs Zustand
+
+| Feature / Comparison | React Context API | Zustand |
+| --- | --- | --- |
+| **Installation** | Built-in React (No `npm i` needed) | Requires `npm install zustand` |
+| **Provider Setup** | Must wrap components in `<Provider>` | **No Provider needed** |
+| **Re-render Performance** | Can cause unexpected re-renders for complex state | **Highly optimal** (only re-renders subscribed components based on selectors) |
+| **Code Complexity** | Lots of boilerplate (Create, Provider, Hook) | Very concise (just `create()`) |
+| **Best Used For** | Simple & rarely changing global state (e.g., Theme, i18n language) | Dynamic, complex, or frequently changing state (e.g., Shopping cart, Auth, Forms) |

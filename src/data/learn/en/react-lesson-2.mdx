@@ -1,30 +1,8 @@
-## Components, Props & Events
+## Handling Events
 
-Components let you split the UI into independent, reusable pieces. Conceptually, components are like JavaScript functions. They accept arbitrary inputs (called "props") and return React elements describing what should appear on the screen.
+In React, events are written in *camelCase* (e.g., `onClick`, `onChange`, `onSubmit`) and are passed a function (*event handler*), rather than a string.
 
-### Functional Components
-The simplest way to define a component is to write a JavaScript function:
-
-```jsx
-function Welcome(props) {
-  return <h1>Hello, {props.name}</h1>;
-}
-```
-
-### Rendering a Component
-When React sees an element representing a user-defined component, it passes JSX attributes and children to this component as a single object called "props".
-
-```jsx
-const element = <Welcome name="Ubay" />;
-```
-
-Always remember that components **must never modify their own props**. Props are *read-only*.
-
----
-
-## Event Handling & State Updates
-
-In React, events are named using camelCase (e.g. `onClick`, `onChange`) rather than lowercase.
+### Example 1: Click & Input Events
 
 ```jsx
 import React, { useState } from 'react';
@@ -32,14 +10,24 @@ import React, { useState } from 'react';
 function EventExample() {
   const [text, setText] = useState('');
 
-  const handleChange = (e) => {
-    setText(e.target.value);
+  const handleChange = (event) => {
+    setText(event.target.value);
+  };
+
+  const handleClick = () => {
+    console.log(`Typed text: ${text}`);
   };
 
   return (
     <div>
-      <input type="text" value={text} onChange={handleChange} placeholder="Type here..." />
-      <p>Live output: {text}</p>
+      <input 
+        type="text"
+        placeholder="Type something..."
+        value={text}
+        onChange={handleChange}
+      />
+      <button onClick={handleClick}>Show Alert</button>
+      <p>Real-time result: {text}</p>
     </div>
   );
 }
@@ -47,18 +35,129 @@ function EventExample() {
 
 ---
 
-## List Rendering & Keys
+## Conditional Rendering & List Rendering
 
-Render lists using standard `.map()` and assign a unique `key` prop to each list item.
+### 1. Conditional Rendering
+
+You can show or hide components using JavaScript logical operators (`&&` or the ternary operator `? :`).
 
 ```jsx
-function ProductList({ products }) {
+function StatusUser({ isLoggedIn }) {
+  return (
+    <div>
+      {isLoggedIn ? <h3>Welcome, User!</h3> : <h3>Please Login First</h3>}
+    </div>
+  );
+}
+```
+
+### 2. List Rendering (`map`)
+
+To render arrays of data into the UI, use the `.map()` function. Every array element **must have a unique `key` property**.
+
+```jsx
+function ProductList() {
+  const products = [
+    { id: 1, name: 'Laptop', price: '$1000' },
+    { id: 2, name: 'Mouse', price: '$50' },
+    { id: 3, name: 'Keyboard', price: '$100' },
+  ];
+
   return (
     <ul>
       {products.map((item) => (
-        <li key={item.id}>{item.name}</li>
+        <li key={item.id}>
+          {item.name} - <strong>{item.price}</strong>
+        </li>
       ))}
     </ul>
   );
 }
+```
+
+---
+
+## Lifecycle & `useEffect` (Data Fetching)
+
+`useEffect` is a Hook used to handle *side effects*, such as:
+
+* Fetching data from an API (*fetch* / *axios*)
+* Modifying the document title (`document.title`)
+* Running *timers* or setting up *subscriptions*
+
+### Anatomy of `useEffect`
+
+```jsx
+import { useEffect } from 'react';
+
+useEffect(() => {
+  // Side effect code here
+
+  return () => {
+    // Optional: Cleanup function (e.g., clearing timers/listeners)
+  };
+}, [dependencyArray]);
+```
+
+> **Dependency Array `[]` Rules:**
+> - **Empty `[]`**: Effect runs **only once** when the component first mounts.
+> - **With variables `[data]`**: Effect runs on mount **and** every time the value of `data` changes.
+> - **Without array**: Effect runs **every time** a re-render occurs (avoid this for API fetches to prevent infinite loops).
+
+---
+
+### Practice Example: Fetching Data from an API
+
+Here is the standard pattern for fetching data from an external REST API:
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+function UserListFromAPI() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  if (loading) {
+    return <p>Loading data...</p>;
+  }
+
+  return (
+    <div>
+      <h2>User List from API</h2>
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}>
+            <strong>{user.name}</strong> ({user.email})
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default UserListFromAPI;
+```
+
+---
+
+## React Basic Data Flow Summary
+
+```
+State / Props Change ──► Component Re-renders ──► Virtual DOM Compares ──► UI is Updated
 ```

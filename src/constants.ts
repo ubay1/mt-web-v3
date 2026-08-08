@@ -6,7 +6,6 @@ import { learnEn } from './data/learn/en-data';
 export const NAV_LINKS = [
   { name: 'nav.home', href: '/' },
   { name: 'nav.projects', href: '/projects' },
-  { name: 'nav.notes', href: '/notes' },
   { name: 'nav.learn', href: '/learn' },
 ];
 

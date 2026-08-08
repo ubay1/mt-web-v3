@@ -5,13 +5,15 @@ import {
 
 ## React 19: Actions, `useActionState` & `useFormStatus`
 
-React 19 introduces **Actions**, `useActionState`, and `useFormStatus` to simplify form handling and asynchronous transitions.
+React 19 brings massive changes to data handling and form submissions via the **Actions** concept, alongside new hooks like `useActionState` and `useFormStatus`.
 
 ---
 
 ### 1a. Actions & `useTransition`
 
-Use `useTransition` to track pending state automatically for async functions without manually setting `useState` loading states.
+We no longer need to manage _loading state_ manually using `useState`. We can now leverage `useTransition` to automatically manage the _pending_ state while an asynchronous process runs.
+
+> **Error Handling Note:** `useTransition` only manages the `isPending` state and doesn't automatically provide an `error` variable from its tuple. Error handling is done inside the `startTransition` callback by storing the message in a local `useState` or letting an **Error Boundary** catch it.
 
 ```jsx
 "use client";
@@ -35,10 +37,15 @@ function UpdateNameStartTransition() {
 
   return (
     <div>
-      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Type something..."
+      />
       <button onClick={handleSubmit} disabled={isPending}>
         {isPending ? "Saving..." : "Save via Transition"}
       </button>
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }
@@ -50,6 +57,118 @@ function UpdateNameStartTransition() {
 
 ### 1b. Actions & `useActionState`
 
-`useActionState` manages form submission state updates automatically based on the action function's return value.
+Previously, to handle a _form submission_, we had to call `e.preventDefault()`, and manually manage _loading_, _error_, and _data_ states.
+
+In React 19, the **`useActionState`** hook simplifies this scenario by automatically managing state updates based on the execution result of the Action function.
+
+> **Error Handling Note:** `useActionState` returns a tuple `[state, formAction, isPending]`. The _error_ message or success indicator is returned as part of the `state` object by the Action function.
+
+```jsx
+import { useActionState } from "react";
+
+// The Action function receives the previous state and formData
+async function pingAction(previousState, formData) {
+  const { data, error } = await fetch("/api/ping").then((res) => res.json());
+  if (error) {
+    return { error, success: false };
+  }
+  return { data, error: null, success: true };
+}
+
+function FormPing() {
+  // state holds the return value from pingAction
+  const [state, submitAction, isPending] = useActionState(pingAction, {
+    error: null,
+    success: false,
+  });
+
+  return (
+    <form action={submitAction}>
+      <label htmlFor="name">Name</label>
+      <input
+        type="text"
+        name="name"
+        disabled={isPending}
+        placeholder="Enter name..."
+      />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Saving..." : "Save"}
+      </button>
+      {state?.error && <p className="error">{state.error}</p>}
+      {state?.success && <p className="success">{state.data}</p>}
+    </form>
+  );
+}
+```
 
 <FormActionDemo />
+
+#### Comparison: `useTransition` vs `useActionState`
+
+Although both are used to handle asynchronous processes and track _pending_ status, they have different focuses and characteristics:
+
+| Feature | `useTransition` | `useActionState` |
+| --- | --- | --- |
+| **Main Focus** | General async processes & mutations (event handlers/non-form) | Managing Form Submission _state_ |
+| **Return Value** | `[isPending, startTransition]` | `[state, formAction, isPending]` |
+| **Data/Error Handling** | Manual (requires separate `useState` for storing data) | Automatic (returned directly via the `state` object) |
+| **`<form>` Tag Integration** | Requires manual handling in an event handler | Plugged directly into the `<form action={formAction}>` prop |
+
+##### 💡 Pros & Cons of `useTransition`
+
+- **Pros**:
+  - **Highly Flexible**: Can be used in any event handler (`onClick`, `onChange`, `onBlur`) without needing a `<form>` element.
+  - **Not Just for Forms**: Great for non-blocking UI updates like data filtering, tab switching, or search inputs.
+- **Cons**:
+  - Does not automatically save return values or _error_ messages.
+
+##### 💡 Pros & Cons of `useActionState`
+
+- **Pros**:
+  - **Very Concise for Forms**: Returns a `formAction` function ready to be used on the `<form action={formAction}>` prop.
+  - **Integrated State Management**: Automatically stores response data or error messages from the Action function into the `state` variable.
+  - **Compatible with Server Actions**: Highly optimal when used alongside React Server Components (RSC).
+- **Cons**:
+  - Less flexible for general interactive components outside of form flows.
+
+##### 🎯 Recommended Use Cases (When to Use Which?)
+
+- **Use `useTransition` if:**
+  1. **Real-time Filtering & Search**: Typing in a search/filter bar for heavy data without causing input lag.
+  2. **Tab / View Switching**: Switching between interactive tabs/pages that render heavy components.
+  3. **Non-Form Button Actions**: Simple button clicks like _"Refresh Data"_, _"Follow/Unfollow"_, or _"Load More"_.
+
+- **Use `useActionState` if:**
+  1. **Login & Auth Forms**: Submitting email/password and displaying validation errors from the server (`state.error`).
+  2. **Data Input / Edit Forms**: Profile edit forms, account settings, or checkouts that return new data responses.
+  3. **Server Actions / RSC Forms**: Forms in React Server Components that submit data directly to the server.
+
+---
+
+### 2. `useFormStatus`
+
+This new hook allows child components inside a `<form>` to automatically know the form's status (such as the _pending_ status) without needing to receive additional _props_ (prop drilling).
+
+```jsx
+import { useFormStatus } from "react-dom";
+
+function SubmitButton() {
+  // Automatically reads the status of the closest parent form
+  const { pending } = useFormStatus();
+
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? "Saving..." : "Save"}
+    </button>
+  );
+}
+
+function FormContainer() {
+  return (
+    <form action={async (formData) => await submitAction(formData)}>
+      <input name="username" />
+      <SubmitButton />
+    </form>
+  );
+}
+```

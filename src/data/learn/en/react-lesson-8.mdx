@@ -8,10 +8,10 @@ Previously, if you wanted to forward a `ref` to a custom component, you were req
 ```jsx
 import { useRef } from "react";
 
-// ❌ BEFORE (React 18): Had to be wrapped in a confusing forwardRef
+// ❌ OLD WAY (React 18): Must be wrapped with confusing forwardRef
 // const CustomInput = forwardRef((props, ref) => <input ref={ref} className="border p-2" {...props} />);
 
-// ✅ NOW (React 19): Simply accept 'ref' like a regular prop!
+// ✅ NEW WAY (React 19): Simply accept 'ref' like a regular prop!
 function CustomInput({ ref, placeholder }) {
   return <input ref={ref} placeholder={placeholder} className="border p-2 rounded" />;
 }
@@ -36,15 +36,60 @@ export default function OurForm() {
 
 ---
 
-### 2. `<Context>` as a Provider
+### 2. Cleanup Functions for Refs
 
-You no longer need to write the long `.Provider` suffix (like `<ThemeContext.Provider>`). In React 19, you can simply use the _Context_ object itself directly as the wrapper tag for your components.
+In React 19, when you use a *callback ref*, you can return a cleanup function. React will automatically call this cleanup function when the component unmounts or when the ref changes. This is extremely useful for preventing memory leaks when you need to instantiate external libraries (like third-party charts) that must be destroyed when the component is removed.
+
+**Practical Code Example:**
+```jsx
+function InputWithCleanup() {
+  // ❌ OLD WAY (React 18): Had to use if-else to check for null when the element unmounted
+  /*
+  return (
+    <input
+      ref={(domElement) => {
+        if (domElement) {
+          console.log("Input element is ready:", domElement);
+        } else {
+          // domElement is null upon unmount
+          console.log("Cleaning up ref (component unmounted)");
+        }
+      }}
+    />
+  );
+  */
+
+  // ✅ NEW WAY (React 19): Simply return a cleanup function!
+  return (
+    <input
+      ref={(domElement) => {
+        // ref created (component mounted to the DOM)
+        console.log("Input element is ready:", domElement);
+
+        // return cleanup function
+        return () => {
+          // This runs automatically when the component is unmounted
+          console.log("Cleaning up ref (component unmounted)");
+        };
+      }}
+      placeholder="Type something..."
+      className="border p-2 rounded"
+    />
+  );
+}
+```
+
+---
+
+### 3. `<Context>` as a Provider
+
+You no longer need to write the long `.Provider` suffix (like `<ThemeContext.Provider>`). In React 19, you can simply use the _Context_ object itself directly as a wrapper tag for your components.
 
 **Practical Code Example:**
 ```jsx
 import { createContext, useContext, useState } from "react";
 
-// 1. Create the Context
+// 1. Create Context
 const ThemeContext = createContext("light");
 
 // 2. Child Component consuming the Context
@@ -58,12 +103,12 @@ function ThemeButton() {
 }
 
 // 3. Parent Component (Provider)
-export default function App() {
+export default function Application() {
   const [theme, setTheme] = useState("dark");
 
   return (
-    // ✅ NOW (React 19): Use ThemeContext directly as a tag,
-    // no need to write <ThemeContext.Provider> anymore!
+    // ✅ NEW WAY (React 19): Use ThemeContext directly as a tag,
+    // no longer need to write <ThemeContext.Provider>!
     <ThemeContext value={theme}>
       <div className="p-4 border rounded bg-gray-100">
         <ThemeButton />
