@@ -139,6 +139,49 @@ b := make([]int, 0, 5)
 > **Kapasitas vs Panjang**
 > Bayangkan sebuah meja bundar. *Kapasitas (cap)* adalah total kursi yang tersedia di meja itu (misal 5 kursi). *Panjang (len)* adalah berapa orang yang saat ini sedang duduk di kursi tersebut. Saat kursinya penuh dan kamu mau menambah orang, Go akan mengganti mejamu dengan meja yang lebih besar (biasanya dua kali lipat) secara otomatis di belakang layar!
 
+### "Array of Objects" (JavaScript vs Go)
+
+Jika kamu datang dari bahasa JavaScript, kamu pasti sangat sering menggunakan "Array of Object":
+```javascript
+// JavaScript
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" }
+]
+```
+
+Di Golang, karena tidak ada konsep "Object" yang dinamis seperti itu, padanannya adalah **Slice of Structs**. Kita menggabungkan `Slice` (sebagai array) dan `Struct` (sebagai bentuk object-nya):
+
+```go
+// 1. Definisikan bentuk Struct terlebih dahulu
+type User struct {
+	ID   int
+	Name string
+}
+
+func main() {
+	// 2. Buat Slice dari struct User
+	users := []User{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+	}
+
+	fmt.Println(users[0].Name) // Output: Alice
+}
+```
+Pendekatan *strongly-typed* ini memastikan bahwa setiap item di dalam array memiliki bentuk yang persis sama, mencegah *bug*, dan memberimu *autocomplete* yang sempurna!
+
+**Lalu, bukankah bisa pakai Map?**
+Ya, betul! Jika datanya sangat dinamis dan bentuknya tidak pasti (benar-benar mirip objek di JS), kamu bisa menggunakan **Slice of Maps** (`[]map[string]any`):
+
+```go
+usersDinamis := []map[string]any{
+	{"id": 1, "name": "Alice"},
+	{"id": 2, "name": "Bob", "role": "admin"}, // Bisa beda bentuk (dinamis)
+}
+```
+Namun di ekosistem Go, **Slice of Structs (cara pertama) jauh lebih disarankan** untuk sebagian besar kasus karena lebih aman, minim *bug*, dan performanya lebih cepat dibandingkan Map.
+
 ---
 
 ## 4. Perulangan dengan `range`

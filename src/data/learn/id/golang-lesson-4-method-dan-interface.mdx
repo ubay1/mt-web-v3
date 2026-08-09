@@ -1,21 +1,22 @@
 # Bab 4: Method dan Interface
 
-Selamat! Kita sudah tiba di bab krusial dalam mempelajari gaya "Pemrograman Berorientasi Objek" (*Object-Oriented*) ala Golang. 
+Selamat! Kita sudah tiba di bab krusial dalam mempelajari gaya "Pemrograman Berorientasi Objek" (_Object-Oriented_) ala Golang.
 
-Perlu kamu ketahui, Go **tidak memiliki** konsep *class* seperti Java atau Python. Sebagai gantinya, Go memberikan kita *Method* pada struct, dan *Interface* sebagai perekat ajaibnya. Mari kita kupas tuntas.
+Perlu kamu ketahui, Go **tidak memiliki** konsep _class_ seperti Java atau Python. Sebagai gantinya, Go memberikan kita _Method_ pada struct, dan _Interface_ sebagai perekat ajaibnya. Mari kita kupas tuntas.
 
 ---
 
 ## 1. Apa Itu Method?
 
-*Method* sejatinya adalah fungsi biasa. Bedanya, method secara khusus ditempelkan ("*attached*") ke suatu tipe data tertentu, biasanya sebuah `struct`.
+_Method_ sejatinya adalah fungsi biasa. Bedanya, method secara khusus ditempelkan ("_attached_") ke suatu tipe data tertentu, biasanya sebuah `struct`.
 
-> **Formula Sederhana:** 
+> **Formula Sederhana:**
 > Method = Fungsi + Receiver
 
 Untuk mengerti bedanya, mari kita lihat perbandingan fungsi biasa dan method.
 
 ### ❌ Menggunakan Fungsi Biasa
+
 Saat menggunakan fungsi biasa, kita akan mengoper struct sebagai parameter biasa:
 
 ```go
@@ -32,6 +33,7 @@ func main() {
 ```
 
 ### ✅ Mengubahnya Menjadi Method
+
 Kita tinggal memindahkan posisi tipe datanya (disebut **Receiver**) dari dalam parameter, ke sebelah kiri nama fungsi:
 
 ```go
@@ -48,20 +50,77 @@ func main() {
 }
 ```
 
+> [!TIP]
+> **Ke Mana Perginya Parameter di `Abs()`?**
+>
+> Bagi pemula, perubahan ini mungkin sedikit membingungkan. Mari kita bandingkan:
+>
+> **1. Fungsi Biasa:** Kita memberikan data dari dalam kurung `()`.
+>
+> ```go
+> func Abs(v Vertex) float64 { return ... }
+>
+> // Cara panggil:
+> Abs(v) // "Tolong hitung nilai milik v"
+> ```
+>
+> **2. Method:** Kita memindahkan parameter ke _sebelum_ nama fungsi (menjadi Receiver).
+>
+> ```go
+> func (v Vertex) Abs() float64 { return ... }
+>
+> // Cara panggil:
+> v.Abs() // "Hei v, tolong hitung nilaimu sendiri"
+> ```
+>
+> **Lalu bagaimana perbandingannya dengan JavaScript/Java?**
+> Di bahasa berorientasi objek lain, fungsi di dalam _class_ biasanya menggunakan kata kunci `this` secara ajaib. Pembuatannya menggunakan keyword `new`:
+>
+> ```javascript
+> class Vertex {
+>   constructor(x, y) {
+>     this.X = x;
+>     this.Y = y;
+>   }
+>   Abs() {
+>     return Math.sqrt(this.X * this.X + this.Y * this.Y);
+>   }
+> }
+>
+> // Cara panggil di JS:
+> const v = new Vertex(3, 4);
+> v.Abs();
+> ```
+>
+> Di Golang, **tidak ada kata kunci `this` maupun `class`**. Tulisan `(v Vertex)` di depan nama fungsi itulah cara Golang menyuruh kita membuat "this" secara manual dan memberinya nama `v`. Pembuatannya pun tidak butuh keyword `new`:
+>
+> ```go
+> type Vertex struct { X, Y float64 }
+> func (v Vertex) Abs() float64 { return math.Sqrt(v.X*v.X + v.Y*v.Y) }
+>
+> // Cara panggil di Go:
+> v := Vertex{3, 4}
+> v.Abs()
+> ```
+>
+> **Intinya:** Di kedua bahasa, kamu **harus** membuat wujud nyata dari cetakannya (`new Vertex` di JS atau `Vertex{}` di Go) sebelum bisa memanggil method-nya!
+
 ---
 
 ## 2. Perang Bintang: Value Receiver vs Pointer Receiver
 
 Ini adalah salah satu topik yang sering membuat pemula kebingungan, namun sebenarnya sangat logis.
 
-Ada dua cara sebuah *Receiver* menerima data struct:
+Ada dua cara sebuah _Receiver_ menerima data struct:
+
 - **Value Receiver (`v Vertex`)**: Bekerja dengan **salinan (copy)** dari data.
 - **Pointer Receiver (`v *Vertex`)**: Bekerja dengan **data asli (referensi)**.
 
 Mari kita buktikan dengan contoh!
 
 ### 🔵 Skenario 1: Value Receiver
-Saat kita menggunakan *value receiver*, Go akan menyalin data aslinya. Artinya, apapun yang kita ubah di dalam method tidak akan mempengaruhi data aslinya di luar method.
+
+Saat kita menggunakan _value receiver_, Go akan menyalin data aslinya. Artinya, apapun yang kita ubah di dalam method tidak akan mempengaruhi data aslinya di luar method.
 
 ```go
 type Counter struct {
@@ -80,7 +139,8 @@ func main() {
 ```
 
 ### 🔴 Skenario 2: Pointer Receiver
-Dengan memberikan bintang `*` pada tipe receiver, kita memberikan "alamat" dari data asli. 
+
+Dengan memberikan bintang `*` pada tipe receiver, kita memberikan "alamat" dari data asli. dan kita bisa mengubah data aslinya.
 
 ```go
 type Counter struct {
@@ -106,17 +166,19 @@ func main() {
 ### Kapan Memilih Pointer vs Value?
 
 Gunakan **Pointer Receiver (`*Struct`)** jika:
+
 1. Kamu berencana **mengubah isi** dari struct tersebut.
 2. Struct tersebut ukurannya **sangat besar** (menghindari proses salin data yang berat di memori).
-3. Kamu ingin mengikuti *best practice* paling umum di Golang (konsistensi).
+3. Kamu ingin mengikuti _best practice_ paling umum di Golang (konsistensi).
 
 Gunakan **Value Receiver (`Struct`)** jika:
+
 1. Kamu hanya membaca data tanpa perlu mengubahnya.
 2. Struct tersebut berukuran kecil dan ringan.
 
 > [!WARNING]
 > **Aturan Emas Konsistensi!**
-> Jika satu *method* pada struct mu sudah menggunakan *Pointer Receiver*, pastikan **semua method lainnya pada struct yang sama juga menggunakan *Pointer***. Jangan mencampurnya! Ini akan meminimalisir banyak *bug* aneh di masa depan.
+> Jika satu _method_ pada struct mu sudah menggunakan _Pointer Receiver_, pastikan **semua method lainnya pada struct yang sama juga menggunakan _Pointer_**. Jangan mencampurnya! Ini akan meminimalisir banyak _bug_ aneh di masa depan.
 
 ---
 
@@ -130,52 +192,61 @@ Jika sebuah `struct` memiliki method-method yang sama persis (nama, argumen, dan
 
 Tidak seperti bahasa lain yang menggunakan kata kunci spesifik (seperti `class X implements Y`), **di Go hal ini terjadi secara implisit dan otomatis.**
 
-### Contoh Konkret Interface
+### Contoh Konkret Interface (Bangun Datar)
 
-Misalkan kita punya kontrak pencatatan (*Logger*):
+Agar tidak bingung dengan struct yang kosong, mari gunakan contoh nyata yang memiliki data: **Menghitung Luas Bangun Datar**.
 
 ```go
-// 1. Definisikan Kontrak Interface
-type Logger interface {
-	Log(message string)
+// 1. Kontrak Interface: Apapun yang punya method Luas(), dia adalah BangunDatar
+type BangunDatar interface {
+	Luas() float64
 }
 ```
 
-Kita lalu membuat 2 struct berbeda:
-```go
-// Struct Pertama
-type ConsoleLogger struct{}
+Kita lalu membuat 2 struct berbeda yang memiliki isi datanya masing-masing:
 
-func (c ConsoleLogger) Log(message string) {
-	fmt.Println("Console:", message)
+```go
+// Struct Pertama: Persegi
+type Persegi struct {
+	Sisi float64
 }
 
-// Struct Kedua
-type FileLogger struct{}
+// Persegi memenuhi kontrak BangunDatar
+func (p Persegi) Luas() float64 {
+	return p.Sisi * p.Sisi
+}
 
-func (f FileLogger) Log(message string) {
-	fmt.Println("File:", message)
+// Struct Kedua: Lingkaran
+type Lingkaran struct {
+	JariJari float64
+}
+
+// Lingkaran juga memenuhi kontrak BangunDatar
+func (l Lingkaran) Luas() float64 {
+	return math.Pi * l.JariJari * l.JariJari
 }
 ```
-Karena kedua struct di atas memiliki method `Log(message string)`, keduanya resmi disebut sebagai `Logger`.
+
+Karena kedua struct di atas sama-sama memiliki method `Luas() float64`, Golang otomatis menganggap KEDUANYA sebagai `BangunDatar`.
 
 ### Mengapa ini berguna?
-Karena sekarang kita bisa membuat satu fungsi yang cukup menerima tipe Interface! 
+
+Karena sekarang kita bisa membuat **satu fungsi universal** yang bisa menerima bangun datar apapun, tanpa harus membuat fungsi terpisah untuk persegi dan lingkaran!
 
 ```go
-// Fungsi ini menerima APAPUN yang penting "Logger"
-func ProcessTask(l Logger) {
-	l.Log("Proses berhasil diselesaikan!")
+// Fungsi ini menerima APAPUN yang penting sebuah "BangunDatar"
+func CetakLuas(b BangunDatar) {
+	fmt.Println("Luasnya adalah:", b.Luas())
 }
 
 func main() {
-	console := ConsoleLogger{}
-	file := FileLogger{}
+	kotak := Persegi{Sisi: 5}
+	bulat := Lingkaran{JariJari: 7}
 
-	// Keduanya diterima karena sesuai dengan spesifikasi "Logger"
-	ProcessTask(console) 
-	ProcessTask(file)
+	// Keduanya bisa dimasukkan ke fungsi yang sama!
+	CetakLuas(kotak) // Output: Luasnya adalah: 25
+	CetakLuas(bulat) // Output: Luasnya adalah: 153.93...
 }
 ```
 
-Antarmuka (*Interface*) membebaskan kamu dari keterikatan tipe spesifik. Memahami Interface adalah kunci untuk naik level menuju developer Golang sejati!
+Antarmuka (_Interface_) membebaskan kamu dari keterikatan tipe spesifik. Memahami Interface adalah kunci untuk naik level menuju developer Golang sejati!

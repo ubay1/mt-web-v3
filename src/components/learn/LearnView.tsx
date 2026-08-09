@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { X, Menu } from "lucide-react";
 import { LEARNS } from "../../constants";
@@ -15,6 +15,13 @@ export default function LearnView() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 0);
+    }
+  }, [selectedLesson]);
 
   useEffect(() => {
     if (selectedLearn) {
@@ -281,7 +288,7 @@ export default function LearnView() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-bg p-6 md:p-12 lg:p-20 relative z-10 w-full">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar bg-bg p-6 md:p-12 lg:p-20 relative z-10 w-full">
               <div className="max-w-4xl mx-auto animate-slide-up">
                 <div className="flex gap-4 mb-8">
                   {selectedLearn.tags.map((tag: string) => (

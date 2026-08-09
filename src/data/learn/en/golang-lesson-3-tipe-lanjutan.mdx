@@ -139,6 +139,49 @@ b := make([]int, 0, 5)
 > **Capacity vs Length**
 > Imagine a round table. *Capacity (cap)* is the total number of chairs available at that table (e.g., 5 chairs). *Length (len)* is how many people are currently sitting in those chairs. When the chairs are full and you want to add people, Go will replace your table with a bigger one (usually double the size) automatically behind the scenes!
 
+### "Array of Objects" (JavaScript vs Go)
+
+If you come from JavaScript, you probably use an "Array of Objects" everywhere:
+```javascript
+// JavaScript
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" }
+]
+```
+
+In Golang, because there is no concept of a dynamic "Object", the equivalent is a **Slice of Structs**. We combine `Slice` (for the array) and `Struct` (for the object shape):
+
+```go
+// 1. Define the Struct first
+type User struct {
+	ID   int
+	Name string
+}
+
+func main() {
+	// 2. Create a Slice of the User struct
+	users := []User{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+	}
+
+	fmt.Println(users[0].Name) // Output: Alice
+}
+```
+This strongly-typed approach ensures that every item in your array follows the exact same shape, preventing bugs and giving you perfect autocomplete!
+
+**But wait, can't we use Maps?**
+Yes, you can! If your data is extremely dynamic and the shape is unknown (exactly like JS objects), you can use a **Slice of Maps** (`[]map[string]any`):
+
+```go
+dynamicUsers := []map[string]any{
+	{"id": 1, "name": "Alice"},
+	{"id": 2, "name": "Bob", "role": "admin"}, // Can have different shapes dynamically
+}
+```
+However, in the Go ecosystem, **Slice of Structs (the first method) is highly recommended** for most use cases because it's safer, less prone to bugs, and performs much faster than Maps.
+
 ---
 
 ## 4. Looping with `range`

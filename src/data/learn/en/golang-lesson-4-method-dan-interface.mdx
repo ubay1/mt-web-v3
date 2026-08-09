@@ -48,6 +48,51 @@ func main() {
 }
 ```
 
+> [!TIP]
+> **Where Did the Parameter Go in `Abs()`?**
+> 
+> For beginners, this change can be a bit confusing. Let's compare them:
+> 
+> **1. Regular Function:** We pass data inside the parenthesis `()`.
+> ```go
+> func Abs(v Vertex) float64 { return ... }
+> 
+> // How to call:
+> Abs(v) // "Please calculate the value of v"
+> ```
+> 
+> **2. Method:** We move the parameter to *before* the function name (becoming a Receiver).
+> ```go
+> func (v Vertex) Abs() float64 { return ... }
+> 
+> // How to call:
+> v.Abs() // "Hey v, please calculate your own value"
+> ```
+> 
+> **How does it compare to JavaScript/Java?**
+> In other object-oriented languages, functions inside a class magically use the `this` keyword, and objects are created using the `new` keyword:
+> ```javascript
+> class Vertex {
+>   constructor(x, y) { this.X = x; this.Y = y; }
+>   Abs() { return Math.sqrt(this.X * this.X + this.Y * this.Y); }
+> }
+> 
+> // How to call in JS:
+> const v = new Vertex(3, 4);
+> v.Abs();
+> ```
+> 
+> In Golang, **there is no `this` or `class` keyword**. The `(v Vertex)` before the function name is how Go tells us to create "this" manually and name it `v`. We also don't use the `new` keyword to create it:
+> ```go
+> type Vertex struct { X, Y float64 }
+> func (v Vertex) Abs() float64 { return math.Sqrt(v.X*v.X + v.Y*v.Y) }
+> 
+> // How to call in Go:
+> v := Vertex{3, 4}
+> v.Abs()
+> ```
+> **The Point:** In both languages, you **must** create the physical object first (`new Vertex` in JS or `Vertex{}` in Go) before you can call its method!
+
 ---
 
 ## 2. Star Wars: Value Receiver vs Pointer Receiver
@@ -130,51 +175,60 @@ If a `struct` has the exact same methods (name, arguments, and return types) as 
 
 Unlike other languages that use specific keywords (like `class X implements Y`), **in Go this happens implicitly and automatically.**
 
-### A Concrete Interface Example
+### A Concrete Interface Example (Shapes)
 
-Let's say we have a logging contract (*Logger*):
+To avoid confusion with empty structs, let's use a real-world example that holds data: **Calculating the Area of Shapes**.
 
 ```go
-// 1. Define the Interface Contract
-type Logger interface {
-	Log(message string)
+// 1. Interface Contract: Anything that has an Area() method is a Shape
+type Shape interface {
+	Area() float64
 }
 ```
 
-Then we create 2 different structs:
-```go
-// First Struct
-type ConsoleLogger struct{}
+Then we create 2 different structs that hold their own unique data:
 
-func (c ConsoleLogger) Log(message string) {
-	fmt.Println("Console:", message)
+```go
+// First Struct: Square
+type Square struct {
+	Side float64
 }
 
-// Second Struct
-type FileLogger struct{}
+// Square fulfills the Shape contract
+func (s Square) Area() float64 {
+	return s.Side * s.Side
+}
 
-func (f FileLogger) Log(message string) {
-	fmt.Println("File:", message)
+// Second Struct: Circle
+type Circle struct {
+	Radius float64
+}
+
+// Circle also fulfills the Shape contract
+func (c Circle) Area() float64 {
+	return math.Pi * c.Radius * c.Radius
 }
 ```
-Because both structs above have the `Log(message string)` method, they are both officially called a `Logger`.
+
+Because both structs above have the `Area() float64` method, Go automatically considers BOTH of them as a `Shape`.
 
 ### Why is this useful?
-Because now we can create one function that simply accepts the Interface type! 
+
+Because now we can create **one universal function** that accepts any shape, without having to write separate functions for squares and circles!
 
 ```go
-// This function accepts ANYTHING as long as it's a "Logger"
-func ProcessTask(l Logger) {
-	l.Log("Task completed successfully!")
+// This function accepts ANYTHING as long as it's a "Shape"
+func PrintArea(s Shape) {
+	fmt.Println("The area is:", s.Area())
 }
 
 func main() {
-	console := ConsoleLogger{}
-	file := FileLogger{}
+	box := Square{Side: 5}
+	round := Circle{Radius: 7}
 
-	// Both are accepted because they match the "Logger" specification
-	ProcessTask(console) 
-	ProcessTask(file)
+	// Both can be passed into the exact same function!
+	PrintArea(box)   // Output: The area is: 25
+	PrintArea(round) // Output: The area is: 153.93...
 }
 ```
 
