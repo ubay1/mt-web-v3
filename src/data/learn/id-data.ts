@@ -116,7 +116,7 @@ export const learnId = {
       },
       {
         id: 'lesson-4',
-        title: 'Method dan Interface',
+        title: 'Method dan Interface (OOP ala Golang)',
         content: GolangLesson4
       }
     ]

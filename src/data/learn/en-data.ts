@@ -115,7 +115,7 @@ export const learnEn = {
       },
       {
         id: 'lesson-4',
-        title: 'Methods and Interfaces',
+        title: 'Methods and Interfaces (OOP style in Golang)',
         content: GolangLesson4
       }
     ]
