@@ -1,3 +1,113 @@
-# React Hooks: Context & Store Hooks
+# React Hooks: useEffectEvent (Background Task Tanpa Gangguan)
 
-(Konten materi akan ditambahkan di sini)
+`useEffectEvent` adalah salah satu Hook terbaru di ekosistem React 19 yang diciptakan untuk memecahkan masalah klasik: **Stale Closure**.
+
+Inti dari `useEffectEvent` adalah kemampuannya untuk menjadi **"Jembatan Gaib"**. Di satu sisi, Anda punya UI di depan yang terus berinteraksi dengan user (*Reactive Data*). Di sisi lain, Anda punya tugas di belakang layar (*Background Task* seperti Timer, koneksi Socket) yang tidak boleh di-restart sembarangan.
+
+Hook ini mengizinkan *background task* untuk mengintip data terbaru dari *user* tanpa memicu alarm *restart* dari React. Mari kita lihat buktinya!
+
+---
+
+## 1. Masalah Utama: Jebakan Masa Lalu (Stale Closure)
+
+Bayangkan Anda membuat fitur **Auto-Save**. Anda ingin agar catatan otomatis disimpan ke *database* setiap 5 detik.
+
+### Niat Awal (Tapi Gagal)
+```jsx
+const [catatan, setCatatan] = useState("");
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log("Menyimpan:", catatan); // ❌ Akan selalu menyimpan "" (kosong)!
+  }, 5000);
+
+  return () => clearInterval(timer);
+}, []); // <--- Dependency kosong
+```
+**Kenapa gagal?** Karena `[]` kosong, timer dibuat hanya sekali di awal. Saat itu, `catatan` masih kosong `""`. Timer tersebut selamanya hanya akan mengingat `catatan` versi awal tersebut. Inilah fenomena yang disebut **Stale Closure**.
+
+### Coba Diperbaiki (Tapi Makin Gagal)
+Karena *linter* React memaksa, Anda menurut dan memasukkan `catatan` ke dalam daftar *dependency*.
+```jsx
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log("Menyimpan:", catatan);
+  }, 5000);
+
+  return () => clearInterval(timer);
+}, [catatan]); // ❌
+```
+**Kenapa makin gagal?** Setiap kali Anda mengetik satu huruf, nilai `catatan` berubah. Hal ini memicu `useEffect` untuk **mematikan timer lama** (`clearInterval`) dan membuat timer baru dari 0 detik. 
+Akibatnya? Selama Anda rajin mengetik (tidak pernah berhenti selama 5 detik penuh), fitur auto-save Anda **tidak akan pernah jalan!**
+
+### Coba Memisahkan useEffect (Tetap Gagal)
+"Ah, bagaimana kalau kita akali dengan dua `useEffect` terpisah? Satu untuk timer agar tidak ter-reset, satu lagi untuk membaca `catatan`?"
+```jsx
+const [memicuSave, setMemicuSave] = useState(0);
+
+// Effect 1: Hanya menjalankan timer (dependency kosong)
+useEffect(() => {
+  const timer = setInterval(() => setMemicuSave(n => n + 1), 5000);
+  return () => clearInterval(timer);
+}, []); // ✅ Timer aman, tidak ter-reset
+
+// Effect 2: Bertugas mengeksekusi save
+useEffect(() => {
+  if (memicuSave > 0) {
+    console.log("Menyimpan:", catatan); 
+  }
+}, [memicuSave, catatan]); // ❌ Gagal lagi!
+```
+**Kenapa masih gagal?** Walaupun timer sekarang aman dan tidak ter-reset, namun karena kita memasukkan `catatan` ke dalam *dependency* Effect 2, maka fungsi `console.log` akan tereksekusi **setiap kali Anda mengetik satu huruf**. Auto-save 5 detiknya menjadi bocor dan malah melakukan save terus menerus setiap kali user mengetik! Memisahkan efek tidak akan menyelesaikan akar masalahnya.
+
+> 👉 **[Coba Simulasi Interaktif Kegagalan Ini & Solusinya Disini](/learn/test-use-effect-event)**
+
+---
+
+## 2. Solusi: useEffectEvent
+
+`useEffectEvent` bertindak seperti "asisten pribadi" yang selalu tahu nilai paling *update*. Dan hebatnya, karena fungsi yang dihasilkan oleh hook ini bersifat "stabil", React **tidak akan memaksa Anda memasukkannya** ke *dependency array*.
+
+```jsx
+import { useEffect, useEffectEvent, useState } from 'react';
+
+function AplikasiCatatan() {
+  const [catatan, setCatatan] = useState("");
+
+  // ✅ 1. Bungkus logika yang butuh 'catatan' terbaru
+  const simpanOtomatis = useEffectEvent(() => {
+    console.log("Menyimpan ke database:", catatan);
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      
+      // ✅ 2. Panggil asisten di dalam timer
+      simpanOtomatis(); 
+
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []); // ✅ 3. Sempurna! Kosongkan array. Timer hanya dibuat 1x!
+}
+```
+
+**Bagaimana hasilnya?**
+- Timer 5 detik berjalan mulus secara independen di *background*, tidak pernah di-reset atau diganggu gugat oleh seberapa cepat Anda mengetik.
+- Saat 5 detik tercapai, timer memanggil `simpanOtomatis()`.
+- `simpanOtomatis` akan menyedot nilai `catatan` yang **paling terbaru** pada detik tersebut.
+
+---
+
+## 3. Kasus Dunia Nyata Lainnya
+
+Selain timer, Anda akan sangat membutuhkan `useEffectEvent` pada kasus integrasi dengan sistem pihak ketiga yang proses *connect/disconnect*-nya berat:
+
+1. **Sistem Analitik (Tracking):**
+   Mencatat *"User mengunjungi URL X"* beserta *"Jumlah Item di Keranjang"*. Anda tentu tidak ingin kunjungan tercatat berulang-ulang seolah-olah *user* bolak-balik me-refresh halaman, hanya karena mereka merubah isi keranjang.
+
+2. **Koneksi Real-time (WebSocket / Socket.io):**
+   Memainkan notifikasi suara saat ada *chat* masuk, TAPI hanya berlaku jika *user* tidak menyalakan mode *Mute* (`isMuted`). Anda tentu tidak mau koneksi chat ke server terputus dan menyambung ulang hanya gara-gara user mengklik tombol Mute.
+
+3. **Integrasi Peta (Google Maps / 3D Canvas):**
+   Anda tidak ingin peta seluruh wilayah di-*destroy* dan dirender ulang dari 0, hanya karena user mengganti status *state* `alatTerpilih` di UI (misalnya: dari alat ukur jarak menjadi alat pemberi tanda).

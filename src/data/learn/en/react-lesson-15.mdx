@@ -1,3 +1,113 @@
-# React Hooks: Context & Store Hooks
+# React Hooks: useEffectEvent (Uninterrupted Background Tasks)
 
-(Lesson content will be added here)
+`useEffectEvent` is one of the latest Hooks in the React 19 ecosystem created to solve a classic problem: **Stale Closure**.
+
+The core of `useEffectEvent` is its ability to act as an **"Invisible Bridge"**. On one side, you have the UI in the front constantly interacting with the user (*Reactive Data*). On the other side, you have behind-the-scenes tasks (*Background Tasks* like Timers, Socket connections) that must not be restarted arbitrarily.
+
+This Hook allows the *background task* to peek at the latest data from the *user* without triggering React's *restart* alarm. Let's see the proof!
+
+---
+
+## 1. The Main Problem: Stale Closure
+
+Imagine you are building an **Auto-Save** feature. You want notes to be automatically saved to the *database* every 5 seconds.
+
+### The Initial Intention (But Fails)
+```jsx
+const [note, setNote] = useState("");
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log("Saving:", note); // ❌ Will ALWAYS save "" (empty)!
+  }, 5000);
+
+  return () => clearInterval(timer);
+}, []); // <--- Empty dependency
+```
+**Why does it fail?** Because `[]` is empty, the timer is only created once at the very beginning. At that exact moment, `note` is still empty `""`. That timer will forever only remember the initial version of `note`. This phenomenon is called a **Stale Closure**.
+
+### Attempting to Fix (But Fails Harder)
+Because the React *linter* forces you, you obey and put `note` into the *dependency* list.
+```jsx
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log("Saving:", note);
+  }, 5000);
+
+  return () => clearInterval(timer);
+}, [note]); // ❌
+```
+**Why does it fail harder?** Every time you type a single letter, the value of `note` changes. This triggers the `useEffect` to **kill the old timer** (`clearInterval`) and create a brand new timer starting from 0 seconds. 
+The result? As long as you keep typing diligently (never stopping for a full 5 seconds), your auto-save feature **will never execute!**
+
+### Attempting to Separate useEffect (Still Fails)
+"Ah, what if we work around it with two separate `useEffect`s? One for the timer so it never resets, and another to read the `note`?"
+```jsx
+const [triggerSave, setTriggerSave] = useState(0);
+
+// Effect 1: Only runs the timer (empty dependency)
+useEffect(() => {
+  const timer = setInterval(() => setTriggerSave(n => n + 1), 5000);
+  return () => clearInterval(timer);
+}, []); // ✅ Timer is safe, won't reset
+
+// Effect 2: Responsible for executing the save
+useEffect(() => {
+  if (triggerSave > 0) {
+    console.log("Saving:", note); 
+  }
+}, [triggerSave, note]); // ❌ Fails again!
+```
+**Why does it still fail?** Even though the timer is now safe and won't reset, because we included `note` in the *dependency* array of Effect 2, the `console.log` function will execute **every single time you type a letter**. The 5-second auto-save becomes "leaky" and ends up saving continuously on every keystroke! Separating the effects does not solve the root of the problem.
+
+> 👉 **[Try the Interactive Simulation of this Failure & Solution Here](/learn/test-use-effect-event)**
+
+---
+
+## 2. The Solution: useEffectEvent
+
+`useEffectEvent` acts like a "personal assistant" who always knows the most *updated* value. And amazingly, because the function produced by this hook is "stable", React **will not force you to include it** in the *dependency array*.
+
+```jsx
+import { useEffect, useEffectEvent, useState } from 'react';
+
+function NoteApp() {
+  const [note, setNote] = useState("");
+
+  // ✅ 1. Wrap the logic that needs the latest 'note'
+  const autoSave = useEffectEvent(() => {
+    console.log("Saving to database:", note);
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      
+      // ✅ 2. Call the assistant inside the timer
+      autoSave(); 
+
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []); // ✅ 3. Perfect! Keep the array empty. The timer is only created 1x!
+}
+```
+
+**What is the result?**
+- The 5-second timer runs smoothly and independently in the *background*, never being reset or interrupted by how fast you type.
+- When 5 seconds are reached, the timer calls `autoSave()`.
+- `autoSave` will extract the **most recent** value of `note` at that exact second.
+
+---
+
+## 3. Other Real-World Cases
+
+Besides timers, you will desperately need `useEffectEvent` when integrating with third-party systems where the *connect/disconnect* process is heavy:
+
+1. **Analytics System (Tracking):**
+   Logging *"User visited URL X"* along with *"Number of Items in Cart"*. You certainly don't want visits to be logged repeatedly as if the *user* keeps refreshing the page, just because they changed the contents of their cart.
+
+2. **Real-time Connections (WebSocket / Socket.io):**
+   Playing a notification sound when a *chat* arrives, BUT only if the *user* hasn't enabled *Mute* mode (`isMuted`). You certainly don't want the chat connection to the server to drop and reconnect just because the user clicked the Mute button.
+
+3. **Map Integration (Google Maps / 3D Canvas):**
+   You don't want the entire world map to be *destroyed* and re-rendered from 0, just because the user changed the `selectedTool` *state* in the UI (for example: switching from a measuring tool to a marking tool).

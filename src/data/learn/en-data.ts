@@ -101,7 +101,7 @@ export const learnEn = {
       },
       {
         id: 'lesson-15',
-        title: 'React Hooks: Context & Store Hooks (useContext & useSyncExternalStore)',
+        title: 'React Hooks: useEffectEvent (Uninterrupted Background Tasks)',
         content: ReactLesson15
       },
       {
