@@ -1,3 +1,85 @@
-# React Hooks: Custom Hooks
+# React Hooks: useTransition (Non-Blocking UI, Like AbortController)
 
-(Lesson content will be added here)
+`useTransition` is the sibling of `useDeferredValue` (which we discussed in Lesson 14). Both were introduced in React 18 for the exact same purpose: **Concurrent Rendering** (preventing screen *freezes* caused by slow UI rendering processes).
+
+Philosophically, `useTransition` is very similar to `AbortController` used during data *fetching*. The difference is:
+- **`AbortController`** operates on the network layer. It cancels an active *download* that is no longer needed because the user navigated away.
+- **`useTransition`** operates on the memory/CPU layer (Rendering). It cancels the process of *drawing a component* that is no longer needed because the user interacted somewhere else.
+
+---
+
+## 1. The Core Problem: Blocked UI (Freeze)
+
+Imagine you have an application with 3 tabs: `Home`, `Contact`, and `Transaction History`.
+The `Transaction History` tab is extremely heavy because it has to render a table with thousands of complex component rows simultaneously.
+
+```jsx
+// ❌ THE OLD WAY (Blocking UI)
+const [tab, setTab] = useState('home');
+
+function changeTab(tabName) {
+  setTab(tabName); // This will freeze the UI if the target component is too heavy!
+}
+```
+
+**The Problem:** 
+If the user clicks the "Transaction History" tab, the application will **freeze / get stuck** instantly for a few seconds. The user won't be able to type anything in a search input, won't be able to cancel the click, and won't be able to change their mind and go back to the "Home" tab. This results in a terrible User Experience (UX)!
+
+---
+
+## 2. The Solution: useTransition
+
+With `useTransition`, we can tell React: *"Hey React, switching to the Transaction History tab is a non-urgent process (low priority). Please do it slowly in the background. If the user types something or clicks another tab midway, just cancel the History rendering process!"*
+
+```jsx
+import { useState, useTransition } from 'react';
+
+function Application() {
+  const [tab, setTab] = useState('home');
+  
+  // ✅ 1. Declare the hook
+  const [isPending, startTransition] = useTransition();
+
+  function changeTab(tabName) {
+    // ✅ 2. Wrap the slow state update inside startTransition
+    startTransition(() => {
+      setTab(tabName);
+    });
+  }
+
+  return (
+    <div>
+      <button onClick={() => changeTab('home')}>Home</button>
+      <button onClick={() => changeTab('history')}>History (Slow)</button>
+      
+      {/* ✅ 3. Show a transition loading UI (background task indicator) */}
+      {isPending && <p>Please wait, preparing the history UI...</p>}
+      
+      {/* Dim the old tab content while the new one is processing */}
+      <div style={{ opacity: isPending ? 0.5 : 1 }}>
+        {tab === 'home' ? <Home /> : <HeavyHistory />}
+      </div>
+    </div>
+  );
+}
+```
+
+### The 3 Superpowers of `useTransition`
+
+1. **Works in the Background (Non-Blocking):** While the rendering process of the `HeavyHistory` tab happens in memory, your search input box will remain completely responsive at 60 FPS if you type into it. The UI won't freeze.
+2. **Cancellable Anytime (Interruptible):** If the `HeavyHistory` tab process takes 2 seconds and hasn't finished, but the user clicks the `Home` tab button again at the first second, React will **instantly discard/cancel** the `HeavyHistory` process into the trash and immediately render the `Home` tab!
+3. **Smooth Indicators (`isPending`):** You can show a smooth loading indicator on top of the old UI (like dimming the opacity), without needing to reset the old *state* to empty.
+
+> 👉 **[Try the Interactive Simulation of UI Freeze vs useTransition Solution Here](/learn/test-use-transition)**
+
+---
+
+## 3. When Should You Use It?
+
+`useTransition` is **NOT MEANT** to be used on every single `setState`. Use it ONLY for:
+- Changing Tabs or Pages (Routing) where the target content is extremely heavy.
+- *Filter/Sort* features that render or remove thousands of data rows on the screen.
+- Redrawing slow chart visualizations (Canvas / Maps / Complex SVGs).
+
+**Exception:**
+Use normal **`useState`** (without transition) for controlling *text inputs*, *checkboxes*, and *hover* effects that always require lightning-fast 0ms responses on the screen.

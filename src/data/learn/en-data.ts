@@ -111,7 +111,7 @@ export const learnEn = {
       },
       {
         id: 'lesson-17',
-        title: 'React Hooks: Custom Hooks & Best Practices',
+        title: 'React Hooks: useTransition (Non-Blocking UI, Like AbortController)',
         content: ReactLesson17
       }
     ]

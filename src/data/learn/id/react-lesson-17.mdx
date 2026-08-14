@@ -1,3 +1,85 @@
-# React Hooks: Custom Hooks
+# React Hooks: useTransition (Non-Blocking UI, Mirip AbortController)
 
-(Konten materi akan ditambahkan di sini)
+`useTransition` adalah saudaranya `useDeferredValue` (yang sudah kita bahas di Lesson 14). Keduanya diciptakan oleh React 18 untuk satu tujuan: **Concurrent Rendering** (menghindari layar *freeze* akibat proses render UI yang lambat).
+
+Secara filosofi, `useTransition` ini mirip sekali dengan `AbortController` pada proses *fetch* data. Bedanya:
+- **`AbortController`** beroperasi di jaringan (Network). Membatalkan proses *download* yang tak lagi diperlukan karena *user* sudah pindah halaman.
+- **`useTransition`** beroperasi di memori (CPU/Rendering). Membatalkan proses *menggambar komponen* yang tak lagi diperlukan karena *user* sudah berinteraksi ke tempat lain.
+
+---
+
+## 1. Masalah Utama: UI Terblokir (Freeze)
+
+Bayangkan Anda memiliki aplikasi dengan 3 tab: `Beranda`, `Kontak`, dan `Riwayat Transaksi`.
+Tab `Riwayat Transaksi` sangat berat karena ia harus me-render tabel dengan ribuan baris komponen secara sekaligus.
+
+```jsx
+// ❌ CARA LAMA (Blokir UI)
+const [tab, setTab] = useState('beranda');
+
+function gantiTab(namaTab) {
+  setTab(namaTab); // Ini akan mem-freeze UI jika komponen targetnya sangat berat!
+}
+```
+
+**Masalahnya:** 
+Jika *user* mengklik tab "Riwayat Transaksi", aplikasi akan **macet / freeze** seketika selama beberapa detik. *User* tidak akan bisa mengetik apapun di kotak input, tidak bisa membatalkan klik, dan tidak bisa merubah pikiran untuk kembali ke tab "Beranda". Ini adalah pengalaman pengguna (UX) yang sangat buruk!
+
+---
+
+## 2. Solusi: useTransition
+
+Dengan `useTransition`, kita bisa memberitahu React: *"Hai React, pindah tab ke Riwayat Transaksi itu proses yang tidak mendesak (prioritas rendah). Tolong kerjakan pelan-pelan di belakang layar (background) ya. Jika user mengetik atau nge-klik tab lain di pertengahan jalan, batalkan saja proses Riwayat ini!"*
+
+```jsx
+import { useState, useTransition } from 'react';
+
+function Aplikasi() {
+  const [tab, setTab] = useState('beranda');
+  
+  // ✅ 1. Deklarasi hook
+  const [isPending, startTransition] = useTransition();
+
+  function gantiTab(namaTab) {
+    // ✅ 2. Bungkus perubahan state yang lambat di dalam startTransition
+    startTransition(() => {
+      setTab(namaTab);
+    });
+  }
+
+  return (
+    <div>
+      <button onClick={() => gantiTab('beranda')}>Beranda</button>
+      <button onClick={() => gantiTab('riwayat')}>Riwayat (Lambat)</button>
+      
+      {/* ✅ 3. Tampilkan UI loading transisi (background task indikator) */}
+      {isPending && <p>Tunggu sebentar, sedang menyiapkan UI riwayat...</p>}
+      
+      {/* Konten Tab dibuat transparan (dim) saat sedang proses */}
+      <div style={{ opacity: isPending ? 0.5 : 1 }}>
+        {tab === 'beranda' ? <Beranda /> : <RiwayatBerat />}
+      </div>
+    </div>
+  );
+}
+```
+
+### 3 Kekuatan Utama `useTransition`
+
+1. **Bekerja di Latar Belakang (Non-Blocking):** Saat proses render tab `RiwayatBerat` terjadi di memori, kotak input pencarian Anda tetap akan berjalan lancar 60 FPS jika diketik. UI tidak akan mati rasa.
+2. **Bisa Dibatalkan Kapan Saja (Interruptible):** Jika proses tab `RiwayatBerat` memakan waktu 2 detik dan belum selesai, tapi *user* keburu mengeklik tombol tab `Beranda` lagi di detik pertama, React akan **langsung membuang/membatalkan** proses `RiwayatBerat` ke tempat sampah dan seketika merender tab `Beranda` secara instan!
+3. **Indikator Halus (`isPending`):** Anda bisa menunjukkan indikator loading yang mulus di atas UI lama (seperti memudarkan warna), tanpa perlu me-reset *state* lama menjadi kosong.
+
+> 👉 **[Coba Simulasi Interaktif Kegagalan UI Freeze vs Solusi useTransition Disini](/learn/test-use-transition)**
+
+---
+
+## 3. Kapan Harus Menggunakannya?
+
+`useTransition` **TIDAK UNTUK** digunakan di setiap `setState`. Gunakan HANYA pada:
+- Pergantian Tab atau Halaman (Routing) yang komponen isinya sangat berat.
+- Fitur *Filter/Sort* yang merender atau menghilangkan ribuan baris data di layar.
+- Menggambar ulang visualisasi grafik yang lambat (Canvas / Map / SVG kompleks).
+
+**Pengecualian:**
+Gunakan **`useState` normal** (tanpa transition) untuk mengendalikan *input text*, *checkbox*, dan efek *hover* yang selalu membutuhkan respon kilat 0 milidetik di layar.
