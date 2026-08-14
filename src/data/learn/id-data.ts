@@ -8,6 +8,13 @@ import ReactLesson7 from './id/react-lesson-7.mdx';
 import ReactLesson8 from './id/react-lesson-8.mdx';
 import ReactLesson9 from './id/react-lesson-9.mdx';
 import ReactLesson10 from './id/react-lesson-10.mdx';
+import ReactLesson11 from './id/react-lesson-11.mdx';
+import ReactLesson12 from './id/react-lesson-12.mdx';
+import ReactLesson13 from './id/react-lesson-13.mdx';
+import ReactLesson14 from './id/react-lesson-14.mdx';
+import ReactLesson15 from './id/react-lesson-15.mdx';
+import ReactLesson16 from './id/react-lesson-16.mdx';
+import ReactLesson17 from './id/react-lesson-17.mdx';
 import GolangBasics1 from './id/golang-basics-1-package.mdx';
 import GolangBasics2 from './id/golang-basics-2-exported.mdx';
 import GolangBasics3 from './id/golang-basics-3-functions.mdx';
@@ -72,6 +79,41 @@ export const learnId = {
         id: 'lesson-10',
         title: 'React 19: Server Actions',
         content: ReactLesson10
+      },
+      {
+        id: 'lesson-11',
+        title: 'React Hooks: useCallback & React.memo',
+        content: ReactLesson11
+      },
+      {
+        id: 'lesson-12',
+        title: 'React Hooks: useEffect & Aturan Dependency',
+        content: ReactLesson12
+      },
+      {
+        id: 'lesson-13',
+        title: 'React Hooks: Perbedaan useEffect & useLayoutEffect',
+        content: ReactLesson13
+      },
+      {
+        id: 'lesson-14',
+        title: 'React Hooks: useDeferredValue ("Debounce" Tanpa Timer)',
+        content: ReactLesson14
+      },
+      {
+        id: 'lesson-15',
+        title: 'React Hooks: Context & Store Hooks (useContext & useSyncExternalStore)',
+        content: ReactLesson15
+      },
+      {
+        id: 'lesson-16',
+        title: 'React Hooks: Utility Hooks (useId & useDebugValue)',
+        content: ReactLesson16
+      },
+      {
+        id: 'lesson-17',
+        title: 'React Hooks: Custom Hooks & Best Practices',
+        content: ReactLesson17
       }
     ]
   },

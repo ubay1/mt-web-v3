@@ -1,0 +1,39 @@
+# React Hooks: Perbedaan useEffect & useLayoutEffect
+
+Di React, `useEffect` dan `useLayoutEffect` adalah dua Hook yang serupa tetapi memiliki perbedaan krusial pada **waktu eksekusinya**. Memahami perbedaan ini penting untuk menghindari *flicker* (layar berkedip) atau masalah performa.
+
+## 1. `useEffect` (Asynchronous / Tidak Memblokir)
+
+- **Waktu Eksekusi:** Berjalan secara asinkron **setelah** React memperbarui DOM dan **setelah** browser selesai me-render (menampilkan) perubahan ke layar pengguna.
+- **Karakteristik:** Tidak memblokir visual dari browser. Pengguna akan melihat pembaruan awal di layar, lalu `useEffect` berjalan di latar belakang.
+- **Kapan Digunakan:** Ini adalah Hook standar. Gunakan untuk 99% kasus efek samping Anda:
+  - *Data fetching* (mengambil data dari API).
+  - Berlangganan event (event listener).
+  - Melakukan log analisis.
+
+## 2. `useLayoutEffect` (Synchronous / Memblokir)
+
+- **Waktu Eksekusi:** Berjalan secara sinkron **setelah** React memperbarui DOM, tetapi **sebelum** browser melakukan *paint* (menampilkan) hasil perubahan ke layar.
+- **Karakteristik:** Memblokir browser dari menggambar layar hingga kodenya selesai dieksekusi. Ini berarti pengguna tidak akan melihat pembaruan DOM awal, melainkan hanya hasil akhirnya.
+- **Kapan Digunakan:** Gunakan **hanya** saat Anda perlu membaca informasi *layout* dari DOM (seperti lebar, tinggi, atau posisi) dan kemudian secara sinkron mengubah state atau DOM berdasarkan informasi tersebut.
+
+## Contoh Kasus Klasik: Mencegah *Flicker* pada Tooltip
+
+Bayangkan Anda membuat komponen Tooltip kustom. Anda perlu mengukur lebarnya untuk memastikannya tidak keluar dari layar.
+
+Jika Anda menggunakan `useEffect`:
+1. Tooltip dirender pada posisi default.
+2. Browser **menampilkannya** (pengguna melihatnya di posisi salah).
+3. `useEffect` berjalan, mengambil ukuran, lalu mengubah posisi Tooltip.
+4. Komponen di-render ulang.
+5. Browser menampilkannya lagi.
+*(Hasil: Tooltip tampak berkedip dari posisi awal ke posisi akhir).*
+
+Jika Anda menggunakan `useLayoutEffect`:
+1. Tooltip dirender pada posisi default di DOM.
+2. `useLayoutEffect` berjalan (browser **ditahan** dari menampilkan layar), mengambil ukuran, dan mengubah posisi Tooltip.
+3. Komponen di-render ulang dengan posisi yang benar.
+4. Browser **baru menampilkan** layar.
+*(Hasil: Animasi mulus, Tooltip langsung muncul di tempat yang benar tanpa berkedip).*
+
+> **Aturan Praktis:** Selalu gunakan `useEffect` sebagai pilihan pertama. Hanya beralih ke `useLayoutEffect` jika Anda mengalami masalah visual, seperti elemen melompat atau berkedip sesaat setelah dimuat. Penggunaan `useLayoutEffect` yang berlebihan dapat menurunkan performa karena menunda waktu tampil aplikasi.

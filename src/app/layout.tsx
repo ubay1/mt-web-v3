@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className="antialiased bg-bg text-ink selection:bg-accent selection:text-black">
         <I18nProvider>
           <SmoothScroll>

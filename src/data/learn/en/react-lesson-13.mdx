@@ -1,0 +1,39 @@
+# React Hooks: Difference between useEffect & useLayoutEffect
+
+In React, `useEffect` and `useLayoutEffect` are two similar Hooks but have a crucial difference in **when they execute**. Understanding this difference is key to avoiding visual flicker or performance issues.
+
+## 1. `useEffect` (Asynchronous / Non-blocking)
+
+- **Execution Timing:** Runs asynchronously **after** React has updated the DOM and **after** the browser has finished painting those changes to the screen.
+- **Characteristics:** Does not block the browser's visual update. The user sees the initial render, and then `useEffect` runs in the background.
+- **When to Use:** This is the default Hook. Use it for 99% of your side effects:
+  - Data fetching from an API.
+  - Setting up event listeners/subscriptions.
+  - Logging analytics.
+
+## 2. `useLayoutEffect` (Synchronous / Blocking)
+
+- **Execution Timing:** Runs synchronously **after** React has updated the DOM, but **before** the browser has a chance to paint the changes to the screen.
+- **Characteristics:** Blocks the browser from painting until the code finishes executing. This means the user won't see the initial DOM update, only the final result.
+- **When to Use:** Use this **only** when you need to read layout information from the DOM (like width, height, or scroll position) and then synchronously mutate state or the DOM based on that information.
+
+## Classic Use Case: Preventing Tooltip Flicker
+
+Imagine building a custom Tooltip component. You need to measure its width to ensure it doesn't render off-screen.
+
+If you use `useEffect`:
+1. The Tooltip renders at a default position.
+2. The browser **paints it** (the user sees it in the wrong place).
+3. `useEffect` runs, measures the width, and updates the state with the new position.
+4. The component re-renders.
+5. The browser paints the new position.
+*(Result: The Tooltip visibly flickers from its initial position to the final position).*
+
+If you use `useLayoutEffect`:
+1. The Tooltip renders at a default position in the DOM.
+2. `useLayoutEffect` runs (the browser is **blocked** from painting), measures the width, and updates the position.
+3. The component re-renders with the correct position.
+4. The browser **finally paints** the screen.
+*(Result: Smooth rendering, the Tooltip appears directly in the correct position without any flicker).*
+
+> **Rule of Thumb:** Always start with `useEffect`. Only switch to `useLayoutEffect` if you notice visual glitches, like elements jumping or flickering right after they load. Overusing `useLayoutEffect` can hurt performance because it delays the time it takes for your application to paint to the screen.

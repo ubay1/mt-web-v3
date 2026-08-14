@@ -1,0 +1,50 @@
+# React Hooks: useDeferredValue ("Debounce" Tanpa Timer)
+
+Di React 18, diperkenalkan konsep *Concurrent Rendering*, yang memungkinkan React untuk memprioritaskan tugas-tugas render sehingga aplikasi tetap responsif meskipun sedang memproses data yang berat. Salah satu hook yang paling berguna dalam kategori ini adalah `useDeferredValue`.
+
+## `useDeferredValue`
+
+Fungsi utama hook ini sekilas mirip dengan teknik *Debounce* atau *Throttle*, tetapi ia **tidak menggunakan batasan waktu/timer**. Hook ini digunakan ketika Anda menerima sebuah nilai (misalnya *search query* dari pengguna) dan ingin **menunda** proses *render* komponen yang berat berdasarkan nilai tersebut, agar tidak menghalangi interaksi pengguna.
+
+**Cara kerjanya:**
+- `useDeferredValue` memantau seberapa sibuk tenaga (CPU) pada browser pengguna.
+- Saat ada input yang berlangsung cepat dan terus-menerus (misal pengguna mengetik teks dengan cepat), React akan mengutamakan *update* pada kotak input dan mengabaikan rendering bagian bawah yang berat.
+- Begitu pengguna berhenti mengetik sejenak (meskipun hanya sepersekian milidetik) dan CPU sedang tidak sibuk, React langsung memproses komponen lambat tersebut di latar belakang secara sembunyi-sembunyi.
+- Jika pengguna kembali mengetik saat render belum selesai, proses render yang lama itu langsung dibuang/dibatalkan, sehingga aplikasi tidak pernah terasa *hang* atau *freeze*.
+
+**Kapan digunakan?**
+Intinya: **Setiap kali ada aksi yang akan memperbarui konten yang sangat berat di layar (memakan banyak tenaga CPU).**
+- Pencarian dan pemfilteran daftar panjang (ribuan baris data).
+- *Slider* yang memanipulasi rentang waktu pada grafik atau visualisasi data 3D.
+- *Live preview* Markdown editor.
+- *Color picker* yang mengubah ratusan warna komponen sekaligus secara *real-time*.
+
+```jsx
+import { useState, useDeferredValue, memo } from 'react';
+
+function SearchApp() {
+  const [text, setText] = useState('');
+  
+  // 1. Buat versi tertunda dari state
+  const deferredText = useDeferredValue(text);
+
+  return (
+    <>
+      {/* 2. Input tetap menggunakan 'text' yang asli agar ketikan sangat mulus (Prioritas Tinggi) */}
+      <input value={text} onChange={e => setText(e.target.value)} />
+
+      {/* 3. Komponen yang berat menggunakan 'deferredText' (Prioritas Rendah) */}
+      <DaftarSangatPanjang search={deferredText} />
+    </>
+  );
+}
+
+// Dibungkus memo() agar tidak ikut re-render jika tidak perlu
+const DaftarSangatPanjang = memo(function Daftar({ search }) {
+  // Logic render yang memakan waktu lama...
+});
+```
+
+> **Perbandingan: useDeferredValue vs Debounce Tradisional** 
+> - **Debounce:** Menunggu timer habis secara *mutlak* (misal 500ms). Jika waktu habis, proses render dijalankan secara sinkron dan jika rendernya berat, layar akan tetap *freeze* saat render berlangsung.
+> - **useDeferredValue:** Tidak memiliki patokan waktu. Ia murni berpatokan pada *beban kerja CPU*. Ia bekerja di sela-sela interaksi, dan proses rendernya bisa di-interupsi (dibatalkan) kapan saja di tengah jalan jika pengguna memberikan input baru.

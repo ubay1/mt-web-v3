@@ -8,6 +8,13 @@ import ReactLesson7 from './en/react-lesson-7.mdx';
 import ReactLesson8 from './en/react-lesson-8.mdx';
 import ReactLesson9 from './en/react-lesson-9.mdx';
 import ReactLesson10 from './en/react-lesson-10.mdx';
+import ReactLesson11 from './en/react-lesson-11.mdx';
+import ReactLesson12 from './en/react-lesson-12.mdx';
+import ReactLesson13 from './en/react-lesson-13.mdx';
+import ReactLesson14 from './en/react-lesson-14.mdx';
+import ReactLesson15 from './en/react-lesson-15.mdx';
+import ReactLesson16 from './en/react-lesson-16.mdx';
+import ReactLesson17 from './en/react-lesson-17.mdx';
 import GolangBasics1 from './en/golang-basics-1-package.mdx';
 import GolangBasics2 from './en/golang-basics-2-exported.mdx';
 import GolangBasics3 from './en/golang-basics-3-functions.mdx';
@@ -71,6 +78,41 @@ export const learnEn = {
         id: 'lesson-10',
         title: 'React 19: Async Data Reading with use() Hook',
         content: ReactLesson10
+      },
+      {
+        id: 'lesson-11',
+        title: 'React Hooks: useCallback & React.memo',
+        content: ReactLesson11
+      },
+      {
+        id: 'lesson-12',
+        title: 'React Hooks: useEffect & Dependency Rules',
+        content: ReactLesson12
+      },
+      {
+        id: 'lesson-13',
+        title: 'React Hooks: Difference between useEffect & useLayoutEffect',
+        content: ReactLesson13
+      },
+      {
+        id: 'lesson-14',
+        title: 'React Hooks: useDeferredValue ("Debounce" Without Timers)',
+        content: ReactLesson14
+      },
+      {
+        id: 'lesson-15',
+        title: 'React Hooks: Context & Store Hooks (useContext & useSyncExternalStore)',
+        content: ReactLesson15
+      },
+      {
+        id: 'lesson-16',
+        title: 'React Hooks: Utility Hooks (useId & useDebugValue)',
+        content: ReactLesson16
+      },
+      {
+        id: 'lesson-17',
+        title: 'React Hooks: Custom Hooks & Best Practices',
+        content: ReactLesson17
       }
     ]
   },

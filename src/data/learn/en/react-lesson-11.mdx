@@ -1,0 +1,109 @@
+# React Hooks: useCallback
+
+(Lesson content will be added here)
+
+Imagine you own a restaurant. Every time there is a new order, you rewrite the entire recipe from scratch before giving it to the chef. This is obviously a waste of time, right?
+
+That is exactly what happens by default in React. Every time a component re-renders, all functions inside that component will be **recreated** (assigned a new memory address).
+
+This is where **`useCallback`** comes in. `useCallback` functions to **remember (cache) a function** so it doesn't get recreated on every render, unless the data it depends on changes.
+
+---
+
+## When Do We Need `useCallback`?
+
+The main problem with functions being recreated every render is when we pass that function as a _prop_ to a child component.
+
+Even if the child component is optimized using `React.memo` to prevent re-renders, it will **still re-render** because it thinks it received a "new" function from its parent.
+
+Let's look at an example.
+
+### Case Example: Constantly Re-rendering Button
+
+Suppose we have a parent component that has a `text` state (for an input) and a `count` state (for a number). We have a `Button` child component wrapped in `React.memo`.
+
+```jsx
+import { useState, useCallback, memo } from "react";
+
+// Child Component (Memoized so it doesn't re-render if props haven't changed)
+const Button = memo(({ onClick, children }) => {
+  console.log(`Render: Button ${children}`);
+  return <button onClick={onClick}>{children}</button>;
+});
+
+export default function App() {
+  const [text, setText] = useState("");
+  const [count, setCount] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  // ❌ WITHOUT useCallback
+  // This function is recreated every time we type in the input!
+  // As a result, <Button> will keep re-rendering.
+  const addWithoutCallback = () => {
+    setCount(count + 1);
+  };
+
+  // ✅ WITH useCallback
+  // This function is 'remembered' by React.
+  // It will only be recreated if the 'count2' variable changes.
+  const addWithCallback = useCallback(() => {
+    setCount2(count2 + 1);
+  }, [count2]); // <--- Dependency array
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h3>Input Text (Type something here)</h3>
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Type something..."
+      />
+
+      <h3>Count: {count}</h3>
+
+      {/* This button will re-render when you type in the input text */}
+      <Button onClick={addWithoutCallback}>Add (Without useCallback)</Button>
+
+      <br />
+      <br />
+
+      {/* This button WILL NOT re-render when you type in the input text */}
+      <Button onClick={addWithCallback}>
+        Add (With useCallback)
+      </Button>
+    </div>
+  );
+}
+```
+
+### Explanation of the Example Above:
+
+1. When you **type in the input box**, the `text` state changes and triggers the `App` component to re-render.
+2. Because of the re-render, the `addWithoutCallback` function is recreated. Since it's a new function, the `Button (Without useCallback)` child component also re-renders (even though it has nothing to do with the text!).
+3. Conversely, the `addWithCallback` function uses `useCallback`. React sees that the value of `count2` hasn't changed while we type text. So, React reuses the old function from its memory.
+4. As a result, `Button (With useCallback)` **avoids unnecessary re-renders**.
+
+---
+
+## Golden Rule: useCallback & React.memo are a "Package Deal"
+
+The most common mistake is developers blindly using `useCallback`, but forgetting to wrap the child component in `React.memo`.
+
+These two things **cannot be separated** when it comes to re-render optimization:
+
+- **`React.memo`** is tasked with protecting the child from re-rendering if its _props_ haven't changed.
+- **`useCallback`** is tasked with ensuring the function _props_ sent to the child remain the same (memory reference doesn't change).
+
+> ❌ If you use `useCallback` but the child is not memoized, it is **useless**. (The child will still automatically re-render when the parent re-renders).  
+> ❌ If the child is memoized but the function doesn't use `useCallback`, it is **also useless**. (The function is always recreated, so the child thinks its props keep changing).
+
+## Conclusion: When SHOULD You Use useCallback?
+
+Writing `useCallback` on all functions actually adds a little extra "workload" to React's memory.
+
+**Use `useCallback` ONLY IF:**
+
+1. It is passed as a _prop_ to a **Child Component** (and ensure the child is wrapped in `React.memo`).
+2. It is used as a _dependency_ (put inside `[...]`) within a **`useEffect`** or other custom hook (we will specifically learn about `useEffect` in the next lesson!).
+
+Outside of these two conditions, writing it will only be in vain!

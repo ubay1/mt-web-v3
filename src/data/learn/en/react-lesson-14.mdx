@@ -1,0 +1,50 @@
+# React Hooks: useDeferredValue ("Debounce" Without Timers)
+
+In React 18, the concept of *Concurrent Rendering* was introduced, allowing React to prioritize rendering tasks so the application remains responsive even when processing heavy data. One of the most useful hooks in this category is `useDeferredValue`.
+
+## `useDeferredValue`
+
+The primary function of this hook may seem similar to the *Debounce* or *Throttle* technique at first glance, but it **does not use a fixed time limit or timer**. This hook is used when you receive a value (e.g., a search query from the user) and want to **defer** the rendering of a heavy component based on that value, preventing it from blocking user interactions.
+
+**How it works:**
+- `useDeferredValue` monitors how busy the user's browser CPU is.
+- When rapid and continuous input occurs (like a user typing text quickly), React will prioritize updating the input box and ignore rendering the heavy lower section.
+- As soon as the user stops typing for a fraction of a millisecond and the CPU is free, React immediately starts processing the slow component in the background stealthily.
+- If the user starts typing again before the background render finishes, the old rendering process is immediately thrown away/aborted, ensuring the application never feels *hung* or *frozen*.
+
+**When to use it:**
+The core idea: **Whenever there is an action that updates very heavy content on the screen (consuming a lot of CPU power).**
+- Searching and filtering long lists (thousands of rows of data).
+- A slider manipulating the time range on a complex chart or 3D data visualization.
+- Live previewing a Markdown editor.
+- A color picker changing the color of hundreds of components in real-time.
+
+```jsx
+import { useState, useDeferredValue, memo } from 'react';
+
+function SearchApp() {
+  const [text, setText] = useState('');
+  
+  // 1. Create a deferred version of the state
+  const deferredText = useDeferredValue(text);
+
+  return (
+    <>
+      {/* 2. The input keeps using the original 'text' so typing is buttery smooth (High Priority) */}
+      <input value={text} onChange={e => setText(e.target.value)} />
+
+      {/* 3. The heavy component uses 'deferredText' (Low Priority) */}
+      <SuperLongList search={deferredText} />
+    </>
+  );
+}
+
+// Wrapped in memo() so it doesn't re-render unnecessarily
+const SuperLongList = memo(function List({ search }) {
+  // Heavy rendering logic...
+});
+```
+
+> **Comparison: useDeferredValue vs Traditional Debounce** 
+> - **Debounce:** Strictly waits for a timer (e.g., 500ms) to expire. Once the time is up, the rendering process executes synchronously, and if the render is heavy, the screen will still *freeze* while it renders.
+> - **useDeferredValue:** Has no time constraints. It is purely based on the *CPU workload*. It works in the gaps between interactions, and its rendering process can be interrupted (aborted) midway at any time if the user provides new input.

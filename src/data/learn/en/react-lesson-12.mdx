@@ -1,0 +1,124 @@
+# React Hooks: useEffect & Dependency Rules
+
+`useEffect` is one of the most frequently used Hooks, but also the one that most often frustrates developers (especially when dealing with _Infinite Loops_ and _ESLint Warnings_).
+
+Simply put, `useEffect` allows you to run "side effect" code (such as fetching APIs, setting timers, or mutating the DOM) **after** the component has finished rendering.
+
+---
+
+## 3 Dependency Array Scenarios
+
+When does a `useEffect` run? That is entirely controlled by the **Dependency Array** (the square brackets `[...]` at the end of `useEffect`). There are 3 ways to write it:
+
+### 1. No Array At All (Most Dangerous 💀)
+
+```jsx
+useEffect(() => {
+  console.log("I run constantly!");
+}); // <--- No comma and square brackets
+```
+
+**The Effect:** `useEffect` will execute **EVERY TIME** the component re-renders (no matter what state changes). If you put an API fetch here and call `setState`, it will 100% cause an _Infinite Loop_ that makes the browser _hang_.
+
+### 2. Empty Array `[]` (mounted)
+
+```jsx
+useEffect(() => {
+  console.log("I run exactly 1x when the component first appears");
+}, []); // <--- Empty array
+```
+
+**The Effect:** `useEffect` will only run **ONCE** when the component is first loaded (_mounted_) to the screen. Whatever state changes afterwards, this `useEffect` will not run again. This is often used for initial data fetching.
+
+### 3. Array with Variables `[variable A]` (Required if using external data)
+
+```jsx
+useEffect(() => {
+  fetchData(userId);
+}, [userId]); // <--- Has contents
+```
+
+**The Effect:** `useEffect` will run when first loaded, **AND** every time the value of `userId` changes.
+
+---
+
+## Golden Rule (Linting Rule): Must Fill Dependencies
+
+Problems arise when inside `useEffect`, you use variables or functions from outside the component, but you **forget (or intentionally omit)** adding them into the array.
+
+For example:
+
+```jsx
+useEffect(() => {
+  fetchData(userId);
+}, []); // ❌ ESLint will be very angry (Warning exhaustive-deps)
+```
+
+React (via ESLint) will yell: _"Hey! You used `userId` and `fetchData` inside, why aren't they in the array?!"_
+
+**Why is it forbidden?**
+Because if the value of `userId` changes, this `useEffect` **won't know** (since the array is empty, it thinks it doesn't need to run again). As a result, your UI will display stale data (still using the old `userId`).
+
+Therefore, the standard React rule (Hooks Rules) is: **Anything you call inside `useEffect` (both variables and functions) MUST be included in the `[...]`.**
+
+---
+
+## Solution: 3 Ways to Handle "Fetch 1x On Load" Without Breaking the Rules
+
+Often, our intention is to leave the dependency `[]` empty so the _fetch_ only runs 1x on load. That is **very correct**. The problem is merely the _way it is written_ which is not yet "approved" by React's rules.
+
+Choose one of these 3 legal ways:
+
+### Way 1: Move the function INSIDE `useEffect` (Most recommended!)
+
+If the `fetchData` function is **only used** when the page loads, just move the function creation _inside_ the `useEffect`.
+
+```jsx
+useEffect(() => {
+  // This function is NO LONGER "from the outside", but born inside useEffect
+  const fetchData = () => {
+    fetch("https://jsonplaceholder.typicode.com/todos/1")
+      .then((res) => res.json())
+      .then((data) => setTodo(data));
+  };
+
+  fetchData(); // Call the function
+}, []); // ✅ Linter is 100% quiet. Your intent is achieved (runs 1x on load).
+```
+
+### Way 2: Move the function entirely OUTSIDE the component
+
+If the function purely fetches static API data and doesn't read state from within the component, place the function in the global area (outside the component function).
+
+```jsx
+// Function outside the component, will never be affected by the re-render process
+const fetchData = () => {
+  return fetch("https://jsonplaceholder.typicode.com/todos/1").then((res) =>
+    res.json(),
+  );
+};
+
+export default function App() {
+  const [todo, setTodo] = useState(null);
+
+  useEffect(() => {
+    fetchData().then((data) => setTodo(data));
+  }, []); // ✅ Linter is quiet, because fetchData is not part of the component.
+}
+```
+
+### Way 3: Wrap the function using `useCallback`
+
+Use this **IF** the function must be created inside the component (for example, because the function needs to read `state` or will be passed to a child component as `props`).
+
+```jsx
+const fetchData = useCallback(() => {
+  /* fetch and setState... */
+}, []);
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // ✅ Linter is quiet because you obey the rules.
+```
+
+With `useCallback`, the `fetchData` function is permanently cached. So even though it's placed inside `[fetchData]`, the effect is **exactly the same** as an empty array `[]` (only runs 1x), because the function reference never changes!

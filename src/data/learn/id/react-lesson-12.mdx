@@ -1,0 +1,124 @@
+# React Hooks: useEffect & Aturan Dependency
+
+`useEffect` adalah salah satu Hook yang paling sering digunakan, tapi juga yang paling sering membuat developer frustrasi (terutama berhadapan dengan _Infinite Loop_ dan _ESLint Warnings_).
+
+Secara sederhana, `useEffect` memungkinkan kamu menjalankan kode "efek samping" (seperti memanggil API, mengatur timer, atau mengubah DOM) **setelah** komponen selesai di-render.
+
+---
+
+## 3 Skenario Dependency Array
+
+Kapan sebuah `useEffect` dijalankan? Itu semua diatur oleh **Dependency Array** (kotak kurung siku `[...]` di akhir `useEffect`). Ada 3 skenario penulisan:
+
+### 1. Tanpa Array Sama Sekali (Paling Bahaya 💀)
+
+```jsx
+useEffect(() => {
+  console.log("Aku jalan terus!");
+}); // <--- Tidak ada koma dan kurung siku
+```
+
+**Efeknya:** `useEffect` akan dieksekusi **SETIAP KALI** komponen melakukan re-render (apapun state yang berubah). Kalau kamu menaruh fetch API di sini dan melakukan `setState`, 100% akan terjadi _Infinite Loop_ yang membuat browser _hang_.
+
+### 2. Array Kosong `[]` (mounted)
+
+```jsx
+useEffect(() => {
+  console.log("Aku jalan 1x waktu komponen baru muncul");
+}, []); // <--- Array kosong
+```
+
+**Efeknya:** `useEffect` hanya akan jalan **SATU KALI SAJA** saat komponen pertama kali dimuat (_mount_) ke layar. Apapun state yang berubah setelahnya, `useEffect` ini tidak akan jalan lagi. Sering dipakai untuk mengambil data awal (initial fetch).
+
+### 3. Array Berisi Variabel `[variabel A]` (Wajib jika pakai data luar)
+
+```jsx
+useEffect(() => {
+  fetchData(userId);
+}, [userId]); // <--- Ada isinya
+```
+
+**Efeknya:** `useEffect` akan jalan saat pertama kali dimuat, **DAN** setiap kali nilai `userId` berubah.
+
+---
+
+## Aturan Emas (Linting Rule): Wajib Mengisi Dependency
+
+Masalah muncul kalau di dalam `useEffect`, kamu memakai variabel atau fungsi dari luar komponen, tapi kamu **lupa (atau sengaja tidak)** memasukkannya ke dalam array.
+
+Misalnya:
+
+```jsx
+useEffect(() => {
+  fetchData(userId);
+}, []); // ❌ ESLint akan marah besar (Warning exhaustive-deps)
+```
+
+React (melalui ESLint) akan teriak: _"Hei! Kamu pakai `userId` dan `fetchData` di dalam, tapi kenapa nggak dimasukkan ke array?!"_
+
+**Kenapa dilarang?**
+Karena kalau nilai `userId` berubah, `useEffect` ini **tidak akan tahu** (karena array-nya kosong, dia merasa tidak perlu jalan lagi). Akibatnya UI kamu akan menampikan data yang basi (masih pakai `userId` yang lama).
+
+Oleh karena itu, aturan baku React (Hooks Rules) adalah: **Apapun yang kamu panggil di dalam `useEffect` (baik variabel maupun fungsi), WAJIB diikutkan ke dalam `[...]`.**
+
+---
+
+## Solusi: 3 Cara Menangani "Fetch 1x Saat Load" Tanpa Melanggar Aturan
+
+Seringkali, niat kita adalah mengosongkan dependency `[]` agar _fetch_ hanya jalan 1x saat load. Itu sudah **sangat benar**. Yang jadi masalah hanyalah _cara penulisannya_ yang belum "direstui" oleh aturan React.
+
+Pilih salah satu dari 3 cara legal ini:
+
+### Cara 1: Pindahkan fungsi ke DALAM `useEffect` (Paling disarankan!)
+
+Kalau fungsi `fetchData` itu **hanya dipakai** saat load halaman, pindahkan saja pembuatan fungsinya ke _dalam_ `useEffect`.
+
+```jsx
+useEffect(() => {
+  // Fungsi ini sekarang BUKAN "dari luar", tapi lahir di dalam useEffect
+  const fetchData = () => {
+    fetch("https://jsonplaceholder.typicode.com/todos/1")
+      .then((res) => res.json())
+      .then((data) => setTodo(data));
+  };
+
+  fetchData(); // Panggil fungsinya
+}, []); // ✅ Linter 100% diam. Niatmu tercapai (jalan 1x saat load).
+```
+
+### Cara 2: Pindahkan fungsi ke LUAR komponen sama sekali
+
+Kalau fungsinya murni hanya mengambil data API statis dan tidak membaca state dari dalam komponen, taruh fungsinya di area global (di luar fungsi komponen).
+
+```jsx
+// Fungsi di luar komponen, tidak akan pernah terpengaruh proses re-render
+const fetchData = () => {
+  return fetch("https://jsonplaceholder.typicode.com/todos/1").then((res) =>
+    res.json(),
+  );
+};
+
+export default function App() {
+  const [todo, setTodo] = useState(null);
+
+  useEffect(() => {
+    fetchData().then((data) => setTodo(data));
+  }, []); // ✅ Linter diam, karena fetchData bukan bagian dari komponen.
+}
+```
+
+### Cara 3: Bungkus fungsi menggunakan `useCallback`
+
+Digunakan **JIKA** fungsinya memang harus dibuat di dalam komponen (misalnya karena fungsi tersebut perlu membaca `state` atau akan dikirim ke komponen anak sebagai `props`).
+
+```jsx
+const fetchData = useCallback(() => {
+  /* fetch dan setState... */
+}, []);
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // ✅ Linter diam karena kamu patuh aturan.
+```
+
+Dengan `useCallback`, fungsi `fetchData` di-cache permanen. Jadi meskipun dimasukkan ke dalam `[fetchData]`, efeknya **persis sama** seperti array kosong `[]` (hanya jalan 1x), karena referensi fungsinya tidak pernah berubah!

@@ -1,0 +1,109 @@
+# React Hooks: useCallback
+
+(Konten materi akan ditambahkan di sini)
+
+Bayangkan kamu punya restoran. Setiap kali ada pesanan baru, kamu menulis ulang seluruh resep masakan dari awal sebelum diberikan ke koki. Tentu ini sangat membuang waktu, bukan?
+
+Itulah yang terjadi secara default di React. Setiap kali komponen melakukan render ulang (re-render), semua fungsi yang ada di dalam komponen tersebut akan **dibuat ulang** (mendapat alamat memori yang baru).
+
+Di sinilah **`useCallback`** masuk. `useCallback` berfungsi untuk **mengingat (mencache) sebuah fungsi** agar tidak dibuat ulang pada setiap render, kecuali jika data yang dibutuhkan fungsi tersebut berubah.
+
+---
+
+## Kapan Kita Membutuhkan `useCallback`?
+
+Masalah utama dari fungsi yang dibuat ulang setiap render adalah ketika kita memberikan fungsi tersebut sebagai _prop_ (props) ke komponen anak.
+
+Meskipun komponen anak sudah dioptimasi menggunakan `React.memo` agar tidak re-render, komponen anak tersebut akan **tetap re-render** karena ia menganggap mendapat fungsi yang "baru" dari induknya.
+
+Mari kita lihat contohnya.
+
+### Contoh Kasus: Tombol yang Re-render Terus
+
+Misalkan kita punya komponen induk yang memiliki state `text` (untuk input) dan state `count` (untuk angka). Kita memiliki komponen anak `Tombol` yang dibungkus `React.memo`.
+
+```jsx
+import { useState, useCallback, memo } from "react";
+
+// Komponen Anak (Sudah di-memo agar tidak re-render kalau props-nya tidak berubah)
+const Tombol = memo(({ onClick, children }) => {
+  console.log(`Render: Tombol ${children}`);
+  return <button onClick={onClick}>{children}</button>;
+});
+
+export default function App() {
+  const [text, setText] = useState("");
+  const [count, setCount] = useState(0);
+  const [count2, setCount2] = useState(0);
+
+  // ❌ TANPA useCallback
+  // Fungsi ini dibuat ulang setiap kali kita mengetik di input!
+  // Akibatnya, <Tombol> akan terus re-render.
+  const tambahTanpaCallback = () => {
+    setCount(count + 1);
+  };
+
+  // ✅ DENGAN useCallback
+  // Fungsi ini 'diingat' oleh React.
+  // Hanya akan dibuat ulang jika variabel 'count2' berubah.
+  const tambahDenganCallback = useCallback(() => {
+    setCount2(count2 + 1);
+  }, [count2]); // <--- Dependency array
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h3>Input Text (Ketik sesuatu di sini)</h3>
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Ketik sesuatu..."
+      />
+
+      <h3>Count: {count}</h3>
+
+      {/* Tombol ini akan ikut re-render saat kamu mengetik di input text */}
+      <Tombol onClick={tambahTanpaCallback}>Tambah (Tanpa useCallback)</Tombol>
+
+      <br />
+      <br />
+
+      {/* Tombol ini TIDAK akan re-render saat kamu mengetik di input text */}
+      <Tombol onClick={tambahDenganCallback}>
+        Tambah (Dengan useCallback)
+      </Tombol>
+    </div>
+  );
+}
+```
+
+### Penjelasan Contoh di Atas:
+
+1. Saat kamu **mengetik di kotak input**, state `text` berubah dan memicu komponen `App` untuk re-render.
+2. Karena re-render, fungsi `tambahTanpaCallback` dibuat ulang. Karena ini fungsi baru, komponen anak `Tombol (Tanpa useCallback)` ikut re-render (padahal tidak ada hubungannya dengan teks!).
+3. Sebaliknya, fungsi `tambahDenganCallback` menggunakan `useCallback`. React melihat bahwa isi `count2` belum berubah saat kita mengetik teks. Jadi, React menggunakan kembali fungsi lama dari memorinya.
+4. Hasilnya, `Tombol (Dengan useCallback)` **terhindar dari re-render yang tidak perlu**.
+
+---
+
+## Aturan Emas: useCallback & React.memo itu "Paket Sepaket"
+
+Kesalahan yang paling sering terjadi adalah developer menggunakan `useCallback` secara membabi-buta, tapi lupa membungkus komponen anaknya dengan `React.memo`.
+
+Kedua hal ini **tidak bisa dipisahkan** untuk urusan optimasi re-render:
+
+- **`React.memo`** bertugas melindungi anak agar tidak re-render kalau _props_-nya tidak berubah.
+- **`useCallback`** bertugas menjaga agar _props_ fungsi yang dikirim ke anak tetap sama (tidak berubah referensi memorinya).
+
+> ❌ Kalau kamu pakai `useCallback` tapi anaknya tidak di-`memo`, maka **sia-sia**. (Anaknya tetap re-render otomatis saat parent re-render).  
+> ❌ Kalau anaknya di-`memo` tapi fungsinya tidak pakai `useCallback`, maka **sia-sia juga**. (Fungsi selalu dibuat baru, jadi anak menganggap props-nya berubah terus).
+
+## Kesimpulan: Kapan Sebaiknya MENGGUNAKAN useCallback?
+
+Menulis `useCallback` di semua fungsi justru menambahkan sedikit "beban kerja" ekstra pada memori React.
+
+**Gunakan `useCallback` HANYA JIKA:**
+
+1. Dikirim sebagai _props_ ke **Child Component** (dan pastikan child-nya dibungkus `React.memo`).
+2. Dijadikan _dependency_ (dimasukkan ke `[...]`) di dalam **`useEffect`** atau custom hook lainnya (kita akan pelajari khusus tentang `useEffect` di materi selanjutnya!).
+
+Selain dua kondisi di atas, menuliskannya hanya akan sia-sia!
