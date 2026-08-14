@@ -106,7 +106,7 @@ export const learnEn = {
       },
       {
         id: 'lesson-16',
-        title: 'React Hooks: Utility Hooks (useId & useDebugValue)',
+        title: 'React Hooks: useMemo (Caching Expensive Calculations)',
         content: ReactLesson16
       },
       {

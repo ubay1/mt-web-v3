@@ -1,3 +1,102 @@
-# React Hooks: Utility Hooks
+# React Hooks: useMemo (Caching Expensive Calculations)
 
-(Lesson content will be added here)
+In React, every time a component re-renders (due to state or prop changes), **all the code inside that component will be re-executed from top to bottom**.
+
+If you have a complex mathematical calculation or a process filtering thousands of array items, re-executing that process every single time will make your application slow (laggy). This is where `useMemo` becomes a hero.
+
+---
+
+## 1. What is useMemo?
+
+`useMemo` is a hook to **cache the result of a calculation** so it doesn't need to be recomputed on the next render, provided that the data needed for the calculation hasn't changed.
+
+- `useCallback` remembers **a function definition**.
+- `useMemo` remembers **the result/return value of a function**.
+
+### The Scenario Without useMemo (Causes Lag!)
+```jsx
+function SearchProduct({ productList, keyword, darkTheme }) {
+  // ❌ This heavy function will run EVERY TIME the component re-renders
+  const searchResults = verySlowProductFilter(productList, keyword);
+
+  return (
+    <div className={darkTheme ? 'bg-black' : 'bg-white'}>
+      <p>Found {searchResults.length} products</p>
+    </div>
+  );
+}
+```
+**The Problem:** Imagine the `verySlowProductFilter` function takes a full 1 second to finish. If the user simply clicks the "Toggle Dark Theme" button (changing `darkTheme`), the component re-renders. The heavy function will be triggered again! As a result, merely toggling the theme takes a 1-second freeze.
+
+### The Solution with useMemo
+```jsx
+import { useMemo } from 'react';
+
+function SearchProduct({ productList, keyword, darkTheme }) {
+  // ✅ The calculation result is locked (cached)
+  const searchResults = useMemo(() => {
+    return verySlowProductFilter(productList, keyword);
+  }, [productList, keyword]); // Only recalculate if these 2 things change!
+
+  return (
+    <div className={darkTheme ? 'bg-black' : 'bg-white'}>
+      <p>Found {searchResults.length} products</p>
+    </div>
+  );
+}
+```
+Now, when the "Toggle Dark Theme" button is clicked, React sees that `productList` and `keyword` haven't changed. Thus, React will skip the slow calculation process and immediately use the old computed result already saved in memory. The UI will toggle themes instantly!
+
+> 👉 **[Try the Interactive Simulation of this Failure & Solution Here](/learn/test-use-memo)**
+
+---
+
+## 2. Another Use Case: Maintaining Referential Equality
+
+Besides heavy computations, `useMemo` is very frequently used to **prevent new Arrays or Objects from being created** on every render.
+
+In JavaScript, `{}` is not equal to `{}` even if their contents are identical. New Arrays and Objects are always considered "different" by React, which can trigger unnecessary re-renders in child components or cause `useEffect` to run continuously out of control.
+
+```jsx
+function MainComponent({ id }) {
+  // ❌ This object will be considered "new" every time MainComponent re-renders
+  // const config = { type: "admin", id: id };
+
+  // ✅ This object will always remain the exact same reference as long as id doesn't change
+  const config = useMemo(() => {
+    return { type: "admin", id: id };
+  }, [id]);
+
+  useEffect(() => {
+    ConnectToServer(config);
+  }, [config]); // Safe, won't constantly trigger a server reconnection
+}
+```
+
+---
+
+## 3. Common Misconception: Fetching vs Processing Data
+
+Many people assume that when React re-renders, the data fetching process (`fetch` API) will automatically repeat. This is a **common misunderstanding**.
+
+If you place the process of `fetching` millions of data rows inside a `useEffect(..., [])`, the downloading process ONLY happens once at the very beginning. When the component re-renders (for example, due to a click on a Dark Mode button), that data remains safely preserved inside the *state*. You **do not need** to use `useMemo` for data fetching purposes.
+
+However, if you **process (compute)** those millions of data rows directly inside the component body (outside of `useEffect`), that is where the disaster strikes:
+```jsx
+// ❌ filter and sort will be re-executed from scratch when Dark Mode is clicked!
+const activeData = fetchedData.filter(item => item.status === "active");
+const sortedData = activeData.sort((a, b) => a.price - b.price);
+```
+**In conclusion:** Use `useEffect` to avoid repeating the *download* process (Network bound), and use `useMemo` to avoid repeating data computation (CPU/RAM bound).
+
+---
+
+## 4. When NOT to use useMemo?
+
+Do not compulsively wrap every variable in `useMemo`. `useMemo` itself requires a bit of memory and extra CPU processing to check for dependency changes.
+
+- **DO NOT** use it for simple mathematical calculations (e.g., `a + b`).
+- **DO NOT** use it for short array/string manipulations (e.g., mapping a navigation menu with only 5 items).
+- React is fundamentally very fast. Letting React recalculate small data is much faster than forcing it to perform memory *caching* with `useMemo`.
+
+> **Golden Rule:** Write your code normally (without useMemo) first. If the application starts feeling "laggy" when you interact with the UI, only then add `useMemo` exactly at that heavy calculation bottleneck!
