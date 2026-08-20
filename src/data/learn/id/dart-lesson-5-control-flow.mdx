@@ -1,0 +1,274 @@
+# Alur Kontrol & Perulangan (Control Flow & Loops)
+
+Struktur kontrol alur di Dart mencakup percabangan kondisi (*branching*), perulangan (*looping*), hingga kontrol alur bersarang menggunakan *Loop Labels*.
+
+---
+
+## 1. Percabangan Kondisi (Branching)
+
+### A. `if`, `else if`, `else`
+
+Struktur standar untuk mengeksekusi blok kode berdasarkan kondisi boolean:
+
+```dart
+void main() {
+  int nilai = 85;
+
+  if (nilai >= 90) {
+    print('Grade: A');
+  } else if (nilai >= 80) {
+    print('Grade: B');
+  } else if (nilai >= 70) {
+    print('Grade: C');
+  } else {
+    print('Grade: D');
+  }
+}
+```
+
+### B. Ternary Operator (`kondisi ? jika_benar : jika_salah`)
+
+Ekspresi ringkas satu baris untuk memilih nilai berdasarkan kondisi:
+
+```dart
+void main() {
+  int usia = 20;
+  String status = usia >= 18 ? 'Dewasa' : 'Di bawah umur';
+  print(status); // Output: Dewasa
+}
+```
+
+### C. `switch-case` Statement
+
+Digunakan saat kamu ingin mencocokkan satu variabel dengan banyak kemungkinan nilai (*multiple discrete values*):
+
+```dart
+void main() {
+  String role = 'editor';
+
+  switch (role) {
+    case 'admin':
+      print('Akses Penuh: Kelola seluruh sistem.');
+      break;
+    case 'editor':
+    case 'author': // Mengelompokkan beberapa case sekaligus
+      print('Akses Terbatas: Tulis dan edit artikel.');
+      break;
+    case 'viewer':
+      print('Akses Lihat: Hanya dapat membaca konten.');
+      break;
+    default:
+      print('Role tidak dikenal. Akses ditolak.');
+  }
+}
+```
+
+> [!NOTE]
+> **💡 Fitur Dart 3:** Pada Dart 3+, jika sebuah `case` memiliki blok kode isi, kamu tidak lagi wajib menulis `break` di akhir karena Dart secara otomatis mencegah *accidental fall-through*.
+
+### D. `switch` Expression (Dart 3+ Modern)
+
+Sejak Dart 3, `switch` bisa digunakan sebagai **ekspresi yang langsung mengembalikan nilai** ke variabel menggunakan tanda panah (`=>`) dan `_` (*underscore*) sebagai `default`:
+
+```dart
+void main() {
+  String statusOrder = 'shipping';
+
+  // Switch langsung menghasilkan nilai String ke variabel pesanStatus:
+  final pesanStatus = switch (statusOrder) {
+    'pending' => '⏳ Menunggu pembayaran dari pembeli',
+    'paid' => '💳 Pembayaran diterima, pesanan diproses',
+    'shipping' => '🚚 Paket sedang dalam perjalanan kurir',
+    'delivered' => '📦 Paket telah sampai di tujuan',
+    _ => '❓ Status pesanan tidak valid' // _ berfungsi sebagai default/fallback
+  };
+
+  print(pesanStatus); // Output: 🚚 Paket sedang dalam perjalanan kurir
+}
+```
+
+---
+
+## 2. Perulangan (Looping)
+
+Dart mendukung berbagai macam struktur perulangan untuk berbagai kebutuhan:
+
+### A. Standar `for` Loop
+
+Digunakan ketika kita sudah mengetahui pasti berapa kali perulangan akan dilakukan atau saat kita membutuhkan indeks urutan:
+
+```dart
+void main() {
+  // 1. Counter sederhana
+  for (int i = 0; i < 3; i++) {
+    print('Iterasi ke-$i');
+  }
+
+  // 2. Mengiterasi List dengan index
+  List<String> buah = ['Apel', 'Mangga', 'Jeruk'];
+  for (int i = 0; i < buah.length; i++) {
+    print('Index $i: ${buah[i]}');
+  }
+}
+```
+
+### B. `for-in` Loop (List, Set, & Map)
+
+Cara paling bersih dan idiomatis untuk membaca seluruh elemen koleksi tanpa perlu mengelola index manual:
+
+```dart
+void main() {
+  // 1. Pada List
+  List<String> buah = ['Apel', 'Mangga', 'Jeruk'];
+  for (String item in buah) {
+    print('Buah: $item');
+  }
+
+  // 2. Pada Map (menggunakan .entries)
+  Map<String, int> hargaBuah = {
+    'Apel': 5000,
+    'Mangga': 7000,
+    'Jeruk': 3000,
+  };
+
+  for (var entry in hargaBuah.entries) {
+    print('${entry.key} harganya Rp ${entry.value}');
+  }
+}
+```
+
+### C. `while` dan `do-while` Loop
+
+Perbedaan utama keduanya terletak pada **kapan kondisi diperiksa**:
+
+* **`while`**: Memeriksa kondisi di awal sebelum kode dijalankan. Jika dari awal kondisi bernilai `false`, blok kode **tidak akan pernah dieksekusi**.
+* **`do-while`**: Menjalankan blok kode terlebih dahulu, baru memeriksa kondisi di akhir. Blok kode **dijamin berjalan minimal 1 kali**.
+
+```dart
+void main() {
+  // Contoh while: kondisi salah dari awal (0 kali dieksekusi)
+  int i = 10;
+  while (i < 5) {
+    print('while dijalankan'); // ❌ Tidak pernah dicetak
+    i++;
+  }
+
+  // Contoh do-while: kondisi salah dari awal (tetap dieksekusi 1 kali)
+  int j = 10;
+  do {
+    print('do-while tetap jalan minimal 1 kali (nilai j: $j)'); // ✅ Dicetak 1 kali
+    j++;
+  } while (j < 5);
+}
+```
+
+### D. `forEach` Method (List & Map)
+
+Cara fungsional modern menggunakan fungsi lambda (*arrow function*):
+
+```dart
+void main() {
+  // 1. forEach pada List
+  List<String> tags = ['Flutter', 'Mobile', 'UI'];
+  tags.forEach((tag) => print('#$tag'));
+
+  // 2. forEach pada Map (menerima key dan value)
+  Map<String, int> inventaris = {
+    'Laptop': 10,
+    'Monitor': 15,
+    'Keyboard': 25,
+  };
+  inventaris.forEach((produk, stok) {
+    print('Stok $produk: $stok unit');
+  });
+}
+```
+
+---
+
+## 3. `break` dan `continue`
+
+* **`break`**: Menghentikan perulangan saat itu juga dan langsung keluar dari loop.
+* **`continue`**: Melewati sisa baris pada putaran saat ini dan langsung melompat ke putaran berikutnya.
+
+```dart
+void main() {
+  for (int i = 1; i <= 10; i++) {
+    if (i == 5) continue; // lewati angka 5
+    if (i == 8) break;    // berhenti total di angka 8
+    print(i); // Output: 1, 2, 3, 4, 6, 7
+  }
+}
+```
+
+---
+
+## 4. Loop Labels (Label pada Perulangan Bersarang)
+
+Saat kamu memiliki perulangan di dalam perulangan (**nested loop**), perintah `break` atau `continue` biasa **hanya akan mengontrol loop terdalam**:
+
+```dart
+// Tanpa label: break hanya keluar dari loop 'j' (loop 'i' tetap lanjut)
+for (int i = 1; i <= 3; i++) {
+  for (int j = 1; j <= 3; j++) {
+    if (i == 2 && j == 2) {
+      break; // Hanya menghentikan loop 'j' saat ini
+    }
+    print('i: $i, j: $j');
+  }
+}
+```
+
+### 🏷️ Menggunakan Label untuk Mengontrol Loop Luar
+
+Kamu bisa memberi **nama/label** pada perulangan luar dengan menuliskan nama diikuti titik dua (`:`) di depan `for` atau `while` (misalnya `luar:` atau `outerLoop:`).
+
+#### A. Menghentikan Loop Luar dari Dalam (`break label`)
+
+```dart
+void main() {
+  luar: for (int i = 1; i <= 3; i++) {       // <-- Label "luar"
+    dalam: for (int j = 1; j <= 3; j++) {    // <-- Label "dalam"
+      if (i == 2 && j == 2) {
+        print('Kondisi stop tercapai di i:$i, j:$j -> Hentikan seluruh loop luar!');
+        break luar; // Menghentikan loop "luar" sekaligus!
+      }
+      print('i: $i, j: $j');
+    }
+  }
+}
+
+/* Output:
+i: 1, j: 1
+i: 1, j: 2
+i: 1, j: 3
+i: 2, j: 1
+Kondisi stop tercapai di i:2, j:2 -> Hentikan seluruh loop luar!
+*/
+```
+
+#### B. Melompati Iterasi Loop Luar (`continue label`)
+
+```dart
+void main() {
+  outerLoop: for (int i = 1; i <= 3; i++) {
+    innerLoop: for (int j = 1; j <= 3; j++) {
+      if (j == 2) {
+        // Langsung lompat ke iterasi 'i' berikutnya di outerLoop (melewati sisa innerLoop)
+        continue outerLoop;
+      }
+      print('i: $i, j: $j');
+    }
+  }
+}
+
+/* Output:
+i: 1, j: 1
+i: 2, j: 1
+i: 3, j: 1
+*/
+```
+
+> [!TIP]
+> **Kapan Harus Pakai Label?**
+> Gunakan label saat melakukan pencarian koordinat 2D (matrix/grid), pencarian data di dalam nested collection, atau saat menemukan error fatal di proses bersarang yang mengharuskan seluruh iterasi langsung berhenti.

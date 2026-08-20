@@ -1,0 +1,176 @@
+# Fungsi & Pemrograman Fungsional (Functions & Closures)
+
+Di Dart, fungsi adalah **first-class citizens**, artinya fungsi dapat disimpan dalam variabel, dioper sebagai argumen ke fungsi lain, atau dikembalikan sebagai *return value*.
+
+---
+
+## 1. Tipe-Tipe Parameter Fungsi
+
+Dart menyediakan 3 gaya deklarasi parameter yang sangat fleksibel:
+
+### A. Required Positional Parameters (Wajib Sesuai Urutan)
+
+Parameter wajib diisi sesuai dengan urutan posisinya saat fungsi dipanggil:
+
+```dart
+void perkenalan(String name, String job) {
+  print('Nama saya $name, pekerjaan saya $job');
+}
+
+void main() {
+  perkenalan('Ubay', 'Frontend Engineer'); // ✅ Diisi sesuai urutan
+}
+```
+
+### B. Optional Positional Parameters (`[...]`)
+
+Dibungkus menggunakan tanda kurung siku `[...]`. Parameter ini **bersifat opsional** dan boleh tidak diisi saat pemanggilan. Kamu bisa memberikan nilai *default* atau tipe *nullable* (`?`):
+
+```dart
+// 'hobi' bersifat opsional dengan nilai default, 'umur' opsional nullable
+void sapaPengguna(String name, [String hobi = 'Membaca', int? umur]) {
+  print('Nama: $name | Hobi: $hobi | Umur: ${umur ?? "-"}');
+}
+
+void main() {
+  sapaPengguna('Ubay');                      // Output: Nama: Ubay | Hobi: Membaca | Umur: -
+  sapaPengguna('Alex', 'Bermain Game', 25);  // Output: Nama: Alex | Hobi: Bermain Game | Umur: 25
+}
+```
+
+### C. Named Parameters (`{...}`)
+
+Dibungkus menggunakan kurung kurawal `{...}`. Parameter dipanggil dengan menyebutkan label namanya, sehingga urutannya bebas. Ini adalah **gaya dominan yang digunakan oleh seluruh Widget di Flutter**.
+
+* Gunakan **`required`** jika parameter wajib diisi.
+* Gunakan **`?`** atau nilai *default* (`=`) jika parameter opsional.
+
+```dart
+void buatProfil({
+  required String username,
+  String role = 'Member', // Nilai default jika tidak diisi
+  int? age,               // Opsional nullable
+}) {
+  print('User: $username | Role: $role | Umur: ${age ?? 0}');
+}
+
+void main() {
+  // Urutan pemanggilan bebas karena menggunakan label:
+  buatProfil(
+    role: 'Admin',
+    username: 'ubaydillah',
+    age: 26,
+  );
+}
+```
+
+> [!NOTE]
+> **Ringkasan Parameter:**
+> - `(a, b)`: Positional Wajib (harus urut).
+> - `[a = default]`: Positional Opsional (tanda kurung siku `[]`).
+> - `{required a, b = default}`: Named Parameter (tanda kurung kurawal `{}`).
+
+---
+
+## 2. Arrow Functions (`=>`) & Return Value
+
+Untuk fungsi ringkas yang hanya berisi satu ekspresi *return*, gunakan sintaks *fat arrow* (`=>`):
+
+```dart
+// Bentuk blok biasa:
+int tambahBiasa(int a, int b) {
+  return a + b;
+}
+
+// Bentuk Arrow Function ringkas:
+int tambahRingkas(int a, int b) => a + b;
+```
+
+---
+
+## 3. First-Class Functions & Function Types
+
+Karena fungsi adalah objek (*first-class*), kamu bisa menyimpannya ke dalam variabel atau mengirimkannya ke fungsi lain:
+
+### A. Menyimpan Fungsi ke Variabel
+
+```dart
+void cetakPesan(String msg) => print(msg.toUpperCase());
+
+void main() {
+  // Menyimpan fungsi ke dalam variabel:
+  var fungsiSaya = cetakPesan;
+  fungsiSaya('halo dart!'); // Output: HALO DART!
+}
+```
+
+### B. Higher-Order Functions (Fungsi Menerima Fungsi)
+
+Kamu bisa menentukan *signature* fungsi secara spesifik menggunakan `ReturnType Function(ParamTypes)`:
+
+```dart
+// 'operasi' adalah parameter bertipe fungsi yang menerima 2 int dan mengembalikan int
+int hitung(int a, int b, int Function(int, int) operasi) {
+  return operasi(a, b);
+}
+
+int tambah(int x, int y) => x + y;
+int kali(int x, int y) => x * y;
+
+void main() {
+  print(hitung(10, 5, tambah)); // Output: 15
+  print(hitung(10, 5, kali));   // Output: 50
+
+  // Menggunakan anonymous lambda function langsung:
+  print(hitung(10, 5, (x, y) => x - y)); // Output: 5
+}
+```
+
+---
+
+## 4. Lexical Closures
+
+**Closure** adalah fungsi yang dapat **mengingat dan mengakses variabel di scope tempat ia dibuat**, meskipun fungsi induk luarnya sudah selesai dieksekusi:
+
+```dart
+// Fungsi yang mengembalikan fungsi lain (Closure)
+int Function(int) buatPenambah(int angkaTambahan) {
+  // Fungsi di dalam ini mengingat nilai 'angkaTambahan' dari fungsi induknya:
+  return (int nilaiInput) => nilaiInput + angkaTambahan;
+}
+
+void main() {
+  final tambahDua = buatPenambah(2);  // Mengunci angkaTambahan = 2
+  final tambahSepuluh = buatPenambah(10); // Mengunci angkaTambahan = 10
+
+  print(tambahDua(5));     // Output: 7  (5 + 2)
+  print(tambahSepuluh(5)); // Output: 15 (5 + 10)
+}
+```
+
+---
+
+## 5. Method Koleksi Fungsional (`map`, `where`, `reduce`)
+
+Method bawaan pada `List`/`Iterable` yang memanfaatkan callback function:
+
+```dart
+void main() {
+  List<int> numbers = [1, 2, 3, 4, 5];
+
+  // 1. map(): Mengubah setiap elemen
+  List<int> kuadrat = numbers.map((n) => n * n).toList();
+  print('Kuadrat: $kuadrat'); // [1, 4, 9, 16, 25]
+
+  // 2. where(): Memfilter elemen berdasarkan kondisi (filter)
+  List<int> genap = numbers.where((n) => n.isEven).toList();
+  print('Genap: $genap'); // [2, 4]
+
+  // 3. reduce(): Menggabungkan seluruh nilai menjadi satu (akumulasi)
+  int total = numbers.reduce((acc, curr) => acc + curr);
+  print('Total: $total'); // 15
+}
+```
+
+> [!TIP]
+> Hampir seluruh konstruktor Widget di Flutter (seperti `ElevatedButton(onPressed: () => ...)` atau `ListView.builder`) memanfaatkan kombinasi **Named Parameters** dan **Higher-Order Functions**. Menguasai konsep ini akan membuat kodingan Flutter-mu sangat rapi dan idiomatis.

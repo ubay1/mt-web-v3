@@ -1,0 +1,77 @@
+# Fitur Modern Dart 3: Records, Pattern Matching & Switch Expression
+
+Dart 3 membawa perubahan revolusioner pada sistem bahasa pemrograman Dart dengan memperkenalkan **Records**, **Pattern Matching**, **Sealed Classes**, dan **Switch Expressions**.
+
+---
+
+## 1. Records (Multiple Return Values Ringkas)
+
+Sebelum Dart 3, jika fungsi ingin mengembalikan 2 atau lebih nilai, kamu harus membuat class baru atau menggunakan `Map`/`List`. Sekarang, cukup gunakan **Records**:
+
+```dart
+// Mengembalikan record berisi (String, int, bool)
+(String, int, {bool isValid}) getUserStats() {
+  return ('Ubay Dillah', 42, isValid: true);
+}
+
+void main() {
+  final result = getUserStats();
+  print(result.$1); // Ubay Dillah (positional 1)
+  print(result.$2); // 42 (positional 2)
+  print(result.isValid); // true (named field)
+
+  // Destructuring langsung ke variabel:
+  final (name, score, isValid: valid) = getUserStats();
+  print('$name memiliki score $score (Status: $valid)');
+}
+```
+
+---
+
+## 2. Modern Switch Expression
+
+Di Dart 3, `switch` bukan lagi hanya sekadar pernyataan (_statement_), melainkan bisa menjadi **ekspresi** yang langsung mengembalikan nilai dengan sintaks panah `=>`:
+
+```dart
+String getStatusBadge(int httpCode) => switch (httpCode) {
+  200 => '✅ Success (OK)',
+  400 => '⚠️ Bad Request',
+  401 || 403 => '⛔ Unauthorized / Forbidden',
+  >= 500 && <= 599 => '🔥 Server Error',
+  _ => '❓ Unknown Code',
+};
+
+void main() {
+  print(getStatusBadge(200)); // ✅ Success (OK)
+  print(getStatusBadge(503)); // 🔥 Server Error
+}
+```
+
+---
+
+## 3. Sealed Classes & Exhaustive Matching
+
+`sealed class` membatasi agar turunan class hanya boleh dideklarasikan di dalam file yang sama. Hal ini membuat compiler dapat memeriksa bahwa **semua kemungkinan kasus (state)** telah ditangani secara menyeluruh di dalam `switch`. Sangat cocok untuk _State Management_ (seperti BLoC atau Riverpod)!
+
+```dart
+sealed class AuthState {}
+
+class AuthInitial extends AuthState {}
+class AuthLoading extends AuthState {}
+class AuthSuccess extends AuthState {
+  final String token;
+  AuthSuccess(this.token);
+}
+class AuthFailure extends AuthState {
+  final String error;
+  AuthFailure(this.error);
+}
+
+// Compiler akan ERROR jika salah satu state di bawah lupa ditangani!
+String renderUI(AuthState state) => switch (state) {
+  AuthInitial() => 'Tampilkan Tombol Login',
+  AuthLoading() => 'Tampilkan CircularProgressIndicator',
+  AuthSuccess(:final token) => 'Masuk ke Dashboard dengan Token: $token',
+  AuthFailure(:final error) => 'Tampilkan Error: $error',
+};
+```

@@ -1,0 +1,129 @@
+# Introduction to Flutter & Widget Foundations
+
+Flutter is Google's open-source UI toolkit for building natively compiled, multi-platform applications (iOS, Android, Web, Desktop) from a single codebase.
+
+---
+
+## 1. Engine Architecture & "Everything is a Widget"
+
+Unlike traditional hybrid frameworks using webviews or JavaScript bridges, Flutter draws every pixel directly on the canvas via **Impeller / Skia** at **60 to 120 FPS**.
+
+In Flutter:
+- Text is a widget (`Text`).
+- Buttons are widgets (`ElevatedButton`).
+- Layouts are widgets (`Column`, `Row`, `Center`).
+- Gesture detection and styling are widgets (`Padding`, `GestureDetector`).
+
+| Layer / Tree | Core Role | Description |
+| :--- | :--- | :--- |
+| **1. Widget Tree** | Declarative Configuration | Lightweight immutable blueprints describing the UI, rebuilt rapidly whenever state updates. |
+| **2. Element Tree** | Lifecycle & State Manager | Manages widget lifecycles, retains state, and bridges declarative widget configurations to concrete render objects. |
+| **3. RenderObject Tree** | Geometry, Layout & Paint | Computes precise sizing constraints, layout coordinates, hit-testing, and paints physical pixels on screen. |
+
+---
+
+## 2. `StatelessWidget` vs `StatefulWidget`
+
+### A. `StatelessWidget`
+Immutable widget whose visual representation depends solely on configuration arguments passed to its constructor.
+
+```dart
+import 'package:flutter/material.dart';
+
+class GreetingCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const GreetingCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade900,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle, style: TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+```
+
+---
+
+### B. `StatefulWidget` & Lifecycle
+Widgets that hold internal mutable state across the widget lifecycle:
+
+```dart
+class CounterWidget extends StatefulWidget {
+  const CounterWidget({super.key});
+
+  @override
+  State<CounterWidget> createState() => _CounterWidgetState();
+}
+
+class _CounterWidgetState extends State<CounterWidget> {
+  int _counter = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. initState: Invoked once when widget enters the tree
+  }
+
+  void _increment() {
+    setState(() {
+      _counter++;
+    });
+  }
+
+  @override
+  void dispose() {
+    // 3. dispose: Cleans up controllers, subscriptions, and listeners
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 2. build: Re-invoked on every setState() trigger
+    return ElevatedButton(
+      onPressed: _increment,
+      child: Text('Count: $_counter'),
+    );
+  }
+}
+```
+
+> [!NOTE]
+> **💡 Why Are There 2 Classes & What Does `State<CounterWidget>` Mean?**
+> 
+> In Flutter, every `StatefulWidget` is always split into **two paired classes**:
+> 1. **Widget Class (`CounterWidget`)** = **The Outer Shell**. Receives configuration parameters from parents (immutable / unchanging).
+> 2. **State Class (`_CounterWidgetState`)** = **The Engine / Brain**. Stores mutable data that changes over time (like a click counter).
+> 
+> **Role of `State<CounterWidget> createState() => _CounterWidgetState();`:**
+> * `createState()` **spawns the engine** (`_CounterWidgetState`) when the widget is first inserted into the screen.
+> * The `<CounterWidget>` tag acts like an **ownership badge**: *"This engine belongs specifically to `CounterWidget`"*.
+> * **The Benefit:** Inside the state class, you can instantly read any parameter from the outer shell by writing **`widget.propertyName`** (e.g., `widget.title`).
+
+> [!IMPORTANT]
+> Never perform heavy I/O operations inside `build()`, as `build()` is executed frequently. Use `initState()` for initialization.

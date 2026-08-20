@@ -1,0 +1,100 @@
+# Collections: List, Set, Map & Collection-If/For
+
+Dart provides rich, first-class language support for collection literals and collection transformation features. The three core collections are `List`, `Set`, and `Map`.
+
+---
+
+## 1. Core Collections in Dart
+
+### A. List (Ordered Indexable Array)
+A `List<T>` is an ordered collection of objects indexed from 0.
+
+```dart
+void main() {
+  List<String> frameworks = ['Flutter', 'React', 'Vue'];
+  
+  frameworks.add('Next.js');
+  frameworks.addAll(['Nuxt', 'Svelte']);
+  
+  print(frameworks[0]); // Flutter
+  print('Total items: ${frameworks.length}');
+}
+```
+
+### B. Set (Unique Elements)
+A `Set<T>` guarantees uniqueness among its members. Duplicates are automatically discarded.
+
+```dart
+void main() {
+  Set<int> uniqueNumbers = {1, 2, 3, 3, 2, 4};
+  print(uniqueNumbers); // Output: {1, 2, 3, 4}
+
+  uniqueNumbers.add(5);
+  print(uniqueNumbers.contains(3)); // true
+}
+```
+
+### C. Map (Key-Value Pairs)
+A `Map<K, V>` associates keys with values. Keys must be unique.
+
+```dart
+void main() {
+  Map<String, dynamic> user = {
+    'id': 101,
+    'name': 'Ubay Dillah',
+    'isVerified': true,
+    'skills': ['Dart', 'Flutter', 'TypeScript']
+  };
+
+  print(user['name']); // Ubay Dillah
+  user['role'] = 'Senior Engineer';
+}
+```
+
+---
+
+## 2. Spread Operators (`...` and `...?`)
+
+Spread operators unpack elements of an iterable into another collection:
+
+```dart
+List<int> numbers = [1, 2, 3];
+List<int> combined = [0, ...numbers, 4, 5]; // [0, 1, 2, 3, 4, 5]
+
+List<int>? optionalList;
+List<int> safeCombined = [100, ...?optionalList]; // Safe if null
+```
+
+---
+
+## 3. Collection-If & Collection-For
+
+Dart includes powerful syntax directly inside collection literals:
+
+### A. Collection-If
+Includes an element only when a boolean condition is met.
+
+```dart
+bool isSubscriber = true;
+
+List<String> navLinks = [
+  'Home',
+  'Articles',
+  if (isSubscriber) 'Exclusive Tutorials',
+  'Settings',
+];
+```
+
+### B. Collection-For
+Iterates and embeds mapped items directly within collection literals.
+
+```dart
+List<int> raw = [1, 2, 3];
+List<String> formatted = [
+  '#0',
+  for (var n in raw) '#$n'
+]; // ['#0', '#1', '#2', '#3']
+```
+
+> [!TIP]
+> Collection-if and collection-for are essential for building declarative Flutter widget trees cleanly without messy conditional branches.

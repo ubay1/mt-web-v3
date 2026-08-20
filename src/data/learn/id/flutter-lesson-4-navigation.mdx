@@ -1,0 +1,82 @@
+# Navigasi & Routing: Navigator 1.0 vs go_router
+
+Berpindah antar halaman (*screens/routes*) adalah kebutuhan mendasar dalam setiap aplikasi mobile.
+
+---
+
+## 1. Imperative Navigation (Navigator 1.0)
+
+Pendekatan klasik menggunakan stack `Navigator`:
+
+```dart
+// 1. Berpindah ke halaman baru (Push)
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const DetailPage(productId: '101'),
+  ),
+);
+
+// 2. Kembali ke halaman sebelumnya (Pop)
+Navigator.pop(context);
+
+// 3. Mengganti halaman tanpa bisa kembali (misal setelah Login ke Dashboard)
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => const DashboardPage()),
+);
+```
+
+---
+
+## 2. Declarative Modern Routing (`go_router`)
+
+Untuk aplikasi skala besar, web, atau yang membutuhkan *deep linking*, paket resmi Google **`go_router`** adalah standar industri saat ini.
+
+### A. Konfigurasi Router
+```dart
+import 'package:go_router/go_router.dart';
+
+final router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+      routes: [
+        // Sub-route: /detail/:id
+        GoRoute(
+          path: 'detail/:id',
+          builder: (context, state) {
+            final productId = state.pathParameters['id']!;
+            return DetailScreen(id: productId);
+          },
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+  ],
+);
+```
+
+### B. Mendaftarkan Router di `MaterialApp`
+```dart
+MaterialApp.router(
+  routerConfig: router,
+);
+```
+
+### C. Berpindah Halaman dengan `context.go()` dan `context.push()`
+```dart
+// Menuju halaman detail dengan parameter ID
+context.go('/detail/42');
+
+// Kembali ke route sebelumnya
+context.pop();
+```
+
+> [!TIP]
+> `go_router` secara otomatis menangani tombol back di Android, integrasi URL browser di Flutter Web, dan deep linking dari notifikasi push tanpa kode tambahan yang rumit.

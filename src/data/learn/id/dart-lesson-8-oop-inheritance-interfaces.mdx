@@ -1,0 +1,249 @@
+# OOP Lanjutan: Inheritance, Interface, Mixin, Polymorphism & Extension
+
+Di bab ini, kita akan mendalami pilar-pilar OOP tingkat lanjut yang membentuk fondasi arsitektur kode di Dart dan Flutter.
+
+---
+
+## 1. Inheritance (Pewarisan dengan `extends`)
+
+Pewarisan memungkinkan sebuah _sub-class_ (class anak) mewarisi properti dan method dari _super-class_ (class induk).
+
+- Gunakan kata kunci **`extends`** untuk mewarisi class.
+- Gunakan **`super()`** untuk memanggil konstruktor class induk.
+- Gunakan anotasi **`@override`** untuk menimpa perilaku method induk.
+- **Catatan:** Dart hanya mendukung _Single Inheritance_ (satu class hanya boleh meng-`extends` satu class induk). Untuk kebutuhan multi-pewarisan perilaku, gunakan `mixin`.
+
+```dart
+class Kendaraan {
+  String merk;
+  int tahun;
+
+  Kendaraan(this.merk, this.tahun);
+
+  void klakson() {
+    print('Tin tin!');
+  }
+}
+
+class Mobil extends Kendaraan {
+  int jumlahPintu;
+
+  // Memanggil konstruktor class induk dengan : super(...)
+  Mobil(String merk, int tahun, this.jumlahPintu) : super(merk, tahun);
+
+  @override
+  void klakson() {
+    print('Brem brem! $merk ($tahun) dengan $jumlahPintu pintu membunyikan klakson!');
+  }
+}
+
+void main() {
+  var avanza = Mobil('Toyota', 2022, 4);
+  avanza.klakson();
+}
+```
+
+---
+
+## 2. Abstract Class & Interface (`implements`)
+
+### A. Abstract Class
+
+Abstract class adalah class yang **tidak dapat diinstansiasi secara langsung** (`Cannot instantiate abstract class`), melainkan hanya berfungsi sebagai kerangka dasar atau kontrak untuk diturunkan oleh class anak.
+
+```dart
+abstract class BangunDatar {
+  String nama;
+  BangunDatar(this.nama);
+
+  // Abstract Method (hanya deklarasi tanpa body):
+  double hitungLuas();
+
+  void cetakInfo() {
+    print('Bangun Datar: $nama | Luas: ${hitungLuas()} cm²');
+  }
+}
+
+class Persegi extends BangunDatar {
+  double sisi;
+  Persegi(this.sisi) : super('Persegi');
+
+  @override
+  double hitungLuas() => sisi * sisi;
+}
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Sub-class dari Abstract Class:
+  // =======================================================
+  
+  // 1. Instansiasi class anak yang sudah mengimplementasikan abstract method:
+  var kotak = Persegi(5.0);
+  kotak.cetakInfo(); // Output: Bangun Datar: Persegi | Luas: 25.0 cm²
+
+  // 2. Jebakan Abstract Class (Tidak bisa diinstansiasi langsung):
+  // var bentuk = BangunDatar('Lingkaran'); 
+  // ❌ ERROR: The class 'BangunDatar' is abstract and can't be instantiated.
+}
+```
+
+### B. Implicit Interface & Multiple Interfaces (`implements`)
+
+Dart tidak memiliki kata kunci `interface`. Sebagai gantinya, **setiap class di Dart secara otomatis bertindak sebagai interface**.
+
+- Saat menggunakan `implements`, kamu **wajib mengimplementasikan ulang semua properti dan method** dari interface tersebut.
+- Sebuah class bisa mengimplementasikan **banyak interface sekaligus** (_Multiple Interface_).
+
+```dart
+abstract class Autentikasi {
+  void login(String username, String password);
+  void logout();
+}
+
+abstract class Notifikasi {
+  void kirimEmail(String tujuan, String pesan);
+}
+
+// Mengimplementasikan 2 interface sekaligus:
+class LayananPengguna implements Autentikasi, Notifikasi {
+  @override
+  void login(String username, String password) {
+    print('User $username berhasil login.');
+  }
+
+  @override
+  void logout() {
+    print('User telah logout.');
+  }
+
+  @override
+  void kirimEmail(String tujuan, String pesan) {
+    print('Mengirim email ke $tujuan: "$pesan"');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Class dengan Multiple Interface:
+  // =======================================================
+
+  // 1. Akses langsung melalui objek class:
+  var layanan = LayananPengguna();
+  layanan.login('ubaydillah', 'secret123');
+  layanan.kirimEmail('ubay@example.com', 'Selamat datang di platform kami!');
+  layanan.logout();
+
+  // 2. Akses melalui tipe Interface (Polimorfisme Kontrak):
+  Autentikasi auth = LayananPengguna();
+  auth.login('alex', 'pass456'); // Hanya mengekspos method login & logout
+
+  Notifikasi notif = LayananPengguna();
+  notif.kirimEmail('alex@example.com', 'Pemberitahuan keamanan'); // Hanya mengekspos kirimEmail
+}
+```
+
+---
+
+## 3. Polymorphism (Banyak Bentuk)
+
+**Polymorphism** memungkinkan objek-objek dari berbagai class turunan merespons method yang sama dengan **cara/implementasi yang berbeda**:
+
+```dart
+abstract class Hewan {
+  void bersuara();
+}
+
+class Kucing extends Hewan {
+  @override
+  void bersuara() => print('🐱 Meow! Meow!');
+}
+
+class Anjing extends Hewan {
+  @override
+  void bersuara() => print('🐶 Guk! Guk!');
+}
+
+class Bebek extends Hewan {
+  @override
+  void bersuara() => print('🦆 Kwek! Kwek!');
+}
+
+void bunyikanSemua(List<Hewan> daftarHewan) {
+  for (var hewan in daftarHewan) {
+    hewan.bersuara(); // Setiap hewan merespons sesuai class aslinya
+  }
+}
+
+void main() {
+  List<Hewan> kandang = [Kucing(), Anjing(), Bebek()];
+  bunyikanSemua(kandang);
+}
+```
+
+---
+
+## 4. Mixins (`mixin`, `with`, & `on`)
+
+Mixin adalah cara menyuntikkan kode (method/properti) ke dalam berbagai class tanpa terikat hierarki pewarisan tradisional (_reusable behavior across multiple classes_).
+
+- Menggunakan kata kunci **`with`** untuk memasang mixin.
+- Bisa memasang banyak mixin sekaligus (`with MixinA, MixinB`).
+- Gunakan keyword **`on`** untuk membatasi agar mixin hanya bisa dipasang pada class tertentu (_Mixin Constraints_).
+
+```dart
+abstract class Kendaraan {}
+
+// Mixin hanya boleh dipasang pada class yang mewarisi Kendaraan:
+mixin MesinTurbo on Kendaraan {
+  void aktifkanTurbo() {
+    print('🔥 Mode Turbo diaktifkan! Akselerasi meningkat tajam!');
+  }
+}
+
+mixin FiturMusik {
+  void putarLagu(String judul) {
+    print('🎵 Memutar musik: $judul');
+  }
+}
+
+class MobilBalap extends Kendaraan with MesinTurbo, FiturMusik {
+  final String nama;
+  MobilBalap(this.nama);
+}
+
+void main() {
+  var ferrari = MobilBalap('Ferrari SF90');
+  ferrari.aktifkanTurbo();
+  ferrari.putarLagu('Tokyo Drift');
+}
+```
+
+> [!TIP]
+> Di Flutter, Mixin sangat sering dipakai, contohnya `with SingleTickerProviderStateMixin` untuk controller animasi atau `with WidgetsBindingObserver` untuk memantau siklus hidup aplikasi.
+
+---
+
+## 5. Extension Methods
+
+Fitur untuk menambahkan fungsi baru ke dalam tipe data atau class yang sudah ada (bahkan class bawaan SDK seperti `String`, `DateTime`, atau `BuildContext` di Flutter) tanpa perlu mengubah kode sumber aslinya:
+
+```dart
+extension StringManipulasi on String {
+  // Menambahkan method toCapitalized() ke semua objek String:
+  String toCapitalized() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
+  }
+
+  // Menambahkan getter untuk cek format email:
+  bool get isEmailValid => contains('@') && contains('.');
+}
+
+void main() {
+  String judul = 'belajar DART modern';
+  print(judul.toCapitalized()); // Output: Belajar dart modern
+
+  String email = 'user@example.com';
+  print('Email valid? ${email.isEmailValid}'); // Output: true
+}
+```

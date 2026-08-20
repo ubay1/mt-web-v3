@@ -1,0 +1,351 @@
+# Tipe Data, Variabel & Immutability
+
+Dart adalah bahasa pemrograman yang **statically typed** dengan **sound type system** dan **sound null safety**. Artinya, setiap variabel memiliki tipe data yang sudah pasti, dan compiler dapat mendeteksi kesalahan tipe (*type errors*) sebelum program dijalankan.
+
+Dart juga menyediakan fitur *type inference* yang cerdas, sehingga kamu tidak selalu harus menuliskan nama tipe data secara eksplisit.
+
+---
+
+## 1. Tipe Data Primitif
+
+Dart memiliki 3 kelompok utama tipe data primitif:
+
+### A. Number (`int`, `double`, `num`)
+
+* **`int`**: Bilangan bulat (64-bit integer pada platform native). Mendukung format desimal maupun heksadesimal (`0xFF`).
+* **`double`**: Bilangan desimal atau pecahan (64-bit floating point IEEE 754). Mendukung format eksponen seperti `1.5e3`.
+* **`num`**: Tipe induk (*supertype*) dari `int` dan `double`. Cocok digunakan jika sebuah variabel boleh menampung bilangan bulat maupun desimal.
+
+```dart
+void main() {
+  int usia = 24;
+  double beratBadan = 65.5;
+  num saldo = 100000;    // diisi int
+  saldo = 100000.75;     // valid: tipe num bisa berubah ke double
+
+  print('Usia: $usia, Berat: $beratBadan kg, Saldo: Rp $saldo');
+}
+```
+
+### B. Teks (`String`)
+
+`String` di Dart merepresentasikan kumpulan karakter berbasis UTF-16. 
+
+* **Best Practice:** Gunakan tanda kutip tunggal (`'...'`) sesuai konvensi resmi Dart, kecuali jika di dalam teks terdapat tanda kutip.
+* **Fitur-Fitur String Modern:**
+  * **Interpolasi:** Sisipkan variabel dengan `$variabel` atau hasil ekspresi dengan `${ekspresi}`.
+  * **Multi-line String:** Tulis teks panjang lintas baris dengan tiga tanda kutip (`'''...'''` atau `"""..."""`).
+  * **Raw String:** Awali dengan huruf `r` (`r'...'`) untuk mengabaikan *escape character* (misalnya `\n` tidak akan dibaca sebagai baris baru).
+
+```dart
+void main() {
+  String nama = 'Andi';
+  String sapaan = 'Halo $nama, panjang namamu adalah ${nama.length} karakter';
+
+  String teksBaris = '''
+Baris pertama
+Baris kedua
+''';
+
+  // \n tidak akan dianggap enter pada raw string
+  String pathWindows = r'C:\Users\Documents\new_folder';
+
+  print(sapaan);
+  print(teksBaris);
+  print(pathWindows);
+}
+```
+
+### C. Boolean (`bool`)
+
+Hanya memiliki dua nilai literal: `true` atau `false`.
+
+> [!IMPORTANT]
+> **Kondisi `if` di Dart Wajib Menghasilkan Tipe `bool` (Tidak Ada Truthy / Falsy)**
+> 
+> * Kalau kamu menulis `if (a == 10)`, ini **100% benar dan valid** karena perbandingan `a == 10` menghasilkan nilai boolean (`true` atau `false`).
+> * Maksud **"tidak ada truthy/falsy"** adalah: kamu **tidak bisa menaruh variabel angka, teks, atau objek langsung ke dalam `if` tanpa perbandingan**, seperti yang sering dilakukan di JavaScript atau Python.
+
+```dart
+void main() {
+  int a = 10;
+  int totalPesan = 0;
+  String nama = '';
+  String? user = null;
+
+  // ❌ DI JAVASCRIPT/PYTHON BOLEH, TAPI DI DART ERROR:
+  // if (totalPesan) { ... } // 💥 ERROR: int bukan boolean!
+  // if (nama) { ... }       // 💥 ERROR: String bukan boolean!
+  // if (user) { ... }       // 💥 ERROR: Objek/null bukan boolean!
+
+  // ✅ DI DART WAJIB EKSPLISIT DIBUAT JADI PERBANDINGAN BOOLEAN:
+  if (totalPesan > 0) {
+    print('Ada pesan baru.');
+  }
+
+  if (a == 10) {
+    print('Nilai a adalah 10.'); // ✅ Valid karena perbandingan (a == 10) menghasilkan true/false
+  }
+
+  if (nama.isNotEmpty) {
+    print('Nama terisi.');
+  }
+
+  if (user != null) {
+    print('User ditemukan.');
+  }
+}
+```
+
+---
+
+## 2. Deklarasi Variabel: `var`, `final`, `const`, `dynamic`, & `Object?`
+
+Memilih kata kunci deklarasi yang tepat sangat krusial untuk mencegah bug, menjaga immutability, dan mengoptimalkan performa memori.
+
+| Keyword | Bisa Re-assign Nilai? | Kapan Tipe Ditentukan? | Kapan Nilai Ditentukan? | Catatan & Keamanan |
+| :--- | :---: | :---: | :---: | :--- |
+| **`var`** | ✅ Ya | Saat deklarasi (*Inferred*) | Runtime | Tipe dikunci secara statis, nilainya boleh diganti. |
+| **`final`** | ❌ Tidak | Saat deklarasi (*Inferred*) | **Runtime** | Hanya bisa di-set 1 kali saat program berjalan. |
+| **`const`** | ❌ Tidak | Saat deklarasi (*Inferred*) | **Compile-time** | Nilai harus sudah pasti sebelum dikompilasi (hemat memori). |
+| **`dynamic`** | ✅ Ya | Fleksibel saat runtime | Runtime | ⚠️ Mematikan pengecekan tipe statis (rawan runtime crash). |
+| **`Object?`** | ✅ Ya | Statis (`Object?`) | Runtime | ✅ Menerima tipe apa saja, namun tetap aman (*type-safe*). |
+
+### A. `var` (Type Inference)
+Saat pertama kali diberi nilai, compiler Dart otomatis mengunci (*infer*) tipe datanya. Nilainya dapat diubah asalkan tipenya tetap sama.
+
+```dart
+var kota = 'Jakarta'; // tipe otomatis dikunci sebagai String
+kota = 'Bandung';     // ✅ Valid (sama-sama String)
+// kota = 123;        // ❌ Compile Error: int tidak bisa dimasukkan ke variabel String
+```
+
+### B. `final` (Single-Assignment Runtime Constant)
+Variabel `final` **hanya dapat diisi satu kali**. Nilainya baru diketahui saat aplikasi **sedang berjalan (*runtime*)**, seperti jam saat user login, pembacaan sensor HP, atau respon dari API server. Namun setelah nilainya didapat, nilainya **dikunci mati** dan tidak bisa diubah lagi.
+
+```dart
+// ✅ Valid: Jam saat user membuka aplikasi (baru ketahuan saat aplikasi jalan)
+final waktuLogin = DateTime.now(); 
+
+// ✅ Valid: Data yang baru didapat setelah server merespons
+final namaUser = 'Alex'; // contoh nilai yang didapat dari API
+
+// ❌ Error: Variabel final tidak boleh diubah nilainya
+// waktuLogin = DateTime.now(); 
+```
+
+### C. `const` (Compile-Time Constant)
+Nilai `const` harus sudah **pasti dan diketahui sejak kita mengetik kodingan (*compile-time*)**, bahkan sebelum aplikasi dijalankan sama sekali di perangkat pengguna.
+
+`const` juga membuat aplikasi jauh lebih hemat memori karena bersifat **kanonikal** (jika kamu mendeklarasikan nilai `const` yang sama di beberapa tempat, Dart hanya akan menyimpannya 1 kali di memori/RAM dan memakainya bersama-sama tanpa menduplikasi data).
+
+```dart
+const double pi = 3.14159;                 // ✅ Angka pasti sejak koding
+const String baseUrl = 'https://api.com';  // ✅ URL pasti sejak koding
+const int maxUpload = 1024 * 1024 * 5;     // 5 MB
+
+// ❌ ERROR: DateTime.now() nilainya belum ada saat koding, baru ada saat aplikasi jalan
+// const waktu = DateTime.now(); 
+
+// Keuntungan hemat memori (data yang sama tidak diduplikasi di RAM):
+const listA = [1, 2, 3];
+const listB = [1, 2, 3];
+print(identical(listA, listB)); // true (keduanya menunjuk ke alamat memori yang persis sama)
+```
+
+> [!NOTE]
+> **💡 Cara Paling Gampang Membedakan `final` vs `const`:**
+> 
+> | Pertanyaan | `const` | `final` |
+> | :--- | :--- | :--- |
+> | **Kapan nilainya diketahui?** | **Saat ngetik kodingan** (Sebelum aplikasi jalan) | **Saat aplikasi jalan di HP user** (Setelah dapat waktu/API/sensor) |
+> | **Apakah nilainya bisa diubah?** | ❌ Tidak bisa | ❌ Tidak bisa |
+> | **Contoh nyata** | `const pi = 3.14;` | `final waktu = DateTime.now();` |
+> 
+> 🔑 **Rumus Praktis:**
+> - Jika nilainya **sudah pasti bisa kamu tulis langsung di kodingan saat ini juga** → gunakan **`const`**.
+> - Jika nilainya **harus menunggu aplikasi jalan dulu di HP user** (menunggu jam, sensor HP, respon database/API) dan tidak boleh diubah-ubah lagi setelah didapat → gunakan **`final`**.
+
+### D. `dynamic` vs `Object?` (Perbedaan Keamanan)
+
+* **`dynamic`**: Mematikan pemeriksaan tipe compiler. Jika kamu memanggil method yang tidak ada, program akan langsung **crash di runtime** (*NoSuchMethodError*).
+* **`Object?`**: Representasi tipe tertinggi di Dart. Boleh menampung nilai apapun, tetapi compiler **tetap menjaga keamanan tipe** dengan melarang pemanggilan method sebelum tipe aslinya dipastikan.
+
+```dart
+// 1. dynamic: Rawan Crash
+dynamic dataLiar = 'Teks';
+dataLiar = 100;
+// dataLiar.cetakSemua(); // 💥 Tidak error saat coding, tapi CRASH saat aplikasi berjalan!
+
+// 2. Object?: Type-Safe
+Object? dataAman = 'Teks';
+dataAman = 100;
+// dataAman.cetakSemua(); // 🛡️ Compiler langsung menolak saat dicoding karena method tidak dikenal
+```
+
+> [!TIP]
+> **Aturan Praktis (Best Practice):**
+> 1. Gunakan **`final`** sebagai pilihan default untuk semua variabel yang tidak perlu diubah lagi nilainya.
+> 2. Gunakan **`const`** jika nilainya sudah mutlak diketahui saat kode ditulis.
+> 3. Gunakan **`var`** hanya jika nilai variabel memang perlu diubah-ubah di kemudian baris.
+> 4. Hindari **`dynamic`** sebisa mungkin; gunakan **`Object?`** jika membutuhkan tipe data serbaguna.
+
+---
+
+## 3. Type Checking, Type Casting & Konversi Nilai
+
+Dalam pengembangan aplikasi nyata, kamu akan sering memeriksa atau mengubah bentuk tipe data.
+
+### A. Pengecekan Tipe (`is` dan `is!`)
+
+Gunakan operator `is` untuk memeriksa apakah suatu variabel bertipe tertentu, atau `is!` untuk memeriksa sebaliknya. Dart memiliki fitur *smart promotion* yang otomatis mengonversi tipe variabel setelah diperiksa:
+
+```dart
+dynamic input = 'Belajar Flutter';
+
+if (input is String) {
+  // Dart otomatis tahu di dalam blok ini 'input' adalah String
+  print('Panjang teks: ${input.length}');
+}
+
+if (input is! int) {
+  print('Bukan merupakan angka integer.');
+}
+```
+
+### B. Type Casting (`as`) vs Konversi Nilai
+
+Banyak pemula sering tertukar antara **Type Casting (`as`)** dan **Konversi Nilai**.
+
+* **`as` (Type Casting):** Digunakan untuk memberitahu compiler: *"Objek umum ini (`Object`, `dynamic`, `num`) sebenarnya aslinya adalah tipe spesifik ini (`String`, `int`)"*. Operator `as` **tidak mengubah format data**, melainkan hanya memperjelas tipe objek yang sudah ada kepada compiler.
+* **Method Konversi:** Digunakan ketika kamu **ingin mengubah bentuk/format data** dari satu tipe ke tipe lain (misalnya mengubah integer `123` menjadi teks `'123'`).
+
+```dart
+void main() {
+  // =========================================================================
+  // 1. KAPAN MENGGUNAKAN `as` (TYPE CASTING)?
+  // Digunakan saat kita memiliki tipe umum (Object/dynamic/num)
+  // dan ingin membukanya ke tipe aslinya:
+  // =========================================================================
+
+  // Contoh A: Dari tipe umum Object ke String
+  Object data = 'Belajar Dart Modern';
+  String judul = data as String; // ✅ Valid: data aslinya memang String
+  print('Panjang teks: ${judul.length}');
+
+  // Contoh B: Parsing data JSON / Map<String, dynamic> dari API
+  Map<String, dynamic> responApi = {
+    'nama': 'Ubay',
+    'umur': 25,
+  };
+  String namaUser = responApi['nama'] as String; // ✅ Cast dynamic -> String
+  int umurUser = responApi['umur'] as int;       // ✅ Cast dynamic -> int
+
+  // Contoh C: Dari supertype num ke int
+  num saldo = 50000;
+  int saldoBulat = saldo as int; // ✅ Valid: nilai 50000 memang integer
+
+
+  // =========================================================================
+  // 2. KESALAHAN UMUM PENGGUNAAN `as` (JANGAN LAKUKAN INI!)
+  // =========================================================================
+  
+  // int angka = 123;
+  // String teks = angka as String; 
+  // 💥 RUNTIME ERROR: TypeError (angka 123 aslinya bukan String, jadi tidak bisa di-cast)
+
+
+  // =========================================================================
+  // 3. KAPAN MENGGUNAKAN METHOD KONVERSI NILAI?
+  // Digunakan saat ingin mengubah format fisik data:
+  // =========================================================================
+
+  int angka = 123;
+  String teks = angka.toString();              // int -> String ('123')
+
+  String inputHarga = '25000';
+  int harga = int.parse(inputHarga);           // String -> int (25000)
+
+  String inputDesimal = '3.75';
+  double desimal = double.parse(inputDesimal); // String -> double (3.75)
+}
+```
+
+### C. Parsing Aman dengan `tryParse()`
+
+Jika kamu menerima input dari pengguna atau API yang formatnya belum tentu valid, `int.parse()` atau `double.parse()` akan melempar error (*FormatException*) jika formatnya salah. Gunakan **`tryParse()`** agar tidak terjadi crash:
+
+```dart
+String inputUser = 'abc_bukan_angka';
+
+// Menghasilkan null secara anggun tanpa membuat aplikasi berhenti mendadak
+int? hasilAman = int.tryParse(inputUser); 
+
+if (hasilAman == null) {
+  print('Format angka tidak valid! Menggunakan nilai default: 0');
+} else {
+  print('Angka valid: $hasilAman');
+}
+```
+
+---
+
+## 4. Sekilas Koleksi Data (Collections)
+
+Dart menyediakan tipe bawaan untuk mengelompokkan data (akan dibahas tuntas pada Bab 4):
+
+| Tipe Koleksi | Simbol Literal | Karakteristik Utama | Contoh |
+| :--- | :---: | :--- | :--- |
+| **`List<T>`** | `[...]` | Berurutan, memiliki index `[0]`, boleh ada duplikat. | `['Apel', 'Jeruk', 'Apel']` |
+| **`Set<T>`** | `{...}` | Himpunan tidak berurutan, **harus unik** (tanpa duplikat). | `{'Apel', 'Jeruk'}` |
+| **`Map<K, V>`** | `{k: v}` | Pasangan Kunci - Nilai (*Key-Value Pair*). | `{'id': 1, 'nama': 'Andi'}` |
+
+---
+
+## 5. Jebakan Umum Pemula (Common Pitfalls)
+
+1. **Mengira `var` sama dengan `dynamic`:**
+   Pada `var a = 'Halo';`, Dart otomatis mengunci tipe `a` sebagai `String`. Mengisinya dengan `a = 123;` akan menyebabkan error kompilasi.
+2. **Mengira `as` mengonversi nilai data:**
+   `as` hanya mengubah cara pandang compiler terhadap objek (*casting*), bukan mengubah format datanya. Gunakan `.toString()` atau `int.parse()` untuk konversi nilai.
+3. **Mengira `const` dan `final` itu identik:**
+   Gunakan `final` untuk nilai runtime (seperti hasil fungsi, data database, atau jam sekarang). Gunakan `const` untuk nilai yang sudah pasti sebelum program dijalankan.
+
+---
+
+## 6. 🧪 Mini Challenge: Praktik Mandiri
+
+Uji pemahamanmu dengan menyelesaikan skenario berikut:
+
+1. Buat variabel `final String? inputPengguna = null;` (simulasi input kosong).
+2. Ambil nilai nama pengguna dari `inputPengguna` dengan nilai cadangan (*fallback*) `'Pengunjung'` jika nilainya `null`.
+3. Buat variabel string harga barang `String strHarga = '150.75';`, lalu konversikan ke tipe `double`.
+4. Hitung total belanja jika pembeli membeli sejumlah `int kuantitas = 3;`.
+5. Cetak kalimat: `"Total belanja Pengunjung: Rp <total_harga>"`.
+
+<details>
+<summary>👀 <strong>Klik di sini untuk melihat Kunci Jawaban</strong></summary>
+
+```dart
+void main() {
+  // 1. Variabel nullable
+  final String? inputPengguna = null;
+
+  // 2. Fallback jika null dengan operator ??
+  String namaPengguna = inputPengguna ?? 'Pengunjung';
+
+  // 3. Konversi String ke double
+  String strHarga = '150.75';
+  double hargaSatuan = double.parse(strHarga);
+
+  // 4. Perhitungan total belanja
+  int kuantitas = 3;
+  double total = hargaSatuan * kuantitas;
+
+  // 5. Cetak kalimat hasil
+  print('Total belanja $namaPengguna: Rp $total');
+  // Output: Total belanja Pengunjung: Rp 452.25
+}
+```
+
+</details>

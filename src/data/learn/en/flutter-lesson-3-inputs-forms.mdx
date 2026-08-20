@@ -1,0 +1,111 @@
+# Interactivity, Forms & Input Validation
+
+Building responsive touch interactions and robust forms with validation in Flutter.
+
+---
+
+## 1. Gestures: `GestureDetector` vs `InkWell`
+
+- `GestureDetector`: Captures taps, double taps, pinches, and pans without visual feedback.
+- `InkWell`: Captures interactions with a native Material splash/ripple animation.
+
+```dart
+Material(
+  color: Colors.transparent,
+  child: InkWell(
+    borderRadius: BorderRadius.circular(12),
+    onTap: () => print('Tapped with ripple effect'),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      child: const Text('Tap Me!'),
+    ),
+  ),
+)
+```
+
+---
+
+## 2. Forms & Validation with `TextFormField`
+
+Use `Form` combined with `GlobalKey<FormState>` for cohesive validation state:
+
+```dart
+class LoginForm extends StatefulWidget {
+  const LoginForm({super.key});
+
+  @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      print('Form valid for ${_emailController.text}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email Address',
+              prefixIcon: Icon(Icons.email_outlined),
+              border: OutlineInputBorder(),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return 'Email required';
+              if (!value.contains('@')) return 'Invalid email address';
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.length < 6) return 'Minimum 6 characters';
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _submit,
+              child: const Text('Login'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```

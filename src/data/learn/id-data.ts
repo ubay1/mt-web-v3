@@ -24,9 +24,126 @@ import GolangLesson2 from './id/golang-lesson-2-flow-control.mdx';
 import GolangLesson3 from './id/golang-lesson-3-tipe-lanjutan.mdx';
 import GolangLesson4 from './id/golang-lesson-4-method-dan-interface.mdx';
 
-export const learnId = {
-  'react-mastery': {
+// Dart Lessons
+import DartLesson1 from './id/dart-lesson-1-intro.mdx';
+import DartLesson2 from './id/dart-lesson-2-types-variables.mdx';
+import DartLesson3 from './id/dart-lesson-3-null-safety.mdx';
+import DartLesson4 from './id/dart-lesson-4-collections.mdx';
+import DartLesson5 from './id/dart-lesson-5-control-flow.mdx';
+import DartLesson6 from './id/dart-lesson-6-functions.mdx';
+import DartLesson7 from './id/dart-lesson-7-oop-basics.mdx';
+import DartLesson8 from './id/dart-lesson-8-oop-inheritance-interfaces.mdx';
+import DartLesson9 from './id/dart-lesson-9-dart3-records-patterns.mdx';
+import DartLesson10 from './id/dart-lesson-10-async-future-streams.mdx';
 
+// Flutter Lessons
+import FlutterLesson1 from './id/flutter-lesson-1-intro-widgets.mdx';
+import FlutterLesson2 from './id/flutter-lesson-2-layouts.mdx';
+import FlutterLesson3 from './id/flutter-lesson-3-inputs-forms.mdx';
+import FlutterLesson4 from './id/flutter-lesson-4-navigation.mdx';
+import FlutterLesson5 from './id/flutter-lesson-5-state-management.mdx';
+import FlutterLesson6 from './id/flutter-lesson-6-networking-api.mdx';
+import FlutterLesson7 from './id/flutter-lesson-7-theming-animations.mdx';
+
+export const learnId = {
+  'dart-mastery': {
+    title: 'Belajar Bahasa Dart Modern',
+    description: 'Panduan lengkap belajar bahasa Dart dari dasar hingga mahir: Null Safety, OOP, Records Dart 3, dan Asynchronous.',
+    lessons: [
+      {
+        id: 'dart-1',
+        title: 'Dart Dasar: Pengenalan Dart & Struktur Dasar',
+        content: DartLesson1,
+      },
+      {
+        id: 'dart-2',
+        title: 'Dart Dasar: Tipe Data, Variabel & Immutability',
+        content: DartLesson2,
+      },
+      {
+        id: 'dart-3',
+        title: 'Dart Dasar: Sound Null Safety & Operator Null-Aware',
+        content: DartLesson3,
+      },
+      {
+        id: 'dart-4',
+        title: 'Alur & Koleksi: List, Set, Map & Collection-If/For',
+        content: DartLesson4,
+      },
+      {
+        id: 'dart-5',
+        title: 'Alur & Koleksi: Alur Kontrol & Perulangan',
+        content: DartLesson5,
+      },
+      {
+        id: 'dart-6',
+        title: 'Fungsi: Parameter, Arrow & Higher-Order Functions',
+        content: DartLesson6,
+      },
+      {
+        id: 'dart-7',
+        title: 'OOP: Class, Object & Konstruktor',
+        content: DartLesson7,
+      },
+      {
+        id: 'dart-8',
+        title: 'OOP: Inheritance, Interface, Mixin & Extension',
+        content: DartLesson8,
+      },
+      {
+        id: 'dart-9',
+        title: 'Dart Modern: Records, Pattern Matching & Switch Expression',
+        content: DartLesson9,
+      },
+      {
+        id: 'dart-10',
+        title: 'Asinkron: Future, Async/Await & Streams',
+        content: DartLesson10,
+      },
+    ],
+  },
+  'flutter-mastery': {
+    title: 'Menguasai Flutter Mobile Development',
+    description: 'Panduan komprehensif membangun aplikasi mobile multiplatform dengan Flutter: Arsitektur Widget, Layout, State Management, API, & Animasi.',
+    lessons: [
+      {
+        id: 'flutter-1',
+        title: 'Dasar Flutter: Pengenalan Flutter & Fondasi Widget',
+        content: FlutterLesson1,
+      },
+      {
+        id: 'flutter-2',
+        title: 'Layout: Menguasai Layout Flutter (Container, Flex, Stack, ListView)',
+        content: FlutterLesson2,
+      },
+      {
+        id: 'flutter-3',
+        title: 'Interaksi & Form: Interaktivitas, Form & Validasi Input',
+        content: FlutterLesson3,
+      },
+      {
+        id: 'flutter-4',
+        title: 'Navigasi: Routing dengan Navigator vs go_router',
+        content: FlutterLesson4,
+      },
+      {
+        id: 'flutter-5',
+        title: 'State Management: Arsitektur setState, Riverpod & BLoC',
+        content: FlutterLesson5,
+      },
+      {
+        id: 'flutter-6',
+        title: 'Networking: Integrasi REST API, JSON & FutureBuilder',
+        content: FlutterLesson6,
+      },
+      {
+        id: 'flutter-7',
+        title: 'Theming & Animasi: Dark Mode & Animasi Modern di Flutter',
+        content: FlutterLesson7,
+      },
+    ],
+  },
+  'react-mastery': {
     title: 'Menguasai React.js',
     description: 'Belajar fundamental React.js dari awal hingga mahir, termasuk komponen, state, & hooks.',
     lessons: [

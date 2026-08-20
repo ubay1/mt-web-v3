@@ -1,0 +1,362 @@
+# Object-Oriented Programming: Classes & Constructors
+
+Dart is a pure object-oriented language (*pure OOP*). Everything in Dart is an object inheriting from the root `Object` class (including primitive types like numbers, booleans, functions, and `null`).
+
+---
+
+## 1. Defining Classes & Objects
+
+* A **Class** is a *blueprint* that defines fields/properties (*state/data*) and methods (*behavior*).
+* An **Object (Instance)** is a concrete entity instantiated based on that class blueprint.
+
+```dart
+class Car {
+  // Fields / Properties
+  // In Sound Null Safety, fields must have an initial value, be nullable (?), or use 'late'
+  String brand;
+  int year;
+  String? color; // Nullable field
+
+  // Compact generative constructor
+  Car(this.brand, this.year, [this.color]);
+
+  // Method (Class behavior)
+  void honk() {
+    print('Beep beep! $brand ($year) is honking.');
+  }
+}
+
+void main() {
+  // How to Instantiate and Access Fields / Methods:
+  var myCar = Car('Toyota', 2022, 'Black');
+
+  // Accessing fields:
+  print('Brand: ${myCar.brand}, Year: ${myCar.year}, Color: ${myCar.color}');
+
+  // Calling methods:
+  myCar.honk(); // Output: Beep beep! Toyota (2022) is honking.
+}
+```
+
+---
+
+## 2. Constructor Variants in Dart
+
+Constructors are special methods invoked when an object is instantiated to initialize its initial state.
+
+### A. Standard vs Shortcut (`this.field`) Constructors
+
+```dart
+class Product {
+  String name;
+  double price;
+
+  // 1. Verbose standard constructor:
+  // Product(String name, double price) {
+  //   this.name = name;
+  //   this.price = price;
+  // }
+
+  // 2. Shortcut constructor (Idiomatic & Recommended in Dart):
+  Product(this.name, this.price);
+}
+
+void main() {
+  var item = Product('MacBook Air', 18500000);
+  print('Product: ${item.name} - Rp ${item.price}');
+}
+```
+
+### B. Named Constructors
+
+Dart does not use method/constructor overloading by signature. Instead, it provides **Named Constructors** (`ClassName.constructorName`) to define multiple explicit ways to instantiate an object:
+
+```dart
+class User {
+  final String username;
+  final String role;
+  final int age;
+
+  // 1. Default constructor
+  User(this.username, this.role, this.age);
+
+  // 2. Named constructor: Guest user
+  User.guest()
+      : username = 'Guest',
+        role = 'Visitor',
+        age = 0;
+
+  // 3. Named constructor: From JSON / Map data
+  User.fromJson(Map<String, dynamic> json)
+      : username = json['username'] as String,
+        role = json['role'] as String,
+        age = json['age'] as int;
+}
+
+void main() {
+  // How to Access Named Constructors:
+  var user1 = User('ubay', 'Admin', 25);
+  var guest = User.guest(); // Calling .guest()
+  var apiUser = User.fromJson({'username': 'alex', 'role': 'Editor', 'age': 30}); // Calling .fromJson()
+
+  print('${user1.username} (${user1.role})');
+  print('${guest.username} (${guest.role})');
+  print('${apiUser.username} (${apiUser.role})');
+}
+```
+
+### C. Constructors with Optional Parameters (Named & Positional)
+
+Constructors can declare optional parameters just like regular functions:
+
+```dart
+class UserAccount {
+  String username;
+  int level;
+  String status;
+
+  // 1. Named parameters ({...}):
+  UserAccount.withNamed({
+    required this.username,
+    this.level = 1,
+    this.status = 'Active',
+  });
+
+  // 2. Positional parameters ([...]):
+  UserAccount.withPositional(
+    this.username, [
+    this.level = 1,
+    this.status = 'Active',
+  ]);
+
+  void displaySummary() {
+    print('Account: $username | Level: $level | Status: $status');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Optional Parameter Constructors:
+  // =======================================================
+
+  // 1. Accessing Named Parameter Constructor (Label-based):
+  var account1 = UserAccount.withNamed(username: 'ubaydillah'); // level & status use defaults
+  var account2 = UserAccount.withNamed(
+    username: 'alex',
+    level: 5,
+    status: 'VIP',
+  );
+
+  // 2. Accessing Positional Parameter Constructor (Order-based):
+  var account3 = UserAccount.withPositional('jono'); // level & status use defaults
+  var account4 = UserAccount.withPositional('siti', 10, 'Banned');
+
+  account1.displaySummary(); // Account: ubaydillah | Level: 1 | Status: Active
+  account2.displaySummary(); // Account: alex | Level: 5 | Status: VIP
+  account3.displaySummary(); // Account: jono | Level: 1 | Status: Active
+  account4.displaySummary(); // Account: siti | Level: 10 | Status: Banned
+}
+```
+
+### D. `const` Constructors (Canonical & Memory Efficient)
+
+When all fields in a class are `final`, marking the constructor with `const` allows Dart to compile identical instances into a single canonical object in memory.
+
+```dart
+class Point {
+  final int x;
+  final int y;
+
+  const Point(this.x, this.y);
+}
+
+void main() {
+  const p1 = Point(10, 20);
+  const p2 = Point(10, 20);
+
+  // Both point to the exact same memory address:
+  print(identical(p1, p2)); // Output: true
+}
+```
+
+> [!TIP]
+> In Flutter, almost all UI widgets (such as `const Text('Hello')`, `const SizedBox(height: 10)`, `const Icon(Icons.star)`) use `const` constructors to prevent unnecessary widget rebuilds during UI updates.
+
+### E. `factory` Constructors
+
+A `factory` constructor gives you full control over instance creation. It can return cached instances (Singleton pattern), sub-class instances, or validate data before returning:
+
+```dart
+class Logger {
+  final String name;
+  static final Map<String, Logger> _cache = {};
+
+  // Factory constructor: returns cached instance if one already exists
+  factory Logger(String name) {
+    return _cache.putIfAbsent(name, () => Logger._internal(name));
+  }
+
+  // Private named constructor:
+  Logger._internal(this.name);
+
+  void log(String message) {
+    print('[$name] $message');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Factory Constructors:
+  // =======================================================
+  // Invoked just like standard constructors:
+  var log1 = Logger('UI_LOG');
+  var log2 = Logger('UI_LOG');       // Retrieves cached instance
+  var log3 = Logger('NETWORK_LOG');  // Creates and caches new instance
+
+  log1.log('Button clicked');
+
+  // Proof that log1 and log2 point to the exact same memory instance:
+  print(identical(log1, log2)); // Output: true
+  print(identical(log1, log3)); // Output: false (distinct logger name)
+}
+```
+
+---
+
+## 3. Encapsulation & Private Members (`_`)
+
+Encapsulation hides internal class details and protects sensitive data from unauthorized external modification.
+
+In Dart, privacy is scoped to the **file / library** level (rather than per-class). Prefixing any identifier with an underscore (`_`) marks it private to that file:
+
+```dart
+// =========================================================================
+// 📁 File: lib/bank_account.dart
+// =========================================================================
+class BankAccount {
+  final String owner;
+  double _balance = 0.0; // Private field: inaccessible outside this file
+
+  BankAccount(this.owner, this._balance);
+
+  // Getter: Read access to private state
+  double get balance => _balance;
+
+  // Setter: Validates data before mutation
+  set deposit(double amount) {
+    if (amount > 0) {
+      _balance += amount;
+      print('Deposited Rp $amount. New balance: Rp $_balance');
+    } else {
+      print('Deposit amount must be greater than 0!');
+    }
+  }
+
+  // Private method:
+  void _logAudit(String message) {
+    print('Audit Log: $message');
+  }
+}
+```
+
+```dart
+// =========================================================================
+// 📁 File: bin/main.dart
+// =========================================================================
+import 'package:my_app/bank_account.dart';
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Properties, Getters, and Setters:
+  // =======================================================
+  var account = BankAccount('Ubay', 100000);
+
+  // 1. Accessing public property:
+  print('Owner: ${account.owner}');
+
+  // 2. Accessing GETTER (Read like a variable, NOT like a function account.balance()):
+  print('Current balance: Rp ${account.balance}'); // Output: Current balance: Rp 100000.0
+
+  // 3. Accessing SETTER (Using assignment operator '=', NOT account.deposit(50000)):
+  account.deposit = 50000;  // Output: Deposited Rp 50000.0. New balance: Rp 150000.0
+  account.deposit = -10000; // Output: Deposit amount must be greater than 0!
+
+  // 4. Private member access traps from outside file:
+  // account._balance = 999999;     // ❌ ERROR: Identifier '_balance' is private
+  // account._logAudit('test');     // ❌ ERROR: The method '_logAudit' isn't defined
+}
+```
+
+---
+
+## 4. Static Members (`static`)
+
+The `static` keyword binds properties or methods directly to the **Class itself**, rather than to individual object instances.
+
+* **Static Field:** Shared across all instances of the class.
+* **Static Method:** Invoked directly via the class name (`ClassName.methodName()`). Static methods **cannot access the `this` keyword**.
+
+```dart
+class AppConfig {
+  // Static properties:
+  static const String appName = 'My Awesome Flutter App';
+  static const String apiBaseUrl = 'https://api.myapp.com/v1';
+  static int activeVisitors = 0;
+
+  // Static method:
+  static void registerVisit() {
+    activeVisitors++;
+    print('Total visitors: $activeVisitors');
+  }
+}
+
+void main() {
+  // Accessing Static Members (Directly via the Class name):
+  print('App: ${AppConfig.appName}');
+  print('API URL: ${AppConfig.apiBaseUrl}');
+
+  AppConfig.registerVisit(); // Output: Total visitors: 1
+  AppConfig.registerVisit(); // Output: Total visitors: 2
+}
+```
+
+---
+
+## 5. Cascade Notation (`..` dan `?..`)
+
+Cascade notation (`..`) allows you to perform a sequence of operations (mutations and method calls) on the same object without repeating the variable reference:
+
+```dart
+class ButtonConfig {
+  String label = '';
+  String color = 'Grey';
+  double width = 100.0;
+
+  void render() {
+    print('Button: "$label" | Color: $color | Width: ${width}px');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Cascade Notation:
+  // =======================================================
+
+  // 1. Standard Cascade Notation (..) on non-null object:
+  var saveBtn = ButtonConfig()
+    ..label = 'Save Changes'
+    ..color = 'Green'
+    ..width = 250.0
+    ..render();
+  // Output: Button: "Save Changes" | Color: Green | Width: 250.0px
+
+  // 2. Null-Aware Cascade Notation (?..) on nullable object:
+  ButtonConfig? optionalBtn = null;
+
+  // Safely executed even when object is null (no crash/null exception):
+  optionalBtn
+    ?..label = 'Cancel Button'
+    ..color = 'Red'
+    ..render(); // 🛡️ Safely skipped because optionalBtn is null
+}
+```

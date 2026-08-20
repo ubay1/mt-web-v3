@@ -1,0 +1,274 @@
+# Control Flow & Loops
+
+Control flow structures in Dart comprise conditional branching, iteration loops, and nested control flow using *Loop Labels*.
+
+---
+
+## 1. Conditional Branching
+
+### A. `if`, `else if`, `else`
+
+Standard boolean branching blocks:
+
+```dart
+void main() {
+  int score = 85;
+
+  if (score >= 90) {
+    print('Grade: A');
+  } else if (score >= 80) {
+    print('Grade: B');
+  } else if (score >= 70) {
+    print('Grade: C');
+  } else {
+    print('Grade: D');
+  }
+}
+```
+
+### B. Ternary Operator (`condition ? ifTrue : ifFalse`)
+
+Concise single-line expression for binary conditions:
+
+```dart
+void main() {
+  int age = 20;
+  String status = age >= 18 ? 'Adult' : 'Minor';
+  print(status); // Output: Adult
+}
+```
+
+### C. `switch-case` Statement
+
+Useful when matching a single variable against multiple discrete target values:
+
+```dart
+void main() {
+  String role = 'editor';
+
+  switch (role) {
+    case 'admin':
+      print('Full Access: Manage system configuration.');
+      break;
+    case 'editor':
+    case 'author': // Group multiple cases together
+      print('Limited Access: Create and edit articles.');
+      break;
+    case 'viewer':
+      print('Read-Only Access: View content.');
+      break;
+    default:
+      print('Unknown role. Access denied.');
+  }
+}
+```
+
+> [!NOTE]
+> **💡 Dart 3 Update:** In Dart 3+, non-empty `case` clauses no longer strictly require `break` statements at the end because Dart prevents accidental fall-through by default.
+
+### D. `switch` Expression (Modern Dart 3+)
+
+In Dart 3+, `switch` can be written as an **expression that directly produces a value** using the fat-arrow (`=>`) syntax and `_` (*wildcard*) for the default fallback:
+
+```dart
+void main() {
+  String orderStatus = 'shipping';
+
+  // Switch evaluates and assigns the resulting string directly:
+  final statusMessage = switch (orderStatus) {
+    'pending' => '⏳ Waiting for customer payment',
+    'paid' => '💳 Payment verified, packing order',
+    'shipping' => '🚚 Parcel in transit with courier',
+    'delivered' => '📦 Parcel successfully delivered',
+    _ => '❓ Unknown order status' // _ acts as default/wildcard fallback
+  };
+
+  print(statusMessage); // Output: 🚚 Parcel in transit with courier
+}
+```
+
+---
+
+## 2. Iteration Loops
+
+Dart provides versatile looping constructs tailored for different workflows:
+
+### A. Traditional `for` Loop
+
+Ideal when you know the iteration count beforehand or need explicit numeric indexing:
+
+```dart
+void main() {
+  // 1. Numeric counter
+  for (int i = 0; i < 3; i++) {
+    print('Iteration #$i');
+  }
+
+  // 2. Iterating a List with index
+  List<String> fruits = ['Apple', 'Mango', 'Orange'];
+  for (int i = 0; i < fruits.length; i++) {
+    print('Index $i: ${fruits[i]}');
+  }
+}
+```
+
+### B. `for-in` Loop (Lists, Sets, & Maps)
+
+The cleanest and most idiomatic way to traverse collections without manual index counters:
+
+```dart
+void main() {
+  // 1. Iterating a List
+  List<String> fruits = ['Apple', 'Mango', 'Orange'];
+  for (String item in fruits) {
+    print('Fruit: $item');
+  }
+
+  // 2. Iterating a Map (using .entries)
+  Map<String, int> fruitPrices = {
+    'Apple': 5000,
+    'Mango': 7000,
+    'Orange': 3000,
+  };
+
+  for (var entry in fruitPrices.entries) {
+    print('${entry.key} costs Rp ${entry.value}');
+  }
+}
+```
+
+### C. `while` and `do-while` Loops
+
+The fundamental difference is **when the condition is evaluated**:
+
+* **`while`**: Evaluates the condition upfront before entering the loop body. If initially `false`, the body **never executes**.
+* **`do-while`**: Executes the body first, then checks the condition. The body is **guaranteed to run at least once**.
+
+```dart
+void main() {
+  // while example: initial condition is false (0 executions)
+  int i = 10;
+  while (i < 5) {
+    print('while executed'); // ❌ Never printed
+    i++;
+  }
+
+  // do-while example: initial condition is false (executes once)
+  int j = 10;
+  do {
+    print('do-while executed at least once (value of j: $j)'); // ✅ Printed 1 time
+    j++;
+  } while (j < 5);
+}
+```
+
+### D. `forEach` Method (Lists & Maps)
+
+Functional helper method using arrow callbacks:
+
+```dart
+void main() {
+  // 1. forEach on List
+  List<String> tags = ['Flutter', 'Mobile', 'UI'];
+  tags.forEach((tag) => print('#$tag'));
+
+  // 2. forEach on Map (accepts key and value)
+  Map<String, int> inventory = {
+    'Laptop': 10,
+    'Monitor': 15,
+    'Keyboard': 25,
+  };
+  inventory.forEach((product, stock) {
+    print('Stock for $product: $stock units');
+  });
+}
+```
+
+---
+
+## 3. `break` and `continue`
+
+* **`break`**: Immediately terminates loop execution.
+* **`continue`**: Skips the remaining lines of the current cycle and jumps to the next iteration.
+
+```dart
+void main() {
+  for (int i = 1; i <= 10; i++) {
+    if (i == 5) continue; // skip 5
+    if (i == 8) break;    // terminate loop completely at 8
+    print(i); // Output: 1, 2, 3, 4, 6, 7
+  }
+}
+```
+
+---
+
+## 4. Loop Labels (Nested Loop Flow Control)
+
+When dealing with **nested loops** (a loop inside another loop), standard `break` or `continue` statements **only affect the innermost loop**:
+
+```dart
+// Without label: break only exits the inner 'j' loop ('i' loop continues)
+for (int i = 1; i <= 3; i++) {
+  for (int j = 1; j <= 3; j++) {
+    if (i == 2 && j == 2) {
+      break; // Only terminates the current 'j' loop
+    }
+    print('i: $i, j: $j');
+  }
+}
+```
+
+### 🏷️ Using Labels to Target Outer Loops
+
+Prefix an outer loop with an identifier followed by a colon (`:`) (e.g. `outerLoop:` or `outer:`).
+
+#### A. Terminating the Outer Loop from Inside (`break label`)
+
+```dart
+void main() {
+  outerLoop: for (int i = 1; i <= 3; i++) {       // <-- Label "outerLoop"
+    innerLoop: for (int j = 1; j <= 3; j++) {    // <-- Label "innerLoop"
+      if (i == 2 && j == 2) {
+        print('Stop condition met at i:$i, j:$j -> Terminating outer loop!');
+        break outerLoop; // Stops the outer loop entirely!
+      }
+      print('i: $i, j: $j');
+    }
+  }
+}
+
+/* Output:
+i: 1, j: 1
+i: 1, j: 2
+i: 1, j: 3
+i: 2, j: 1
+Stop condition met at i:2, j:2 -> Terminating outer loop!
+*/
+```
+
+#### B. Skipping to the Next Outer Iteration (`continue label`)
+
+```dart
+void main() {
+  outerLoop: for (int i = 1; i <= 3; i++) {
+    innerLoop: for (int j = 1; j <= 3; j++) {
+      if (j == 2) {
+        // Skip remaining innerLoop iterations and jump straight to the next 'i' in outerLoop
+        continue outerLoop;
+      }
+      print('i: $i, j: $j');
+    }
+  }
+}
+
+/* Output:
+i: 1, j: 1
+i: 2, j: 1
+i: 3, j: 1
+*/
+```
+
+> [!TIP]
+> **When to Use Labels?**
+> Loop labels are especially handy when searching 2D matrices/grids, querying nested tree/collection structures, or when encountering early exit criteria that should abort the entire outer processing loop.

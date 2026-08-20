@@ -1,0 +1,117 @@
+# Menguasai Layout Flutter: Container, Flex & Scrollables
+
+Menyusun layout di Flutter menggunakan prinsip kombinasi komposisi widget (*composition over inheritance*).
+
+---
+
+## 1. `Container` & `BoxDecoration`
+
+`Container` adalah widget serbaguna yang menggabungkan kemampuan mengatur dimensi (`width`, `height`), jarak (`padding`, `margin`), warna, border, shadow, dan bentuk (*shape*):
+
+```dart
+Container(
+  width: 250,
+  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  margin: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: const Color(0xFF1E293B),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1.5),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.4),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: const Text(
+    'Kartu Glassmorphism',
+    style: TextStyle(color: Colors.white),
+  ),
+)
+```
+
+---
+
+## 2. Flex Layout: `Row`, `Column`, `Expanded` & `Flexible`
+
+- `Row`: Menata anak-anaknya secara **horizontal** (kiri ke kanan).
+- `Column`: Menata anak-anaknya secara **vertikal** (atas ke bawah).
+- `Expanded`: Memaksa widget anak untuk mengisi seluruh sisa ruang kosong yang tersedia di sumbu utama (*main axis*).
+- `Flexible`: Memberikan fleksibilitas ukuran tanpa memaksa harus mengisi penuh.
+
+```dart
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Sumbu Horizontal
+  crossAxisAlignment: CrossAxisAlignment.center,     // Sumbu Vertikal
+  children: [
+    const Icon(Icons.star, color: Colors.amber),
+    const SizedBox(width: 8),
+    Expanded(
+      child: Text(
+        'Judul yang sangat panjang dan akan otomatis wrap jika tidak muat...',
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+    ElevatedButton(
+      onPressed: () {},
+      child: const Text('Beli'),
+    ),
+  ],
+)
+```
+
+---
+
+## 3. Tumpukan Berlapis: `Stack` & `Positioned`
+
+Gunakan `Stack` jika kamu ingin menumpuk widget di atas widget lainnya (seperti badge notifikasi di atas avatar, atau gradient overlay di atas gambar):
+
+```dart
+Stack(
+  clipBehavior: Clip.none,
+  children: [
+    // 1. Gambar Avatar (di lapisan bawah)
+    const CircleAvatar(
+      radius: 40,
+      backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+    ),
+    // 2. Badge Online (menempel di pojok kanan bawah avatar)
+    Positioned(
+      bottom: 0,
+      right: 0,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: Colors.greenAccent,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+      ),
+    ),
+  ],
+)
+```
+
+---
+
+## 4. Daftar & Grid Berperforma Tinggi: `ListView.builder` & `GridView.builder`
+
+Untuk data dalam jumlah banyak atau tak terbatas, **JANGAN** gunakan `ListView(children: [...])` biasa karena akan membuat seluruh widget di memori sekaligus. Selalu gunakan konstruktor `.builder` yang bersifat *lazy-loading* (hanya me-render item yang tampak di layar):
+
+```dart
+ListView.builder(
+  itemCount: 100,
+  itemBuilder: (context, index) {
+    return ListTile(
+      leading: CircleAvatar(child: Text('${index + 1}')),
+      title: Text('Item Data ke-$index'),
+      subtitle: Text('Deskripsi singkat untuk item $index'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => print('Item $index ditekan'),
+    );
+  },
+)
+```

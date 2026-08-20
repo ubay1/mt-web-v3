@@ -1,0 +1,71 @@
+# Modern Dart 3: Records, Pattern Matching & Switch Expressions
+
+Dart 3 brought major language enhancements including **Records**, **Pattern Matching**, **Sealed Classes**, and **Switch Expressions**.
+
+---
+
+## 1. Records (Multi-Value Tuples)
+
+Records allow bundling multiple values without defining boilerplate classes:
+
+```dart
+(String, int, {bool isValid}) getUserStats() {
+  return ('Ubay Dillah', 42, isValid: true);
+}
+
+void main() {
+  final result = getUserStats();
+  print(result.$1); // Positional 1
+  print(result.$2); // Positional 2
+  print(result.isValid); // Named
+
+  // Direct Pattern Destructuring:
+  final (name, score, isValid: valid) = getUserStats();
+  print('$name scored $score (Valid: $valid)');
+}
+```
+
+---
+
+## 2. Modern Switch Expressions
+
+In Dart 3, `switch` can be written as an expression returning a value using `=>`:
+
+```dart
+String getStatusBadge(int httpCode) => switch (httpCode) {
+  200 => '✅ Success (OK)',
+  400 => '⚠️ Bad Request',
+  401 || 403 => '⛔ Unauthorized / Forbidden',
+  >= 500 && <= 599 => '🔥 Server Error',
+  _ => '❓ Unknown Code',
+};
+```
+
+---
+
+## 3. Sealed Classes & Exhaustive Matching
+
+`sealed` classes enable closed hierarchies checked exhaustively at compile-time by the compiler:
+
+```dart
+sealed class AuthState {}
+
+class AuthInitial extends AuthState {}
+class AuthLoading extends AuthState {}
+class AuthSuccess extends AuthState {
+  final String token;
+  AuthSuccess(this.token);
+}
+class AuthFailure extends AuthState {
+  final String error;
+  AuthFailure(this.error);
+}
+
+// Compiler enforces that all subtypes are handled
+String resolveUI(AuthState state) => switch (state) {
+  AuthInitial() => 'Show Login Button',
+  AuthLoading() => 'Show Spinner',
+  AuthSuccess(:final token) => 'Dashboard Token: $token',
+  AuthFailure(:final error) => 'Show Error: $error',
+};
+```

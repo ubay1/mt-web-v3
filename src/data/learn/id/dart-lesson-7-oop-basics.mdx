@@ -1,0 +1,362 @@
+# Pemrograman Berorientasi Objek: Class & Konstruktor
+
+Dart adalah bahasa berorientasi objek murni (*pure OOP*). Segala hal di Dart adalah objek (bahkan tipe data primitif seperti angka, teks, fungsi, hingga `null` adalah objek yang mewarisi class `Object`).
+
+---
+
+## 1. Konsep Class & Objek
+
+* **Class** adalah sebuah *blueprint* (cetakan / rancangan awal) yang mendefinisikan properti (*state/data*) dan method (*behavior/perilaku*).
+* **Object (Instance)** adalah bentuk nyata yang dibuat berdasarkan cetakan *class* tersebut.
+
+```dart
+class Mobil {
+  // Properti / Field
+  // Di era Sound Null Safety, properti harus memiliki nilai awal, nullable (?), atau late
+  String merk;
+  int tahun;
+  String? warna; // Nullable (boleh kosong)
+
+  // Constructor ringkas (Shortcut Constructor)
+  Mobil(this.merk, this.tahun, [this.warna]);
+
+  // Method (Perilaku / Fungsi di dalam class)
+  void klakson() {
+    print('Tin tin! Mobil $merk ($tahun) membunyikan klakson.');
+  }
+}
+
+void main() {
+  // Cara Membuat Objek & Mengakses Properti / Method:
+  var mobil1 = Mobil('Toyota', 2022, 'Hitam');
+
+  // Mengakses properti:
+  print('Merk: ${mobil1.merk}, Tahun: ${mobil1.tahun}, Warna: ${mobil1.warna}');
+
+  // Mengakses / memanggil method:
+  mobil1.klakson(); // Output: Tin tin! Mobil Toyota (2022) membunyikan klakson.
+}
+```
+
+---
+
+## 2. Ragam Konstruktor di Dart
+
+Konstruktor adalah method khusus yang otomatis dijalankan saat objek pertama kali dibuat untuk menginisialisasi nilai awal properti.
+
+### A. Konstruktor Standar vs Shortcut (`this.field`)
+
+```dart
+class Produk {
+  String nama;
+  double harga;
+
+  // 1. Bentuk Dasar Panjang:
+  // Produk(String nama, double harga) {
+  //   this.nama = nama;
+  //   this.harga = harga;
+  // }
+
+  // 2. Bentuk Shortcut (Sangat Direkomendasikan & Idiomatis di Dart):
+  Produk(this.nama, this.harga);
+}
+
+void main() {
+  var barang = Produk('MacBook Air', 18500000);
+  print('Produk: ${barang.nama} - Rp ${barang.harga}');
+}
+```
+
+### B. Named Constructors (Konstruktor Bernama)
+
+Dart tidak mendukung *constructor overloading* dengan nama yang sama seperti di Java atau C++. Sebagai gantinya, Dart menyediakan **Named Constructor** (`NamaClass.namaKonstruktor`) untuk membuat berbagai variasi cara inisialisasi objek:
+
+```dart
+class User {
+  final String username;
+  final String role;
+  final int umur;
+
+  // 1. Default Constructor
+  User(this.username, this.role, this.umur);
+
+  // 2. Named Constructor: User Tamu (Guest)
+  User.guest()
+      : username = 'Guest',
+        role = 'Visitor',
+        umur = 0;
+
+  // 3. Named Constructor: Dari data Map / JSON API
+  User.fromJson(Map<String, dynamic> json)
+      : username = json['username'] as String,
+        role = json['role'] as String,
+        umur = json['umur'] as int;
+}
+
+void main() {
+  // Cara Mengakses Named Constructor:
+  var user1 = User('ubay', 'Admin', 25);
+  var tamu = User.guest(); // Memanggil .guest()
+  var userApi = User.fromJson({'username': 'alex', 'role': 'Editor', 'umur': 30}); // Memanggil .fromJson()
+
+  print('${user1.username} (${user1.role})');
+  print('${tamu.username} (${tamu.role})');
+  print('${userApi.username} (${userApi.role})');
+}
+```
+
+### C. Konstruktor dengan Parameter Opsional (Named & Positional)
+
+Konstruktor di Dart dapat menggunakan parameter opsional seperti halnya fungsi biasa:
+
+```dart
+class AkunPengguna {
+  String username;
+  int level;
+  String status;
+
+  // 1. Menggunakan Named Parameters ({...}):
+  AkunPengguna.withNamed({
+    required this.username,
+    this.level = 1,
+    this.status = 'Aktif',
+  });
+
+  // 2. Menggunakan Positional Parameters ([...]):
+  AkunPengguna.withPositional(
+    this.username, [
+    this.level = 1,
+    this.status = 'Aktif',
+  ]);
+
+  void cetakInfo() {
+    print('Akun: $username | Level: $level | Status: $status');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Konstruktor Parameter Opsional:
+  // =======================================================
+
+  // 1. Akses Named Parameter (Bisa isi sebagian dengan labelnya):
+  var akun1 = AkunPengguna.withNamed(username: 'ubaydillah'); // level & status pakai nilai default
+  var akun2 = AkunPengguna.withNamed(
+    username: 'alex',
+    level: 5,
+    status: 'VIP',
+  );
+
+  // 2. Akses Positional Parameter (Bisa isi tanpa parameter opsional di akhir):
+  var akun3 = AkunPengguna.withPositional('jono'); // level & status pakai nilai default
+  var akun4 = AkunPengguna.withPositional('siti', 10, 'Banned');
+
+  akun1.cetakInfo(); // Akun: ubaydillah | Level: 1 | Status: Aktif
+  akun2.cetakInfo(); // Akun: alex | Level: 5 | Status: VIP
+  akun3.cetakInfo(); // Akun: jono | Level: 1 | Status: Aktif
+  akun4.cetakInfo(); // Akun: siti | Level: 10 | Status: Banned
+}
+```
+
+### D. `const` Constructor (Kanonikal & Hemat Memori)
+
+Jika semua properti di dalam class bersifat `final` (tidak akan pernah berubah), kamu bisa menambahkan kata kunci `const` pada konstruktor. Dart akan menyatukan instance dengan nilai yang sama ke alamat memori yang persis sama (*canonical instance*).
+
+```dart
+class TitikKoordinat {
+  final int x;
+  final int y;
+
+  const TitikKoordinat(this.x, this.y);
+}
+
+void main() {
+  const t1 = TitikKoordinat(10, 20);
+  const t2 = TitikKoordinat(10, 20);
+
+  // t1 dan t2 menunjuk ke alamat RAM yang persis sama:
+  print(identical(t1, t2)); // Output: true
+}
+```
+
+> [!TIP]
+> Di Flutter, hampir semua Widget UI (seperti `const Text('Halo')`, `const SizedBox(height: 10)`, `const Icon(Icons.star)`) menggunakan `const` constructor agar Flutter tidak perlu me-rebuild widget tersebut saat layar me-render ulang (*re-render*).
+
+### E. `factory` Constructor
+
+Konstruktor `factory` digunakan ketika kamu ingin mengontrol pembuatan objek secara khusus, misalnya mengembalikan objek dari cache (Singleton Pattern), memvalidasi data sebelum membuat objek, atau mengembalikan sub-class:
+
+```dart
+class Logger {
+  final String nama;
+  static final Map<String, Logger> _cache = {};
+
+  // Factory Constructor: mengembalikan instance yang ada di cache jika sudah pernah dibuat
+  factory Logger(String nama) {
+    return _cache.putIfAbsent(nama, () => Logger._internal(nama));
+  }
+
+  // Private Named Constructor:
+  Logger._internal(this.nama);
+
+  void log(String pesan) {
+    print('[$nama] $pesan');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Factory Constructor:
+  // =======================================================
+  // Dipanggil persis seperti konstruktor biasa:
+  var log1 = Logger('UI_LOG');
+  var log2 = Logger('UI_LOG');       // Mengambil objek yang sudah ada di cache
+  var log3 = Logger('NETWORK_LOG');  // Membuat objek cache baru
+
+  log1.log('Tombol diklik');
+
+  // Bukti bahwa log1 dan log2 menunjuk ke satu objek yang sama di memori:
+  print(identical(log1, log2)); // Output: true
+  print(identical(log1, log3)); // Output: false (nama logger berbeda)
+}
+```
+
+---
+
+## 3. Enkapsulasi & Private Member (`_`)
+
+Enkapsulasi bertujuan untuk menyembunyikan data internal class dari modifikasi langsung yang tidak valid di luar file.
+
+Di Dart, hak akses *private* diatur pada tingkat **file / library** (bukan per class). Tambahkan tanda garis bawah (`_`) di depan nama variabel, method, atau class:
+
+```dart
+// =========================================================================
+// 📁 File: lib/rekening_bank.dart
+// =========================================================================
+class RekeningBank {
+  final String pemilik;
+  double _saldo = 0.0; // Private: hanya bisa diakses di dalam file ini
+
+  RekeningBank(this.pemilik, this._saldo);
+
+  // Getter: Memberikan akses baca ke properti private _saldo
+  double get saldo => _saldo;
+
+  // Setter: Mengontrol dan memvalidasi saat nilai _saldo ingin diubah
+  set setor(double jumlah) {
+    if (jumlah > 0) {
+      _saldo += jumlah;
+      print('Berhasil setor Rp $jumlah. Saldo baru: Rp $_saldo');
+    } else {
+      print('Jumlah setor harus lebih dari 0!');
+    }
+  }
+
+  // Private Method:
+  void _catatAudit(String pesan) {
+    print('Audit Log: $pesan');
+  }
+}
+```
+
+```dart
+// =========================================================================
+// 📁 File: bin/main.dart
+// =========================================================================
+import 'package:aplikasi_saya/rekening_bank.dart';
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Properti, Getter, dan Setter:
+  // =======================================================
+  var rekening = RekeningBank('Ubay', 100000);
+
+  // 1. Mengakses properti publik biasa:
+  print('Pemilik: ${rekening.pemilik}');
+
+  // 2. Mengakses GETTER (Dipanggil seperti variabel, BUKAN seperti fungsi rekening.saldo()):
+  print('Saldo saat ini: Rp ${rekening.saldo}'); // Output: Saldo saat ini: Rp 100000.0
+
+  // 3. Mengakses SETTER (Menggunakan tanda sama dengan '=', BUKAN rekening.setor(50000)):
+  rekening.setor = 50000; // Output: Berhasil setor Rp 50000.0. Saldo baru: Rp 150000.0
+  rekening.setor = -10000; // Output: Jumlah setor harus lebih dari 0!
+
+  // 4. Jebakan Akses Private Member dari luar file:
+  // rekening._saldo = 999999;     // ❌ ERROR: Identifier '_saldo' is private to 'rekening_bank.dart'
+  // rekening._catatAudit('test'); // ❌ ERROR: The method '_catatAudit' isn't defined
+}
+```
+
+---
+
+## 4. Static Members (`static`)
+
+Kata kunci `static` digunakan untuk membuat properti atau method yang **dimiliki langsung oleh Class itu sendiri**, bukan oleh instance objek.
+
+* **Static Variable:** Nilainya dibagi bersama (*shared*) oleh semua instance.
+* **Static Method:** Dapat dipanggil langsung melalui nama class tanpa perlu membuat objek (`NamaClass.namaMethod()`). Static method **tidak bisa mengakses keyword `this`**.
+
+```dart
+class KonfigurasiApp {
+  // Static Properties:
+  static const String appName = 'My Awesome Flutter App';
+  static const String apiBaseUrl = 'https://api.myapp.com/v1';
+  static int totalPengunjung = 0;
+
+  // Static Method:
+  static void tambahPengunjung() {
+    totalPengunjung++;
+    print('Total pengunjung saat ini: $totalPengunjung');
+  }
+}
+
+void main() {
+  // Cara Mengakses Static Members (Langsung lewat nama Class):
+  print('Nama Aplikasi: ${KonfigurasiApp.appName}');
+  print('Base URL: ${KonfigurasiApp.apiBaseUrl}');
+
+  KonfigurasiApp.tambahPengunjung(); // Output: Total pengunjung saat ini: 1
+  KonfigurasiApp.tambahPengunjung(); // Output: Total pengunjung saat ini: 2
+}
+```
+
+---
+
+## 5. Cascade Notation (`..` dan `?..`)
+
+Cascade notation (`..`) memungkinkan kamu mengeksekusi serangkaian method atau pengaturan properti pada objek yang sama tanpa perlu mengulang-ulang nama variabelnya:
+
+```dart
+class KonfigurasiTombol {
+  String label = '';
+  String warna = 'Abu-abu';
+  double lebar = 100.0;
+
+  void tampilkan() {
+    print('Tombol: "$label" | Warna: $warna | Lebar: ${lebar}px');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 Cara Mengakses Cascade Notation:
+  // =======================================================
+
+  // 1. Standar Cascade Notation (..) pada objek non-null:
+  var tombolSimpan = KonfigurasiTombol()
+    ..label = 'Simpan Perubahan'
+    ..warna = 'Hijau'
+    ..lebar = 250.0
+    ..tampilkan();
+  // Output: Tombol: "Simpan Perubahan" | Warna: Hijau | Lebar: 250.0px
+
+  // 2. Null-Aware Cascade Notation (?..) pada objek yang nullable:
+  KonfigurasiTombol? tombolOpsional = null;
+
+  // Menggunakan ?.. aman dijalankan meskipun objek bernilai null (tidak akan crash):
+  tombolOpsional
+    ?..label = 'Tombol Batal'
+    ..warna = 'Merah'
+    ..tampilkan(); // 🛡️ Dilewati dengan aman karena tombolOpsional adalah null
+}
+```

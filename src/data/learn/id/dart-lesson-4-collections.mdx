@@ -1,0 +1,100 @@
+# Koleksi: List, Set, Map & Kekuatan Collection-If/For
+
+Dart memiliki dukungan bawaan yang sangat kaya untuk struktur data koleksi (*collections*). Tiga jenis koleksi utama adalah `List`, `Set`, dan `Map`.
+
+---
+
+## 1. Tiga Koleksi Utama di Dart
+
+### A. List (Array Berurutan)
+`List<T>` adalah kumpulan elemen yang berurutan dan diakses menggunakan indeks mulai dari 0.
+
+```dart
+void main() {
+  List<String> framework = ['Flutter', 'React', 'Vue'];
+  
+  framework.add('Next.js');
+  framework.addAll(['Nuxt', 'Svelte']);
+  
+  print(framework[0]); // Flutter
+  print('Jumlah elemen: ${framework.length}');
+}
+```
+
+### B. Set (Koleksi Nilai Unik)
+`Set<T>` adalah kumpulan elemen unik tanpa duplikasi data.
+
+```dart
+void main() {
+  Set<int> nomorUnik = {1, 2, 3, 3, 2, 4};
+  print(nomorUnik); // Output: {1, 2, 3, 4} (duplikat otomatis dibuang)
+
+  nomorUnik.add(5);
+  print(nomorUnik.contains(3)); // true
+}
+```
+
+### C. Map (Key-Value Pair)
+`Map<K, V>` menyimpan data dalam bentuk pasangan kunci dan nilai (*key-value*). Kunci (*key*) harus bersifat unik.
+
+```dart
+void main() {
+  Map<String, dynamic> user = {
+    'id': 101,
+    'nama': 'Ubay Dillah',
+    'isVerified': true,
+    'skills': ['Dart', 'Flutter', 'TypeScript']
+  };
+
+  print(user['nama']); // Ubay Dillah
+  user['role'] = 'Senior Engineer'; // Menambah pasangan baru
+}
+```
+
+---
+
+## 2. Spread Operator (`...` dan `...?`)
+
+Spread operator digunakan untuk memasukkan seluruh isi dari satu koleksi ke dalam koleksi lain:
+
+```dart
+List<int> listA = [1, 2, 3];
+List<int> listB = [0, ...listA, 4, 5]; // [0, 1, 2, 3, 4, 5]
+
+List<int>? listNullable;
+List<int> listC = [100, ...?listNullable]; // Aman jika null!
+```
+
+---
+
+## 3. Fitur Unggulan: Collection-If & Collection-For
+
+Ini adalah salah satu fitur paling disukai di Dart karena mempermudah penyusunan widget tree di Flutter secara deklaratif:
+
+### A. Collection-If
+Menyertakan elemen ke dalam list hanya jika kondisi bernilai `true`.
+
+```dart
+bool isPremiumUser = true;
+
+List<String> menuItems = [
+  'Dashboard',
+  'Profile',
+  if (isPremiumUser) 'Fitur Analitik Pro',
+  'Pengaturan',
+];
+```
+
+### B. Collection-For
+Melakukan perulangan untuk memetakan dan menghasilkan elemen di dalam deklarasi list secara instan.
+
+```dart
+List<int> angka = [1, 2, 3];
+List<String> labelAngka = [
+  '#0',
+  for (var n in angka) '#$n'
+]; // ['#0', '#1', '#2', '#3']
+```
+
+> [!TIP]
+> Di Flutter, `if` dan `for` di dalam list widget tree digunakan secara masif untuk merender widget secara kondisional tanpa perlu memecah kode menjadi blok bersarang.

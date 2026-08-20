@@ -1,0 +1,74 @@
+# Navigation & Routing: Navigator vs go_router
+
+Screen routing is a core capability of any multi-screen Flutter application.
+
+---
+
+## 1. Imperative Navigation (Navigator 1.0)
+
+The standard stack-based routing API:
+
+```dart
+// Push a new route
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const DetailPage(productId: '101'),
+  ),
+);
+
+// Pop the current route
+Navigator.pop(context);
+
+// Replace the current route (e.g. Login -> Dashboard)
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => const DashboardPage()),
+);
+```
+
+---
+
+## 2. Declarative Modern Routing (`go_router`)
+
+For production, web URLs, and deep linking, Google's **`go_router`** package is the industry standard.
+
+### A. Router Setup
+```dart
+import 'package:go_router/go_router.dart';
+
+final router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+      routes: [
+        GoRoute(
+          path: 'detail/:id',
+          builder: (context, state) {
+            final productId = state.pathParameters['id']!;
+            return DetailScreen(id: productId);
+          },
+        ),
+      ],
+    ),
+  ],
+);
+```
+
+### B. Registering with `MaterialApp.router`
+```dart
+MaterialApp.router(
+  routerConfig: router,
+);
+```
+
+### C. Navigation Calls
+```dart
+// Navigate declaratively
+context.go('/detail/42');
+
+// Pop back
+context.pop();
+```

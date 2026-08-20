@@ -1,0 +1,138 @@
+# Pengenalan Flutter & Fondasi Widget
+
+Flutter adalah UI toolkit open-source buatan Google untuk membangun aplikasi yang dikompilasi secara _native_ dan multi-platform (iOS, Android, Web, macOS, Windows, Linux) dari satu basis kode tunggal (_single codebase_).
+
+---
+
+## 1. Arsitektur Engine & Filosofi "Everything is a Widget"
+
+Tidak seperti framework hybrid tradisional yang menggunakan _webview_ atau _bridge_ JavaScript lambat, Flutter menggambar setiap piksel antarmuka pengguna langsung ke layar menggunakan engine grafis berperforma tinggi (**Skia / Impeller**) dengan kecepatan **60-120 FPS**.
+
+Di Flutter, slogan utamanya adalah: **"Semua adalah Widget"**.
+
+- Teks adalah widget (`Text`).
+- Tombol adalah widget (`ElevatedButton`).
+- Tata letak adalah widget (`Column`, `Row`, `Center`).
+- Padding, warna latar, hingga gesture sentuhan pun adalah widget (`Padding`, `ColoredBox`, `GestureDetector`).
+
+| Layer / Tree | Peran Utama | Deskripsi |
+| :--- | :--- | :--- |
+| **1. Widget Tree** | Konfigurasi Deklaratif | Cetak biru (*blueprint*) UI yang sangat ringan dan bersifat *immutable* (dibuat ulang dengan cepat saat state berubah). |
+| **2. Element Tree** | Pengelola Siklus Hidup | Mengelola siklus hidup (*lifecycle*), menyimpan state, dan menjembatani konfigurasi widget ke objek render nyata. |
+| **3. RenderObject Tree** | Pengukuran & Gambar Piksel | Menangani kalkulasi ukuran persis (*sizing*), posisi (*layout*), *hit-testing*, dan melukis piksel ke layar (*painting*). |
+
+---
+
+## 2. `StatelessWidget` vs `StatefulWidget`
+
+### A. `StatelessWidget`
+
+Widget yang tampilannya bersifat statis dan **tidak pernah berubah** setelah dibuat (_immutable_).
+
+```dart
+import 'package:flutter/material.dart';
+
+class GreetingCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const GreetingCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade900,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+---
+
+### B. `StatefulWidget` & Daur Hidup (_Lifecycle_)
+
+Widget yang memiliki **state** internal yang dapat berubah secara dinamis selama aplikasi berjalan (misalnya nilai counter, input form, atau status animasi).
+
+```dart
+class CounterWidget extends StatefulWidget {
+  const CounterWidget({super.key});
+
+  @override
+  State<CounterWidget> createState() => _CounterWidgetState();
+}
+
+class _CounterWidgetState extends State<CounterWidget> {
+  int _counter = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. initState: Dijalankan 1 kali saat widget pertama kali dibuat
+    print('Widget Counter diinisialisasi');
+  }
+
+  void _increment() {
+    // Memanggil setState() memberi tahu framework untuk me-render ulang UI
+    setState(() {
+      _counter++;
+    });
+  }
+
+  @override
+  void dispose() {
+    // 3. dispose: Dijalankan saat widget dihapus dari tree (bersihkan controller/timer)
+    print('Widget Counter dibersihkan');
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 2. build: Dijalankan setiap kali setState() dipanggil
+    return ElevatedButton(
+      onPressed: _increment,
+      child: Text('Diklik: $_counter kali'),
+    );
+  }
+}
+```
+
+> [!NOTE]
+> **💡 Kenapa Ada 2 Class & Apa Maksud `State<CounterWidget>`?**
+> 
+> Di Flutter, setiap `StatefulWidget` selalu dibagi menjadi **2 class yang berpasangan**:
+> 1. **Class Widget (`CounterWidget`)** = **Bungkus Luar**. Tempat menerima data dari luar (isinya tetap / tidak bisa diubah).
+> 2. **Class State (`_CounterWidgetState`)** = **Otak & Mesin**. Tempat menyimpan data yang bisa berubah-ubah (seperti angka counter saat tombol diklik).
+> 
+> **Fungsi Baris `State<CounterWidget> createState() => _CounterWidgetState();`:**
+> * `createState()` berfungsi untuk **menghidupkan otak** (`_CounterWidgetState`) saat widget pertama kali dipasang di layar.
+> * Tulisan `<CounterWidget>` berfungsi seperti **tanda kepemilikan**: *"Otak ini adalah milik si `CounterWidget`"*.
+> * **Keuntungannya:** Di dalam class otak, kamu bisa langsung mengambil data apa pun dari bungkus luarnya cukup dengan mengetik **`widget.namaVariabel`** (contoh: `widget.judul`).
+
+> [!IMPORTANT]
+> Jangan pernah melakukan operasi berat (seperti memanggil API secara langsung) di dalam method `build()`, karena `build()` dapat dipanggil puluhan kali per detik saat UI dirender ulang. Lakukan inisialisasi di `initState()`.

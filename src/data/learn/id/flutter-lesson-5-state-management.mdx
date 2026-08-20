@@ -1,0 +1,87 @@
+# Arsitektur State Management: setState, Riverpod & BLoC
+
+*State* adalah data apa pun yang memengaruhi tampilan UI aplikasi pada saat tertentu. Memilih arsitektur manajemen state yang tepat adalah penentu keberhasilan proyek Flutter jangka panjang.
+
+---
+
+## 1. Spektrum State: Ephemeral vs App State
+
+- **Ephemeral (Local) State:** State yang hanya dibutuhkan oleh 1 widget lokal (misal: status tab aktif, animasi checkbox). Gunakan cukup `setState` atau `ValueNotifier`.
+- **App (Global) State:** State yang dibagikan ke banyak halaman (misal: session autentikasi pengguna, keranjang belanja e-commerce, tema aplikasi). Membutuhkan solusi state management terstruktur.
+
+---
+
+## 2. Riverpod (Modern, Compile-Safe State Management)
+
+Riverpod adalah evolusi dari Provider yang bebas dari ketergantungan `BuildContext`, mendukung *auto-dispose*, dan aman dari error runtime.
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// 1. Definisikan Provider global
+final counterProvider = StateProvider<int>((ref) => 0);
+
+// 2. Gunakan ConsumerWidget untuk membaca state
+class CounterDisplay extends ConsumerWidget {
+  const CounterDisplay({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ref.watch akan otomatis me-rebuild widget saat nilai berubah
+    final count = ref.watch(counterProvider);
+
+    return Column(
+      children: [
+        Text('Angka Saat Ini: $count', style: const TextStyle(fontSize: 24)),
+        ElevatedButton(
+          onPressed: () => ref.read(counterProvider.notifier).state++,
+          child: const Text('Tambah (+1)'),
+        ),
+      ],
+    );
+  }
+}
+```
+
+---
+
+## 3. BLoC & Cubit (Enterprise-Grade State Management)
+
+Pola **BLoC (Business Logic Component)** memisahkan logika bisnis sepenuhnya dari lapisan antarmuka pengguna (UI) melalui aliran Event dan State.
+
+```
+┌─────────────┐       Event       ┌─────────────┐       State       ┌─────────────┐
+│  UI Widget  │  ──────────────>  │    BLoC     │  ──────────────>  │  UI Widget  │
+│  (Trigger)  │                   │  (Business) │                   │  (Render)   │
+└─────────────┘                   └─────────────┘                   └─────────────┘
+```
+
+### Contoh Sederhana dengan Cubit:
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+// State definition
+sealed class AuthState {}
+class AuthUnauthenticated extends AuthState {}
+class AuthLoading extends AuthState {}
+class AuthAuthenticated extends AuthState {
+  final String userName;
+  AuthAuthenticated(this.userName);
+}
+
+// Cubit logic
+class AuthCubit extends Cubit<AuthState> {
+  AuthCubit() : super(AuthUnauthenticated());
+
+  Future<void> login(String email, String password) async {
+    emit(AuthLoading());
+    await Future.delayed(const Duration(seconds: 1)); // Simulasi API
+    emit(AuthAuthenticated('Ubay Dillah'));
+  }
+}
+```
+
+> [!TIP]
+> **Rekomendasi Pemilihan:**
+> - Proyek Kecil / Menengah: **Riverpod** (sangat cepat dikembangkan dan fleksibel).
+> - Proyek Enterprise / Skala Besar: **BLoC / Cubit** (standar arsitektur yang sangat ketat dan mudah di-unit test).

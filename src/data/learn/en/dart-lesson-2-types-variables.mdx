@@ -1,0 +1,350 @@
+# Data Types, Variables & Immutability
+
+Dart is a **statically typed** language with a **sound type system** and **sound null safety**. This means every variable's type is known and guaranteed at compile-time, allowing the compiler to catch errors before your code runs in production.
+
+Dart also provides intelligent **type inference**, allowing you to write concise code without explicitly typing every single variable.
+
+---
+
+## 1. Primitive Data Types
+
+Dart features 3 primary categories of primitive data types:
+
+### A. Numbers (`int`, `double`, `num`)
+
+* **`int`**: Integer numbers (64-bit signed integers on native platforms). Supports decimal and hexadecimal literals (`0xFF`).
+* **`double`**: Floating-point numbers (64-bit IEEE 754 precision). Supports scientific/exponential notation (`1.5e3`).
+* **`num`**: The supertype of both `int` and `double`. Useful when a variable needs to flexibly accept either integers or floating-point numbers.
+
+```dart
+void main() {
+  int age = 24;
+  double weight = 65.5;
+  num balance = 100000;    // initialized with int
+  balance = 100000.75;     // valid: num variable can hold a double
+
+  print('Age: $age, Weight: $weight kg, Balance: Rp $balance');
+}
+```
+
+### B. Text (`String`)
+
+A `String` in Dart represents an immutable sequence of UTF-16 code units.
+
+* **Best Practice:** Prefer single quotes (`'...'`) according to official Dart conventions, unless escaping is required.
+* **Modern String Features:**
+  * **Interpolation:** Embed variables with `$variable` or expression evaluations with `${expression}`.
+  * **Multi-line Strings:** Declare long paragraphs across lines using triple quotes (`'''...'''` or `"""..."""`).
+  * **Raw Strings:** Prefix with `r` (`r'...'`) to ignore escape characters (e.g. `\n` won't create a newline).
+
+```dart
+void main() {
+  String name = 'Andi';
+  String greeting = 'Hello $name, your name has ${name.length} characters';
+
+  String multiLineText = '''
+First line
+Second line
+''';
+
+  // \n will not be interpreted as a newline in raw strings
+  String windowsPath = r'C:\Users\Documents\new_folder';
+
+  print(greeting);
+  print(multiLineText);
+  print(windowsPath);
+}
+```
+
+### C. Booleans (`bool`)
+
+Has only two literal values: `true` or `false`.
+
+> [!IMPORTANT]
+> **`if` Conditions in Dart Must Strictly Evaluate to `bool` (No Truthy / Falsy)**
+> 
+> * Writing `if (a == 10)` is **100% valid and correct** because the comparison expression `(a == 10)` evaluates to a boolean value (`true` or `false`).
+> * The concept of **"No Truthy / Falsy"** means you **cannot pass non-boolean variables directly into `if` without a comparison**, as is common in JavaScript or Python.
+
+```dart
+void main() {
+  int a = 10;
+  int unreadCount = 0;
+  String name = '';
+  String? user = null;
+
+  // ❌ ALLOWED IN JAVASCRIPT / PYTHON, BUT COMPILATION ERROR IN DART:
+  // if (unreadCount) { ... } // 💥 ERROR: int is not a boolean!
+  // if (name) { ... }        // 💥 ERROR: String is not a boolean!
+  // if (user) { ... }        // 💥 ERROR: Object/null is not a boolean!
+
+  // ✅ IN DART, ALWAYS WRITE EXPLICIT BOOLEAN COMPARISONS:
+  if (unreadCount > 0) {
+    print('You have new notifications.');
+  }
+
+  if (a == 10) {
+    print('Value of a is 10.'); // ✅ Valid because (a == 10) returns true/false
+  }
+
+  if (name.isNotEmpty) {
+    print('Name is filled.');
+  }
+
+  if (user != null) {
+    print('User exists.');
+  }
+}
+```
+
+---
+
+## 2. Variable Declarations: `var`, `final`, `const`, `dynamic`, & `Object?`
+
+Choosing the appropriate variable declaration keyword is critical for immutability, memory performance, and bug prevention.
+
+| Keyword | Can Reassign Value? | When is Type Inferred? | When is Value Evaluated? | Safety & Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| **`var`** | ✅ Yes | At declaration (*Inferred*) | Runtime | Statically locked type; value can be modified. |
+| **`final`** | ❌ No | At declaration (*Inferred*) | **Runtime** | Single-assignment; value computed during execution. |
+| **`const`** | ❌ No | At declaration (*Inferred*) | **Compile-time** | Value must be completely determined at build-time. |
+| **`dynamic`** | ✅ Yes | Flexible at runtime | Runtime | ⚠️ Disables static type analysis (danger of runtime crash). |
+| **`Object?`** | ✅ Yes | Static (`Object?`) | Runtime | ✅ Accepts any value while preserving compile-time type-safety. |
+
+### A. `var` (Type Inference)
+When initialized, the Dart compiler automatically locks (*infers*) the type. You can reassign values as long as they match that inferred type.
+
+```dart
+var city = 'Jakarta'; // statically inferred as String
+city = 'Bandung';     // ✅ Valid (same String type)
+// city = 123;        // ❌ Compile Error: Cannot assign int to a String variable
+```
+
+### B. `final` (Single-Assignment Runtime Constant)
+A `final` variable **can only be assigned once**. Its value is determined when the application is **running (*runtime*)**, such as current user login timestamps, mobile device sensors, or server responses. Once assigned, its value is **locked** and cannot be altered.
+
+```dart
+// ✅ Valid: Timestamp when user opens the app (evaluated at runtime)
+final loginTime = DateTime.now(); 
+
+// ✅ Valid: Data retrieved after an API call
+final username = 'Alex'; // e.g. payload from backend server
+
+// ❌ Error: Cannot reassign a final variable
+// loginTime = DateTime.now(); 
+```
+
+### C. `const` (Compile-Time Constant)
+`const` values must be **strictly known ahead-of-time while writing code (*compile-time*)**, before the application even launches on any user device.
+
+`const` also optimizes performance and memory because it is **canonicalized** (if you declare identical `const` objects across your code, Dart stores only 1 shared instance in RAM instead of allocating duplicate memory).
+
+```dart
+const double pi = 3.14159;                 // ✅ Fixed literal known at coding time
+const String baseUrl = 'https://api.com';  // ✅ Constant URL known ahead-of-time
+const int maxUploadSize = 1024 * 1024 * 5; // 5 MB
+
+// ❌ ERROR: DateTime.now() is unknown at build time; it only resolves at runtime
+// const now = DateTime.now(); 
+
+// Memory-saving demonstration (canonical instances in RAM):
+const listA = [1, 2, 3];
+const listB = [1, 2, 3];
+print(identical(listA, listB)); // true (both variables point to the exact same memory address)
+```
+
+> [!NOTE]
+> **💡 The Easiest Way to Distinguish `final` vs `const`:**
+> 
+> | Question | `const` | `final` |
+> | :--- | :--- | :--- |
+> | **When is the value known?** | **While writing code** (Compile-time) | **While app runs on user device** (Runtime) |
+> | **Can the value be changed?** | ❌ No | ❌ No |
+> | **Real-world Example** | `const pi = 3.14;` | `final loginTime = DateTime.now();` |
+> 
+> 🔑 **Practical Rule of Thumb:**
+> - If you **already know and can hardcode the exact value right now in your editor** → use **`const`**.
+> - If you **must wait for the app to run on the user's device** (waiting for timestamps, hardware sensors, API responses) and it should never be modified once acquired → use **`final`**.
+
+### D. `dynamic` vs `Object?` (Type Safety Comparison)
+
+* **`dynamic`**: Turns off the compiler's type checker. Invoking non-existent methods will compile cleanly but throw a fatal **runtime crash** (*NoSuchMethodError*).
+* **`Object?`**: The root of the Dart type hierarchy. It can hold any value, but the compiler **enforces type safety** by disallowing arbitrary method invocations without prior type inspection.
+
+```dart
+// 1. dynamic: Dangerous / Crash-prone
+dynamic dynamicData = 'Text';
+dynamicData = 100;
+// dynamicData.printAll(); // 💥 No compile warning, but CRASHES at runtime!
+
+// 2. Object?: Type-Safe
+Object? safeData = 'Text';
+safeData = 100;
+// safeData.printAll(); // 🛡️ Compiler prevents build because method doesn't exist on Object
+```
+
+> [!TIP]
+> **Best Practice Rules:**
+> 1. Use **`final`** as your default choice for variables whose values do not change after creation.
+> 2. Use **`const`** whenever values are strictly known at compile-time.
+> 3. Use **`var`** only when a variable's value needs to be reassigned later.
+> 4. Avoid **`dynamic`** whenever possible; prefer **`Object?`** for polymorphous data.
+
+---
+
+## 3. Type Checking, Type Casting & Value Conversion
+
+In production apps, you will frequently check and convert types.
+
+### A. Type Checking (`is` and `is!`)
+
+Use the `is` operator to test an object's type, or `is!` to check the opposite. Dart features *smart type promotion* that automatically narrows types inside branches:
+
+```dart
+dynamic input = 'Learning Flutter';
+
+if (input is String) {
+  // Dart automatically promotes 'input' to String inside this scope
+  print('String length: ${input.length}');
+}
+
+if (input is! int) {
+  print('Input is not an integer.');
+}
+```
+
+### B. Type Casting (`as`) vs Value Conversion
+
+Developers often confuse **Type Casting (`as`)** with **Value Conversion**.
+
+* **`as` (Type Casting):** Informs the compiler: *"This generic object (`Object`, `dynamic`, `num`) is actually an instance of this specific type (`String`, `int`)"*. The `as` operator **does not transform the data format**; it merely narrows down the compiler's perspective on the existing object.
+* **Conversion Methods:** Used when you **want to physically transform the data** from one type into another (e.g. converting integer `123` to text `'123'`).
+
+```dart
+void main() {
+  // =========================================================================
+  // 1. WHEN TO USE `as` (TYPE CASTING)?
+  // Used when unpacking generic types (Object/dynamic/num) into concrete types:
+  // =========================================================================
+
+  // Example A: Downcasting from generic Object to String
+  Object data = 'Modern Dart Mastery';
+  String title = data as String; // ✅ Valid: data is genuinely a String
+  print('Title length: ${title.length}');
+
+  // Example B: Parsing JSON / Map<String, dynamic> payloads from an API
+  Map<String, dynamic> apiResponse = {
+    'name': 'Ubay',
+    'age': 25,
+  };
+  String username = apiResponse['name'] as String; // ✅ Cast dynamic -> String
+  int userAge = apiResponse['age'] as int;         // ✅ Cast dynamic -> int
+
+  // Example C: From supertype num to int
+  num balance = 50000;
+  int roundedBalance = balance as int; // ✅ Valid: 50000 is an integer
+
+
+  // =========================================================================
+  // 2. COMMON MISTAKE WITH `as` (DO NOT DO THIS!)
+  // =========================================================================
+  
+  // int number = 123;
+  // String text = number as String; 
+  // 💥 RUNTIME ERROR: TypeError (integer 123 is not a String in memory, cannot cast)
+
+
+  // =========================================================================
+  // 3. WHEN TO USE VALUE CONVERSION METHODS?
+  // Used when you want to convert the actual data representation:
+  // =========================================================================
+
+  int number = 123;
+  String text = number.toString();             // int -> String ('123')
+
+  String inputPrice = '25000';
+  int price = int.parse(inputPrice);           // String -> int (25000)
+
+  String inputDecimal = '3.75';
+  double decimal = double.parse(inputDecimal); // String -> double (3.75)
+}
+```
+
+### C. Safe Parsing with `tryParse()`
+
+When accepting unvalidated user input or external API payloads, `int.parse()` or `double.parse()` will throw a `FormatException` if the string is malformed. Use **`tryParse()`** for graceful fallback:
+
+```dart
+String userInput = 'invalid_number';
+
+// Returns null safely without throwing an unhandled exception
+int? safeResult = int.tryParse(userInput); 
+
+if (safeResult == null) {
+  print('Invalid number format! Falling back to default: 0');
+} else {
+  print('Valid number: $safeResult');
+}
+```
+
+---
+
+## 4. Quick Overview of Collections
+
+Dart provides first-class support for core data collections (covered in depth in Lesson 4):
+
+| Collection Type | Literal Syntax | Key Characteristics | Example |
+| :--- | :---: | :--- | :--- |
+| **`List<T>`** | `[...]` | Ordered sequence, indexed access `[0]`, allows duplicates. | `['Apple', 'Orange', 'Apple']` |
+| **`Set<T>`** | `{...}` | Unordered collection of **unique** elements (no duplicates). | `{'Apple', 'Orange'}` |
+| **`Map<K, V>`** | `{k: v}` | Key - Value associative mappings. | `{'id': 1, 'name': 'Andi'}` |
+
+---
+
+## 5. Common Pitfalls
+
+1. **Confusing `var` with `dynamic`:**
+   In `var a = 'Hello';`, Dart locks `a` as `String`. Assigning `a = 123;` will fail compilation.
+2. **Confusing `as` casting with data conversion:**
+   `as` only alters the compiler's view of an object's type. Use `.toString()` or `int.parse()` for value conversion.
+3. **Assuming `const` and `final` are identical:**
+   Use `final` for values known at runtime. Use `const` for compile-time immutability.
+
+---
+
+## 6. 🧪 Mini Challenge: Hands-On Practice
+
+Test your understanding by solving the following scenario:
+
+1. Create a variable `final String? userInput = null;` (simulating null user input).
+2. Retrieve the username with a fallback value of `'Guest'` if `userInput` is `null`.
+3. Create a price string `String strPrice = '150.75';`, then convert it to a `double`.
+4. Calculate the total cost if the buyer purchases `int quantity = 3;` items.
+5. Print the formatted message: `"Total shopping for Guest: Rp <total_price>"`.
+
+<details>
+<summary>👀 <strong>Click here to reveal the Solution</strong></summary>
+
+```dart
+void main() {
+  // 1. Nullable input variable
+  final String? userInput = null;
+
+  // 2. Fallback with ?? operator
+  String username = userInput ?? 'Guest';
+
+  // 3. Convert String to double
+  String strPrice = '150.75';
+  double unitPrice = double.parse(strPrice);
+
+  // 4. Calculate total cost
+  int quantity = 3;
+  double total = unitPrice * quantity;
+
+  // 5. Output interpolated result
+  print('Total shopping for $username: Rp $total');
+  // Output: Total shopping for Guest: Rp 452.25
+}
+```
+
+</details>

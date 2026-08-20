@@ -1,0 +1,111 @@
+# Theming (Dark Mode) & Animasi Modern di Flutter
+
+Membangun tampilan visual yang memukau (*wow-factor*) menggunakan sistem *Theming* dan animasi halus di Flutter.
+
+---
+
+## 1. Sistem Tema Dinamis (Light & Dark Mode)
+
+Flutter memiliki sistem tema bawaan yang sangat modular melalui `ThemeData` dan `ColorScheme`:
+
+```dart
+MaterialApp(
+  themeMode: ThemeMode.system, // Otomatis mengikuti preferensi OS user
+  
+  // Tema Terang
+  theme: ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    colorSchemeSeed: Colors.indigo,
+  ),
+
+  // Tema Gelap
+  darkTheme: ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorSchemeSeed: Colors.cyanAccent,
+    scaffoldBackgroundColor: const Color(0xFF0F172A),
+  ),
+);
+```
+
+### Mengakses Tema di Widget:
+```dart
+final theme = Theme.of(context);
+final primaryColor = theme.colorScheme.primary;
+```
+
+---
+
+## 2. Implicit Animations (`AnimatedContainer` & `AnimatedOpacity`)
+
+Flutter menyediakan kumpulan widget berawalan `Animated*` yang secara otomatis menganimasikan perubahan properti tanpa perlu pengontrol animasi (*AnimationController*) manual:
+
+```dart
+class ExpandableCard extends StatefulWidget {
+  const ExpandableCard({super.key});
+
+  @override
+  State<ExpandableCard> createState() => _ExpandableCardState();
+}
+
+class _ExpandableCardState extends State<ExpandableCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _isExpanded = !_isExpanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        width: _isExpanded ? 320 : 200,
+        height: _isExpanded ? 240 : 120,
+        decoration: BoxDecoration(
+          color: _isExpanded ? Colors.indigoAccent : Colors.blueGrey.shade800,
+          borderRadius: BorderRadius.circular(_isExpanded ? 24 : 12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: _isExpanded ? 20 : 6,
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          _isExpanded ? 'Ketuk untuk Mengecilkan' : 'Ketuk untuk Melebarkan',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 3. Animasi Transisi Hero (`Hero`)
+
+Animasi `Hero` menghubungkan sebuah widget (seperti gambar thumbnail) dari satu layar dan menganimasikannya terbang membesar ke layar detail berikutnya:
+
+### Di Halaman Daftar:
+```dart
+Hero(
+  tag: 'product-image-101', // Tag unik penghubung
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Image.asset('assets/images/flutter_logo.png', width: 80, height: 80),
+  ),
+)
+```
+
+### Di Halaman Detail:
+```dart
+Hero(
+  tag: 'product-image-101', // Tag HARUS SAMA PERSIS
+  child: Image.asset('assets/images/flutter_logo.png', width: 300, height: 300),
+)
+```
+
+> [!TIP]
+> Dengan memanfaatkan `AnimatedContainer` dan `Hero`, antarmuka aplikasi Flutter terasa sangat hidup, premium, dan interaktif.

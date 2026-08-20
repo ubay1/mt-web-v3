@@ -117,8 +117,13 @@ const resources = {
       learn: {
         label: 'Learn',
         title: 'LEARNING<br />MATERIALS.',
-        description: 'Explore various topics and expand your knowledge.',
+        description: 'Explore various topics and expand your knowledge with structured learning paths.',
         select: 'Select a material to read more',
+        select_track: 'Select Learning Track',
+        all_tracks: 'All Tracks',
+        filter_track: 'Filter Track',
+        switch_track: 'Switch Track',
+        total_lessons: 'Lessons',
         last_updated: 'Last Updated'
       },
       inquiries: {
@@ -241,8 +246,13 @@ const resources = {
       learn: {
         label: 'Belajar',
         title: 'MATERI<br />BELAJAR.',
-        description: 'Eksplorasi berbagai topik dan perluas pengetahuan Anda.',
+        description: 'Eksplorasi berbagai topik dan perluas pengetahuan Anda dengan jalur belajar terstruktur.',
         select: 'Pilih materi untuk membaca lebih lanjut',
+        select_track: 'Pilih Jalur Belajar',
+        all_tracks: 'Semua Jalur',
+        filter_track: 'Filter Jalur',
+        switch_track: 'Ganti Jalur Belajar',
+        total_lessons: 'Pelajaran',
         last_updated: 'Terakhir Diperbarui'
       },
       inquiries: {

@@ -1,0 +1,111 @@
+# Flutter Layout Mastery: Container, Flex & Scrollables
+
+Layout in Flutter is built on clean widget composition.
+
+---
+
+## 1. `Container` & `BoxDecoration`
+
+`Container` combines sizing (`width`, `height`), spacing (`padding`, `margin`), borders, gradients, and shadows:
+
+```dart
+Container(
+  width: 250,
+  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  margin: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: const Color(0xFF1E293B),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: Colors.cyanAccent.withOpacity(0.3), width: 1.5),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.4),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: const Text('Modern Card', style: TextStyle(color: Colors.white)),
+)
+```
+
+---
+
+## 2. Flex Layout: `Row`, `Column`, `Expanded` & `Flexible`
+
+- `Row`: Arranges children **horizontally**.
+- `Column`: Arranges children **vertikal**.
+- `Expanded`: Forces children to fill available main-axis room.
+- `Flexible`: Allows children to take proportioned space without strict fullness.
+
+```dart
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    const Icon(Icons.star, color: Colors.amber),
+    const SizedBox(width: 8),
+    Expanded(
+      child: Text(
+        'Long title that automatically wraps gracefully...',
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+    ElevatedButton(
+      onPressed: () {},
+      child: const Text('Action'),
+    ),
+  ],
+)
+```
+
+---
+
+## 3. Layered Positioning: `Stack` & `Positioned`
+
+Place overlapping elements (badges, floating controls) using `Stack`:
+
+```dart
+Stack(
+  clipBehavior: Clip.none,
+  children: [
+    const CircleAvatar(
+      radius: 40,
+      backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+    ),
+    Positioned(
+      bottom: 0,
+      right: 0,
+      child: Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: Colors.greenAccent,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+      ),
+    ),
+  ],
+)
+```
+
+---
+
+## 4. Virtualized Scrollables: `ListView.builder`
+
+Always prefer `.builder` constructors for dynamic or large datasets to ensure memory efficiency through on-demand rendering:
+
+```dart
+ListView.builder(
+  itemCount: 100,
+  itemBuilder: (context, index) {
+    return ListTile(
+      leading: CircleAvatar(child: Text('${index + 1}')),
+      title: Text('Item #$index'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => print('Pressed #$index'),
+    );
+  },
+)
+```

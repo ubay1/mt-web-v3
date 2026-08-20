@@ -1,0 +1,77 @@
+# Introduction to Dart & Basic Structure
+
+Welcome to the **Dart Mastery** learning module! Dart is a modern, type-safe, object-oriented programming language created by Google to build fast applications across mobile (Flutter), web, server, and desktop.
+
+---
+
+## 1. Why Learn Dart?
+
+- **Optimized for UI:** Dart is specifically tailored for building fluid and responsive user interfaces.
+- **Dual Compilation (AOT & JIT):**
+  - **JIT (Just-In-Time):** Enables ultra-fast *Hot Reload* during local development.
+  - **AOT (Ahead-Of-Time):** Produces high-performance native machine code (ARM/x64) for production.
+- **Sound Null Safety:** Guarantees that variables cannot be `null` unintentionally, preventing runtime crashes.
+
+---
+
+## 2. Basic Program Structure
+
+Every Dart application begins execution at the top-level `main()` function.
+
+```dart
+void main() {
+  // Prints text to the debug console
+  print('Hello, welcome to Dart!');
+}
+```
+
+### Line Breakdown:
+1. `void`: Indicates that the `main` function does not return any value.
+2. `main()`: The mandatory entry-point function for any Dart program.
+3. `print(...)`: Built-in function to display output in the terminal.
+4. `;` (Semicolon): Dart statements **must** end with a semicolon.
+
+---
+
+## 3. Comments in Dart
+
+Dart supports three comment styles:
+
+```dart
+// 1. Single-line comment
+
+/* 
+   2. Multi-line comment:
+   suitable for longer descriptions
+   across multiple lines.
+*/
+
+/// 3. Documentation comment:
+/// Used to document functions, classes, and libraries.
+/// Parsed by IDEs and dartdoc generators.
+void greetUser(String name) {
+  print('Hello, $name!');
+}
+```
+
+---
+
+## 4. String Interpolation
+
+In Dart, you can easily embed variable values or expressions inside strings using `$` or `${}`:
+
+```dart
+void main() {
+  String name = 'Ubay';
+  int birthYear = 1998;
+  int currentYear = 2026;
+
+  // Use $variable for simple identifiers
+  // Use ${expression} for computations or method calls
+  print('Hello, my name is $name.');
+  print('My current age is ${currentYear - birthYear} years old.');
+}
+```
+
+> [!TIP]
+> **Best Practice:** Use `$identifier` for simple variables, and `${expression}` when accessing properties, methods, or performing arithmetic calculations.

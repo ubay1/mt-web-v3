@@ -1,0 +1,249 @@
+# Advanced OOP: Inheritance, Interfaces, Mixins, Polymorphism & Extensions
+
+In this lesson, we delve into the advanced OOP pillars that establish the architectural backbone of Dart and Flutter applications.
+
+---
+
+## 1. Inheritance (`extends`)
+
+Inheritance allows a *sub-class* (child class) to inherit fields and methods from a *super-class* (parent class).
+
+* Use the **`extends`** keyword to inherit from a parent class.
+* Use **`super()`** to delegate parameters to the parent constructor.
+* Use the **`@override`** annotation to override parent methods.
+* **Note:** Dart supports *Single Inheritance* (a class can only extend one parent class). To share behavior across unrelated classes, use `mixin`.
+
+```dart
+class Vehicle {
+  String brand;
+  int year;
+
+  Vehicle(this.brand, this.year);
+
+  void honk() {
+    print('Beep beep!');
+  }
+}
+
+class Car extends Vehicle {
+  int doorCount;
+
+  // Forwarding fields to parent constructor with : super(...)
+  Car(String brand, int year, this.doorCount) : super(brand, year);
+
+  @override
+  void honk() {
+    print('Vroom! $brand ($year) with $doorCount doors is honking!');
+  }
+}
+
+void main() {
+  var sedan = Car('Toyota', 2022, 4);
+  sedan.honk();
+}
+```
+
+---
+
+## 2. Abstract Classes & Interfaces (`implements`)
+
+### A. Abstract Classes
+
+An abstract class **cannot be directly instantiated** (`Cannot instantiate abstract class`). It serves as a base architectural template or contract for derived classes.
+
+```dart
+abstract class Shape {
+  String name;
+  Shape(this.name);
+
+  // Abstract method (no implementation body):
+  double calculateArea();
+
+  void printSummary() {
+    print('Shape: $name | Area: ${calculateArea()} cm²');
+  }
+}
+
+class Square extends Shape {
+  double side;
+  Square(this.side) : super('Square');
+
+  @override
+  double calculateArea() => side * side;
+}
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Sub-classes of Abstract Classes:
+  // =======================================================
+  
+  // 1. Instantiate the concrete derived class:
+  var box = Square(5.0);
+  box.printSummary(); // Output: Shape: Square | Area: 25.0 cm²
+
+  // 2. Direct abstract class instantiation trap:
+  // var shape = Shape('Circle'); 
+  // ❌ ERROR: The class 'Shape' is abstract and can't be instantiated.
+}
+```
+
+### B. Implicit Interfaces & Multiple Interfaces (`implements`)
+
+Dart has no explicit `interface` keyword. Instead, **every class implicitly acts as an interface**.
+
+* When using `implements`, you **must re-implement every field and method** defined in the contract.
+* A class can implement **multiple interfaces simultaneously** (*Multiple Interface*).
+
+```dart
+abstract class Authenticator {
+  void login(String username, String password);
+  void logout();
+}
+
+abstract class Notifier {
+  void sendEmail(String recipient, String message);
+}
+
+// Implementing multiple interfaces simultaneously:
+class UserService implements Authenticator, Notifier {
+  @override
+  void login(String username, String password) {
+    print('User $username logged in.');
+  }
+
+  @override
+  void logout() {
+    print('User logged out.');
+  }
+
+  @override
+  void sendEmail(String recipient, String message) {
+    print('Sending email to $recipient: "$message"');
+  }
+}
+
+void main() {
+  // =======================================================
+  // 💡 How to Access Classes with Multiple Interfaces:
+  // =======================================================
+
+  // 1. Direct access via the concrete instance:
+  var service = UserService();
+  service.login('ubaydillah', 'secret123');
+  service.sendEmail('ubay@example.com', 'Welcome to our platform!');
+  service.logout();
+
+  // 2. Access through Interface type bindings (Contract Polymorphism):
+  Authenticator auth = UserService();
+  auth.login('alex', 'pass456'); // Only exposes login & logout
+
+  Notifier notif = UserService();
+  notif.sendEmail('alex@example.com', 'Security Alert'); // Only exposes sendEmail
+}
+```
+
+---
+
+## 3. Polymorphism
+
+**Polymorphism** enables objects of different sub-classes to respond to the same method invocation in **their own unique manner**:
+
+```dart
+abstract class Animal {
+  void speak();
+}
+
+class Cat extends Animal {
+  @override
+  void speak() => print('🐱 Meow! Meow!');
+}
+
+class Dog extends Animal {
+  @override
+  void speak() => print('🐶 Woof! Woof!');
+}
+
+class Duck extends Animal {
+  @override
+  void speak() => print('🦆 Quack! Quack!');
+}
+
+void makeThemSpeak(List<Animal> animals) {
+  for (var animal in animals) {
+    animal.speak(); // Each animal responds according to its dynamic runtime type
+  }
+}
+
+void main() {
+  List<Animal> shelter = [Cat(), Dog(), Duck()];
+  makeThemSpeak(shelter);
+}
+```
+
+---
+
+## 4. Mixins (`mixin`, `with`, & `on`)
+
+A mixin is a way of reusing a class's code in multiple class hierarchies without traditional single-inheritance limitations.
+
+* Use the **`with`** keyword to apply mixins.
+* Apply multiple mixins separated by commas (`with MixinA, MixinB`).
+* Use the **`on`** keyword to restrict mixin application to specific subclasses (*Mixin Constraints*).
+
+```dart
+abstract class Vehicle {}
+
+// Restricting mixin to classes that extend Vehicle:
+mixin TurboEngine on Vehicle {
+  void engageTurbo() {
+    print('🔥 Turbo mode engaged! Speed increased significantly!');
+  }
+}
+
+mixin MusicPlayer {
+  void playTrack(String title) {
+    print('🎵 Playing: $title');
+  }
+}
+
+class SportsCar extends Vehicle with TurboEngine, MusicPlayer {
+  final String model;
+  SportsCar(this.model);
+}
+
+void main() {
+  var ferrari = SportsCar('Ferrari SF90');
+  ferrari.engageTurbo();
+  ferrari.playTrack('Tokyo Drift');
+}
+```
+
+> [!TIP]
+> In Flutter, mixins are ubiquitous (e.g., `with SingleTickerProviderStateMixin` for animations or `with WidgetsBindingObserver` for app lifecycle hooks).
+
+---
+
+## 5. Extension Methods
+
+Allows adding new capabilities to existing classes (even built-in SDK types like `String`, `DateTime`, or `BuildContext` in Flutter) without modifying the original source code:
+
+```dart
+extension StringCasingExtension on String {
+  // Adds toCapitalized() to all String instances:
+  String toCapitalized() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
+  }
+
+  // Adds an email validation getter:
+  bool get isEmailValid => contains('@') && contains('.');
+}
+
+void main() {
+  String title = 'learn modern DART';
+  print(title.toCapitalized()); // Output: Learn modern dart
+
+  String email = 'user@example.com';
+  print('Is valid email? ${email.isEmailValid}'); // Output: true
+}
+```

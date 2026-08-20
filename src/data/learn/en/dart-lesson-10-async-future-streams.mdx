@@ -1,0 +1,90 @@
+# Asynchronous Programming: Future, Async/Await & Streams
+
+Modern apps must stay responsive while waiting for network I/O or database queries. Dart utilizes a single-threaded event loop architecture combined with `Future` and `Stream` to execute non-blocking asynchronous workflows.
+
+---
+
+## 1. `Future`, `async`, and `await`
+
+A `Future<T>` represents a computation that delivers a result of type `T` or an error at some point in the future.
+
+```dart
+Future<String> fetchUserProfile(String userId) async {
+  print('Fetching user data...');
+  await Future.delayed(Duration(seconds: 2));
+  return 'User: Ubay Dillah (Role: Mobile Lead)';
+}
+
+void main() async {
+  print('App Started');
+  
+  String profile = await fetchUserProfile('101');
+  print(profile);
+  
+  print('App Finished');
+}
+```
+
+---
+
+## 2. Error Handling with `try-catch`
+
+```dart
+Future<void> loadData() async {
+  try {
+    var response = await fetchUserProfile('user_404');
+    print(response);
+  } on TimeoutException {
+    print('Connection timed out');
+  } catch (error) {
+    print('Error occurred: $error');
+  } finally {
+    print('Fetch operation completed.');
+  }
+}
+```
+
+---
+
+## 3. Parallel Execution with `Future.wait()`
+
+Run independent asynchronous operations concurrently:
+
+```dart
+void main() async {
+  final results = await Future.wait([
+    fetchUserProfile('1'),
+    fetchUserProfile('2'),
+    fetchUserProfile('3'),
+  ]);
+
+  print(results);
+}
+```
+
+---
+
+## 4. `Stream` (Real-Time Reactive Sequences)
+
+While a `Future` returns a single value, a `Stream<T>` emits a sequence of events over time (e.g. WebSocket updates, sensor inputs).
+
+```dart
+Stream<int> countdownTimer(int seconds) async* {
+  for (int i = seconds; i >= 0; i--) {
+    await Future.delayed(Duration(seconds: 1));
+    yield i; // Emit event to stream
+  }
+}
+
+void main() async {
+  final countdown = countdownTimer(3);
+
+  await for (var remaining in countdown) {
+    print('Remaining: $remaining s');
+  }
+  print('Time is up!');
+}
+```
+
+> [!TIP]
+> In Flutter, you will commonly render futures using `FutureBuilder` and dynamic stream flows using `StreamBuilder`.

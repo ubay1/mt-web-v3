@@ -1,0 +1,77 @@
+# Pengenalan Dart & Struktur Dasar
+
+Selamat datang di modul pembelajaran **Dart Mastery**! Dart adalah bahasa pemrograman modern, _type-safe_, dan berorientasi objek yang dikembangkan oleh Google untuk membangun aplikasi mobile (Flutter), web, server, dan desktop yang cepat di berbagai platform.
+
+---
+
+## 1. Mengapa Belajar Dart?
+
+- **Dioptimalkan untuk UI:** Dart dirancang khusus untuk memenuhi kebutuhan pengembangan antarmuka pengguna yang dinamis dan mulus.
+- **Kompilasi Ganda (AOT & JIT):**
+  - **JIT (Just-In-Time):** Memungkinkan fitur *Hot Reload* super cepat saat proses *development*.
+  - **AOT (Ahead-Of-Time):** Menghasilkan kode mesin _native_ ARM/x64 yang optimal untuk performa produksi.
+- **Sound Null Safety:** Menjamin bahwa variabel tidak bernilai `null` secara tidak sengaja, mencegah *crash* runtime (*The Billion Dollar Mistake*).
+
+---
+
+## 2. Struktur Program Dasar
+
+Setiap aplikasi Dart selalu dimulai dari fungsi utama bernama `main()`. Fungsi ini adalah *entry point* (titik masuk) eksekusi program.
+
+```dart
+void main() {
+  // Mencetak teks ke konsol
+  print('Halo, selamat datang di Dart!');
+}
+```
+
+### Penjelasan Baris Kode:
+1. `void`: Menandakan bahwa fungsi `main` tidak mengembalikan nilai apapun.
+2. `main()`: Nama fungsi utama wajib dalam aplikasi Dart.
+3. `print(...)`: Fungsi bawaan Dart untuk menampilkan output teks ke konsol atau terminal.
+4. `;` (Titik koma): Setiap baris instruksi di Dart **wajib** diakhiri dengan titik koma.
+
+---
+
+## 3. Komentar dalam Kode Dart
+
+Dart mendukung 3 jenis format komentar:
+
+```dart
+// 1. Single-line comment: untuk penjelasan 1 baris
+
+/* 
+   2. Multi-line comment:
+   untuk penjelasan yang lebih panjang
+   dan memerlukan beberapa baris.
+*/
+
+/// 3. Documentation comment:
+/// Digunakan untuk mendokumentasikan fungsi, kelas, atau library.
+/// Teks ini akan dibaca oleh IDE dan generator dokumentasi (dartdoc).
+void sapaPengguna(String nama) {
+  print('Halo, $nama!');
+}
+```
+
+---
+
+## 4. String Interpolation
+
+Di Dart, kamu bisa menggabungkan variabel atau ekspresi ke dalam string dengan sangat mudah menggunakan tanda dollar (`$` atau `${}`):
+
+```dart
+void main() {
+  String nama = 'Ubay';
+  int tahunLahir = 1998;
+  int tahunSekarang = 2026;
+
+  // Menggunakan $nama untuk variabel sederhana
+  // Menggunakan ${ekspresi} untuk operasi atau komputasi
+  print('Halo, nama saya $nama.');
+  print('Umur saya saat ini adalah ${tahunSekarang - tahunLahir} tahun.');
+}
+```
+
+> [!TIP]
+> **Best Practice:** Gunakan `$variabel` jika hanya menyisipkan nama variabel langsung. Gunakan `${ekspresi}` jika di dalamnya terdapat operasi perhitungan, pemanggilan method, atau manipulasi objek.

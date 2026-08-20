@@ -1,0 +1,100 @@
+# Pemrograman Asinkron: Future, Async/Await & Streams
+
+Aplikasi modern tidak boleh *hang* atau *freeze* saat mengunduh data dari internet atau membaca database. Dart menggunakan model *single-threaded event loop* dengan dukungan `Future` dan `Stream` untuk mengeksekusi operasi asinkron secara mulus.
+
+---
+
+## 1. Konsep `Future`, `async`, dan `await`
+
+Sebuah `Future<T>` merepresentasikan nilai bertipe `T` yang belum tersedia saat ini, tetapi akan selesai di masa mendatang (bisa sukses membawa data atau gagal melempar error).
+
+```dart
+// Simulasi request network yang membutuhkan waktu 2 detik
+Future<String> fetchUserProfile(String userId) async {
+  print('Mengambil data user...');
+  await Future.delayed(Duration(seconds: 2));
+  return 'User: Ubay Dillah (Role: Mobile Lead)';
+}
+
+void main() async {
+  print('Aplikasi Dimulai');
+  
+  // Menunggu hasil future dengan 'await'
+  String profil = await fetchUserProfile('101');
+  print(profil);
+  
+  print('Aplikasi Selesai');
+}
+```
+
+---
+
+## 2. Menangani Error dengan `try-catch`
+
+Pada fungsi `async`, penanganan error dilakukan menggunakan blok standar `try-catch`:
+
+```dart
+Future<void> loadData() async {
+  try {
+    var response = await fetchUserProfile('unknown_id');
+    print(response);
+  } on TimeoutException {
+    print('Koneksi timeout, silakan coba lagi');
+  } catch (error, stackTrace) {
+    print('Terjadi error: $error');
+  } finally {
+    print('Proses pengambilan data selesai.');
+  }
+}
+```
+
+---
+
+## 3. Eksekusi Paralel dengan `Future.wait()`
+
+Jika kamu memiliki beberapa tugas yang independen, jalankan secara paralel untuk menghemat waktu:
+
+```dart
+void main() async {
+  final stopwatch = Stopwatch()..start();
+
+  // Berjalan secara bersamaan
+  final results = await Future.wait([
+    fetchUserProfile('1'),
+    fetchUserProfile('2'),
+    fetchUserProfile('3'),
+  ]);
+
+  print('Semua data selesai dalam: ${stopwatch.elapsedMilliseconds} ms');
+  print(results);
+}
+```
+
+---
+
+## 4. `Stream` (Aliran Data Real-Time)
+
+Jika `Future` mengembalikan **1 nilai tunggal**, maka `Stream<T>` mengembalikan **banyak nilai secara berkelanjutan dari waktu ke waktu** (seperti data WebSocket, audio streaming, atau perubahan state sensor).
+
+### A. Generator Fungsi Asinkron (`async*` dan `yield`)
+```dart
+Stream<int> hitungMundurStream(int detik) async* {
+  for (int i = detik; i >= 0; i--) {
+    await Future.delayed(Duration(seconds: 1));
+    yield i; // Mengirimkan nilai ke stream
+  }
+}
+
+void main() async {
+  final countdown = hitungMundurStream(3);
+
+  // Mendengarkan data yang masuk dari stream:
+  await for (var sisaDetik in countdown) {
+    print('Sisa waktu: $sisaDetik detik');
+  }
+  print('Waktu Habis!');
+}
+```
+
+> [!TIP]
+> Di Flutter, kamu akan sering menggunakan widget `FutureBuilder` untuk menampilkan data dari `Future`, dan `StreamBuilder` untuk bereaksi terhadap perubahan data `Stream` secara otomatis.

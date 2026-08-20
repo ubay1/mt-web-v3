@@ -1,0 +1,190 @@
+# Sound Null Safety & Operator Null-Aware
+
+Dart memiliki fitur **Sound Null Safety**. Secara bawaan (*default*), semua variabel di Dart adalah **non-nullable** (tidak boleh bernilai `null`). Hal ini mengeliminasi error `NullPointerException` atau `NoSuchMethodError: The method '...' was called on null` saat aplikasi berjalan.
+
+---
+
+## 1. Non-Nullable vs Nullable (`Type?`)
+
+Jika sebuah variabel memang diperbolehkan kosong atau bernilai `null`, kamu harus secara eksplisit membubuhkan tanda tanya `?` di belakang tipe datanya:
+
+```dart
+void main() {
+  // Non-nullable (wajib memiliki nilai String)
+  String nama = 'Ubay';
+  // nama = null; // ❌ Compile Error: A value of type 'Null' can't be assigned to 'String'
+
+  // Nullable (boleh bernilai String atau null)
+  String? bio; 
+  print(bio); // Output: null
+  
+  bio = 'Software Developer';
+  print(bio); // Output: Software Developer
+}
+```
+
+---
+
+## 2. Operator Null-Aware
+
+Dart menyediakan operator pintar untuk memanipulasi variabel bernilai `null`:
+
+### A. Null-Aware Access (`?.`)
+Memanggil property atau method hanya jika objek tersebut **tidak null**. Jika bernilai null, proses dilewati dan menghasilkan `null`.
+
+```dart
+String? deskripsi;
+// print(deskripsi.length); // ❌ Error: Property 'length' can't be accessed on 'String?'
+print(deskripsi?.length);   // ✅ Aman: Menghasilkan null tanpa crash
+```
+
+### B. Null-Coalescing Operator (`??`)
+Memberikan nilai cadangan (*fallback/default*) jika ekspresi bernilai `null`.
+
+```dart
+String? username;
+String displayName = username ?? 'Guest User';
+print(displayName); // Output: Guest User
+```
+
+### C. Null-Coalescing Assignment (`??=`)
+Hanya mengisi nilai ke variabel jika variabel tersebut saat ini masih bernilai `null`.
+
+```dart
+int? score;
+score ??= 100; // score bernilai 100
+score ??= 50;  // score tetap 100 (karena sudah ada isinya)
+```
+
+### D. Null Assertion Operator (`!`)
+Menegaskan ke compiler: *"Saya yakin 100% variabel ini tidak null saat baris ini dieksekusi"*. Jika ternyata tetap null, program akan langsung melempar exception saat runtime.
+
+```dart
+String? token = 'jwt_abc123';
+String validToken = token!; // Konversi dari String? ke String
+```
+
+---
+
+## 3. Kata Kunci `late` (Late Initialization)
+
+### ❓ Mengapa Kita Butuh `late`?
+
+Secara bawaan di Dart, variabel **non-nullable** (seperti `String nama;`) **wajib langsung diisi nilainya saat dideklarasikan**. Jika tidak langsung diisi, compiler akan langsung error.
+
+Namun dalam praktik nyata:
+1. Kamu **belum bisa langsung mengisi nilainya sekarang** (misalnya nilainya baru didapat setelah login berhasil, dari sensor HP, atau di fungsi `initState()` Flutter).
+2. Tapi kamu juga **TIDAK MAU menjadikannya nullable (`String?`)**, karena kamu yakin setelah proses setup selesai, variabel ini **pasti selalu ada isinya dan tidak boleh kosong**. Jika dibuat nullable (`String?`), kamu akan repot harus terus-menerus mengetik tanda tanya `?.` atau `!` di setiap baris kode.
+
+> [!TIP]
+> **💡 Analogi Janji ke Compiler:**
+> Kata kunci `late` adalah caramu membuat **"surat janji"** ke compiler Dart:
+> *"Hei Dart, variabel ini non-nullable. Saat ini nilainya memang belum ada, tapi aku **JANJI** akan mengisinya nanti sebelum variabel ini dibaca/digunakan!"*
+
+---
+
+### A. Contoh 1: Inisialisasi Tertunda (Delayed Initialization)
+
+```dart
+void main() {
+  // Tanpa 'late', baris ini akan langsung ERROR karena non-nullable wajib langsung diisi nilai
+  late String namaPengguna;
+
+  print('1. Menyiapkan aplikasi...');
+
+  // Kita isi nilainya nanti sebelum dipakai:
+  namaPengguna = 'Ubay';
+
+  // Aman diakses sebagai String biasa tanpa perlu tanda tanya (?.) atau tanda seru (!)
+  print('2. Selamat datang, $namaPengguna!');
+  print('3. Panjang karakter: ${namaPengguna.length}');
+}
+```
+
+---
+
+### B. Contoh 2: Penggunaan di Class / Service (Real-World)
+
+Bayangkan class service ini berada di file terpisah (`auth_service.dart`), lalu kita import ke file utama (`main.dart`):
+
+```dart
+// =========================================================================
+// 📁 File: lib/services/auth_service.dart
+// =========================================================================
+class AuthService {
+  // Kita tahu token tidak boleh null, tapi nilainya baru ada setelah user login
+  late final String tokenAkses;
+
+  void login(String username, String password) {
+    // Simulasi login dan mendapatkan token dari backend
+    tokenAkses = 'jwt_secret_token_12345';
+    print('Login berhasil untuk: $username');
+  }
+
+  void ambilDataProfil() {
+    // Kita bisa langsung pakai 'tokenAkses' secara aman dan bersih tanpa null-check
+    print('Mengambil profil dengan token: $tokenAkses');
+  }
+}
+```
+
+```dart
+// =========================================================================
+// 📁 File: bin/main.dart
+// =========================================================================
+// Di Dart, kita cukup import path filenya (tidak perlu kurung kurawal { } seperti di JS)
+import 'package:aplikasi_saya/services/auth_service.dart';
+// atau menggunakan relative path: import './services/auth_service.dart';
+
+void main() {
+  final auth = AuthService();
+  auth.login('alex', 'password123'); // 1. Nilai 'tokenAkses' diisi di sini
+  auth.ambilDataProfil();            // 2. Aman digunakan di sini tanpa crash
+}
+```
+
+> [!NOTE]
+> **💡 Perbedaan Import Dart vs JavaScript:**
+> - Di **JavaScript/TypeScript:** `import { AuthService } from './services/auth_service.js';`
+> - Di **Dart:** `import 'services/auth_service.dart';` (semua class publik di file tersebut otomatis bisa langsung dipanggil tanpa perlu dibungkus kurung kurawal `{}`). Jika hanya ingin mengimpor class tertentu, gunakan: `import 'services/auth_service.dart' show AuthService;`.
+
+---
+
+### C. Contoh 3: Lazy Loading (Hemat Memori & Performa)
+
+Jika kamu memberi nilai pada variabel `late` dengan sebuah fungsi yang berat, fungsi tersebut **TIDAK AKAN DIBERIKAN / DIJALANKAN** sampai variabel tersebut benar-benar pertama kali dipanggil!
+
+```dart
+String prosesDataBerat() {
+  print('⏳ Memproses komputasi data berat...');
+  return 'Hasil Komputasi';
+}
+
+void main() {
+  // Fungsi prosesDataBerat() BELUM dijalankan saat baris ini dibuat
+  late String hasil = prosesDataBerat();
+
+  print('Aplikasi dibuka.');
+
+  // Fungsi prosesDataBerat() BARU AKAN DIJALANKAN tepat saat baris di bawah ini dieksekusi:
+  print('Menampilkan: $hasil');
+}
+```
+
+---
+
+### ⚠️ Bahaya / Jebakan Kata Kunci `late`
+
+Karena kamu sudah berjanji kepada compiler bahwa variabel tersebut pasti diisi, compiler mempercayaimu 100%. Namun jika kamu **lupa mengisinya tapi sudah langsung memanggilnya**, aplikasi akan langsung **CRASH saat runtime** dengan error `LateInitializationError`:
+
+```dart
+void main() {
+  late String alamat;
+
+  // 💥 CRASH RUNTIME ERROR: LateInitializationError: Field 'alamat' has not been initialized.
+  // print(alamat); 
+}
+```
+
+> [!CAUTION]
+> Gunakan `late` **hanya jika kamu 100% yakin** inisialisasi nilainya pasti dieksekusi sebelum variabel tersebut diakses (misalnya di alur `initState` Flutter atau fungsi konfigurasi awal).

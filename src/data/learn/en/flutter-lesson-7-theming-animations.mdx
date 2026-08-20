@@ -1,0 +1,88 @@
+# Theming & Modern Animations in Flutter
+
+Crafting polished and dynamic mobile user interfaces through Flutter's theming and animation system.
+
+---
+
+## 1. Dynamic Theming (Light & Dark Mode)
+
+```dart
+MaterialApp(
+  themeMode: ThemeMode.system,
+  theme: ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    colorSchemeSeed: Colors.indigo,
+  ),
+  darkTheme: ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorSchemeSeed: Colors.cyanAccent,
+    scaffoldBackgroundColor: const Color(0xFF0F172A),
+  ),
+);
+```
+
+---
+
+## 2. Implicit Animations (`AnimatedContainer`)
+
+```dart
+class ExpandableCard extends StatefulWidget {
+  const ExpandableCard({super.key});
+
+  @override
+  State<ExpandableCard> createState() => _ExpandableCardState();
+}
+
+class _ExpandableCardState extends State<ExpandableCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        width: _expanded ? 320 : 200,
+        height: _expanded ? 240 : 120,
+        decoration: BoxDecoration(
+          color: _expanded ? Colors.indigoAccent : Colors.blueGrey.shade800,
+          borderRadius: BorderRadius.circular(_expanded ? 24 : 12),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          _expanded ? 'Tap to Shrink' : 'Tap to Expand',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 3. Hero Transitions
+
+Shared element transitions across routes:
+
+### Screen A:
+```dart
+Hero(
+  tag: 'article-hero-101',
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Image.asset('assets/images/preview.png', width: 80, height: 80),
+  ),
+)
+```
+
+### Screen B (Detail):
+```dart
+Hero(
+  tag: 'article-hero-101',
+  child: Image.asset('assets/images/preview.png', width: 320, height: 320),
+)
+```

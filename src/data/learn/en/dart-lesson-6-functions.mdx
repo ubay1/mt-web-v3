@@ -1,0 +1,176 @@
+# Functions & Functional Programming (Functions & Closures)
+
+In Dart, functions are **first-class citizens**. Functions can be assigned to variables, passed into other functions as arguments, or returned from functions as return values.
+
+---
+
+## 1. Function Parameter Types
+
+Dart offers 3 highly expressive styles of parameter declarations:
+
+### A. Required Positional Parameters
+
+Values are matched strictly based on their ordinal position at the call site:
+
+```dart
+void introduce(String name, String job) {
+  print('My name is $name, and I work as a $job');
+}
+
+void main() {
+  introduce('Ubay', 'Frontend Engineer'); // ✅ Passed by position
+}
+```
+
+### B. Optional Positional Parameters (`[...]`)
+
+Wrapped with square brackets `[...]`. These parameters are **optional** and can be omitted when calling the function. You can assign default fallback values or make them nullable (`?`):
+
+```dart
+// 'hobby' is optional with a default value, 'age' is optional nullable
+void greetUser(String name, [String hobby = 'Reading', int? age]) {
+  print('Name: $name | Hobby: $hobby | Age: ${age ?? "-"}');
+}
+
+void main() {
+  greetUser('Ubay');                   // Output: Name: Ubay | Hobby: Reading | Age: -
+  greetUser('Alex', 'Gaming', 25);     // Output: Name: Alex | Hobby: Gaming | Age: 25
+}
+```
+
+### C. Named Parameters (`{...}`)
+
+Wrapped with curly braces `{...}`. Named parameters are labeled and unordered. This is the **primary design paradigm used throughout the entire Flutter framework**.
+
+* Use **`required`** for mandatory named parameters.
+* Use **`?`** or default values (`=`) for optional named parameters.
+
+```dart
+void buildUserProfile({
+  required String username,
+  String role = 'Member', // Default value
+  int? age,               // Optional nullable
+}) {
+  print('User: $username | Role: $role | Age: ${age ?? 0}');
+}
+
+void main() {
+  // Call in any arbitrary order by specifying parameter labels:
+  buildUserProfile(
+    role: 'Admin',
+    username: 'ubaydillah',
+    age: 26,
+  );
+}
+```
+
+> [!NOTE]
+> **Parameter Quick Summary:**
+> - `(a, b)`: Mandatory Positional (strict order).
+> - `[a = default]`: Optional Positional (square brackets `[]`).
+> - `{required a, b = default}`: Named Parameters (curly braces `{}`).
+
+---
+
+## 2. Arrow Functions (`=>`) & Return Values
+
+When a function contains only a single return expression, use the concise *fat arrow* syntax (`=>`):
+
+```dart
+// Standard block
+int sumStandard(int a, int b) {
+  return a + b;
+}
+
+// Arrow function equivalent
+int sumArrow(int a, int b) => a + b;
+```
+
+---
+
+## 3. First-Class Functions & Function Types
+
+Because functions are first-class objects in Dart, you can assign them to variables or pass them as parameters:
+
+### A. Assigning Functions to Variables
+
+```dart
+void printUppercase(String msg) => print(msg.toUpperCase());
+
+void main() {
+  // Store function reference in a variable:
+  var myFunction = printUppercase;
+  myFunction('hello dart!'); // Output: HELLO DART!
+}
+```
+
+### B. Higher-Order Functions (Functions as Arguments)
+
+You can define precise function signatures using `ReturnType Function(ParamTypes)`:
+
+```dart
+// 'operation' parameter expects a function accepting 2 ints and returning an int
+int compute(int a, int b, int Function(int, int) operation) {
+  return operation(a, b);
+}
+
+int add(int x, int y) => x + y;
+int multiply(int x, int y) => x * y;
+
+void main() {
+  print(compute(10, 5, add));      // Output: 15
+  print(compute(10, 5, multiply)); // Output: 50
+
+  // Passing an anonymous lambda directly:
+  print(compute(10, 5, (x, y) => x - y)); // Output: 5
+}
+```
+
+---
+
+## 4. Lexical Closures
+
+A **closure** is a function that can **remember and access variables in its surrounding lexical scope**, even after that outer scope has completed execution:
+
+```dart
+// Function that returns another function (Closure)
+int Function(int) makeAdder(int addBy) {
+  // The returned function captures 'addBy' from the outer lexical scope:
+  return (int inputVal) => inputVal + addBy;
+}
+
+void main() {
+  final addTwo = makeAdder(2);   // Closes over addBy = 2
+  final addTen = makeAdder(10);  // Closes over addBy = 10
+
+  print(addTwo(5));  // Output: 7  (5 + 2)
+  print(addTen(5));  // Output: 15 (5 + 10)
+}
+```
+
+---
+
+## 5. Functional Collection Methods (`map`, `where`, `reduce`)
+
+Built-in iterable methods that leverage first-class callbacks:
+
+```dart
+void main() {
+  List<int> numbers = [1, 2, 3, 4, 5];
+
+  // 1. map(): Transform elements
+  List<int> squared = numbers.map((n) => n * n).toList();
+  print('Squared: $squared'); // [1, 4, 9, 16, 25]
+
+  // 2. where(): Filter elements based on predicate
+  List<int> evens = numbers.where((n) => n.isEven).toList();
+  print('Evens: $evens'); // [2, 4]
+
+  // 3. reduce(): Aggregate all elements into a single value
+  int total = numbers.reduce((acc, curr) => acc + curr);
+  print('Total: $total'); // 15
+}
+```
+
+> [!TIP]
+> Nearly every Flutter widget constructor (e.g., `ElevatedButton(onPressed: () => ...)` or `ListView.builder`) relies on **Named Parameters** and **Higher-Order Functions**. Mastering these constructs is fundamental to idiomatic Flutter development.

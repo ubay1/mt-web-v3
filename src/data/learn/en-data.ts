@@ -24,7 +24,125 @@ import GolangLesson2 from './en/golang-lesson-2-flow-control.mdx';
 import GolangLesson3 from './en/golang-lesson-3-tipe-lanjutan.mdx';
 import GolangLesson4 from './en/golang-lesson-4-method-dan-interface.mdx';
 
+// Dart Lessons (EN)
+import DartLesson1 from './en/dart-lesson-1-intro.mdx';
+import DartLesson2 from './en/dart-lesson-2-types-variables.mdx';
+import DartLesson3 from './en/dart-lesson-3-null-safety.mdx';
+import DartLesson4 from './en/dart-lesson-4-collections.mdx';
+import DartLesson5 from './en/dart-lesson-5-control-flow.mdx';
+import DartLesson6 from './en/dart-lesson-6-functions.mdx';
+import DartLesson7 from './en/dart-lesson-7-oop-basics.mdx';
+import DartLesson8 from './en/dart-lesson-8-oop-inheritance-interfaces.mdx';
+import DartLesson9 from './en/dart-lesson-9-dart3-records-patterns.mdx';
+import DartLesson10 from './en/dart-lesson-10-async-future-streams.mdx';
+
+// Flutter Lessons (EN)
+import FlutterLesson1 from './en/flutter-lesson-1-intro-widgets.mdx';
+import FlutterLesson2 from './en/flutter-lesson-2-layouts.mdx';
+import FlutterLesson3 from './en/flutter-lesson-3-inputs-forms.mdx';
+import FlutterLesson4 from './en/flutter-lesson-4-navigation.mdx';
+import FlutterLesson5 from './en/flutter-lesson-5-state-management.mdx';
+import FlutterLesson6 from './en/flutter-lesson-6-networking-api.mdx';
+import FlutterLesson7 from './en/flutter-lesson-7-theming-animations.mdx';
+
 export const learnEn = {
+  'dart-mastery': {
+    title: 'Modern Dart Language Mastery',
+    description: 'A structured roadmap to mastering Dart from scratch: Null Safety, OOP, Dart 3 Records & Pattern Matching, and Asynchronous programming.',
+    lessons: [
+      {
+        id: 'dart-1',
+        title: 'Dart Basics: Introduction to Dart & Basic Structure',
+        content: DartLesson1,
+      },
+      {
+        id: 'dart-2',
+        title: 'Dart Basics: Data Types, Variables & Immutability',
+        content: DartLesson2,
+      },
+      {
+        id: 'dart-3',
+        title: 'Dart Basics: Sound Null Safety & Null-Aware Operators',
+        content: DartLesson3,
+      },
+      {
+        id: 'dart-4',
+        title: 'Control & Collections: List, Set, Map & Collection-If/For',
+        content: DartLesson4,
+      },
+      {
+        id: 'dart-5',
+        title: 'Control & Collections: Control Flow & Loops',
+        content: DartLesson5,
+      },
+      {
+        id: 'dart-6',
+        title: 'Functions: Parameters, Arrow & Higher-Order Functions',
+        content: DartLesson6,
+      },
+      {
+        id: 'dart-7',
+        title: 'OOP: Classes, Objects & Constructors',
+        content: DartLesson7,
+      },
+      {
+        id: 'dart-8',
+        title: 'OOP: Inheritance, Interfaces, Mixins & Extensions',
+        content: DartLesson8,
+      },
+      {
+        id: 'dart-9',
+        title: 'Modern Dart: Records, Pattern Matching & Switch Expressions',
+        content: DartLesson9,
+      },
+      {
+        id: 'dart-10',
+        title: 'Asynchronous: Future, Async/Await & Streams',
+        content: DartLesson10,
+      },
+    ],
+  },
+  'flutter-mastery': {
+    title: 'Mastering Flutter Mobile Development',
+    description: 'Comprehensive guide to building multiplatform mobile applications with Flutter: Widget Architecture, Layouts, State Management, APIs, and Animations.',
+    lessons: [
+      {
+        id: 'flutter-1',
+        title: 'Flutter Basics: Introduction to Flutter & Widget Foundations',
+        content: FlutterLesson1,
+      },
+      {
+        id: 'flutter-2',
+        title: 'Layouts: Flutter Layout Mastery (Container, Flex, Stack, ListView)',
+        content: FlutterLesson2,
+      },
+      {
+        id: 'flutter-3',
+        title: 'Interactions & Forms: Interactivity, Forms & Input Validation',
+        content: FlutterLesson3,
+      },
+      {
+        id: 'flutter-4',
+        title: 'Navigation: Routing with Navigator vs go_router',
+        content: FlutterLesson4,
+      },
+      {
+        id: 'flutter-5',
+        title: 'State Management: Architecture of setState, Riverpod & BLoC',
+        content: FlutterLesson5,
+      },
+      {
+        id: 'flutter-6',
+        title: 'Networking: REST API Integration, JSON & FutureBuilder',
+        content: FlutterLesson6,
+      },
+      {
+        id: 'flutter-7',
+        title: 'Theming & Animations: Dark Mode & Modern Animations in Flutter',
+        content: FlutterLesson7,
+      },
+    ],
+  },
   'react-mastery': {
     title: 'Mastering React.js',
     description: 'Learn React.js fundamentals from scratch to advanced, including components, state, & hooks.',
