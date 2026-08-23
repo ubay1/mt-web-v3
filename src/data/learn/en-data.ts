@@ -45,7 +45,68 @@ import FlutterLesson5 from './en/flutter-lesson-5-state-management.mdx';
 import FlutterLesson6 from './en/flutter-lesson-6-networking-api.mdx';
 import FlutterLesson7 from './en/flutter-lesson-7-theming-animations.mdx';
 
+import BigONotation from './en/big-o-notation.mdx';
+import SecurityLesson1 from './en/security-lesson-1-backup-files.mdx';
+import SecurityLesson2 from './en/security-lesson-2-debug-pages.mdx';
+import SecurityLesson3 from './en/security-lesson-3-exposed-git.mdx';
+import SecurityLesson4 from './en/security-lesson-4-cookie-manipulation.mdx';
+import SecurityLesson5 from './en/security-lesson-5-access-private-user-data.mdx';
+import SecurityLesson6 from './en/security-lesson-6-user-role-modification.mdx';
+import SecurityLesson7 from './en/security-lesson-7-http-trace-access-control.mdx';
+
 export const learnEn = {
+  'security-mastery': {
+    title: 'Bug Hunting & Web Security Mastery',
+    description: 'A practical guide to bug hunting and web security: finding vulnerabilities, reconnaissance techniques, exploitation methodologies, and mitigation.',
+    lessons: [
+      {
+        id: 'security-lesson-1',
+        title: 'Information Disclosure: Backup File Leaks & Database Passwords',
+        content: SecurityLesson1,
+      },
+      {
+        id: 'security-lesson-2',
+        title: 'Information Disclosure: Debug Pages & Feroxbuster Discovery',
+        content: SecurityLesson2,
+      },
+      {
+        id: 'security-lesson-3',
+        title: 'Information Disclosure: Exposed Version Control (.git) on Server',
+        content: SecurityLesson3,
+      },
+      {
+        id: 'security-lesson-4',
+        title: 'Broken Access Control: Cookie Manipulation',
+        content: SecurityLesson4,
+      },
+      {
+        id: 'security-lesson-5',
+        title: 'Broken Access Control: Accessing Private User Data (IDOR)',
+        content: SecurityLesson5,
+      },
+      {
+        id: 'security-lesson-6',
+        title: 'Broken Access Control: User Role can be Modified in User Profile',
+        content: SecurityLesson6,
+      },
+      {
+        id: 'security-lesson-7',
+        title: 'Broken Access Control: Debugging Flow with HTTP TRACE',
+        content: SecurityLesson7,
+      },
+    ],
+  },
+  'big-o': {
+    title: 'Big O',
+    description: 'Learn Big O Notation, a way to measure the efficiency of your code.',
+    lessons: [
+      {
+        id: 'big-o',
+        title: 'Big O',
+        content: BigONotation,
+      },
+    ],
+  },
   'dart-mastery': {
     title: 'Modern Dart Language Mastery',
     description: 'A structured roadmap to mastering Dart from scratch: Null Safety, OOP, Dart 3 Records & Pattern Matching, and Asynchronous programming.',

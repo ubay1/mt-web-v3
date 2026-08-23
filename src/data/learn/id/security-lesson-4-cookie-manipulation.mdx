@@ -1,0 +1,129 @@
+# Broken Access Control: Cookie Manipulation
+
+**Broken Access Control** (Kegagalan Kontrol Akses) adalah salah satu kerentanan web paling berbahaya yang menempati peringkat teratas dalam **OWASP Top 10**. Celah ini terjadi ketika sistem tidak memverifikasi hak akses pengguna dengan benar di sisi server (_backend_).
+
+Salah satu skenario paling sederhana dari celah ini adalah **Cookie Manipulation**, di mana aplikasi web secara keliru mempercayai nilai cookie di sisi klien (_client-side_) untuk menentukan apakah seorang pengguna adalah admin atau bukan.
+
+---
+
+## 1. Konsep Kerentanan: Mengapa Ini Terjadi?
+
+Aplikasi web yang rentan menyimpan status hak akses langsung di dalam cookie browser dalam bentuk teks biasa tanpa enkripsi atau tanda tangan (_signature_), contohnya:
+
+```http
+Cookie: session=xyz123; Admin=false
+```
+
+Karena cookie dikirimkan oleh browser pengguna, penyerang dapat **mencegat (intercept)** request tersebut dan mengubah nilai `Admin=false` menjadi `Admin=true` sebelum request sampai ke server. Jika backend hanya mengecek apakah nilai cookie tersebut bernilai `true`, penyerang langsung mendapatkan hak akses sebagai Administrator (**Privilege Escalation**)!
+
+---
+
+## 2. Praktik Eksploitasi Langkah Demi Langkah (Burp Suite)
+
+Untuk mempraktikkan manipulasi cookie, kita menggunakan alat intercept HTTP proxy standar industri: **Burp Suite**.
+
+---
+
+### Langkah 1: Membuka Burp Suite & Browser Bawaan
+
+1. Buka aplikasi **Burp Suite**.
+2. Masuk ke tab **Proxy** > **Intercept**.
+3. Klik tombol **Open Browser** untuk membuka browser bawaan Burp Suite (browser ini sudah otomatis terhubung ke proxy Burp tanpa perlu setting manual).
+4. Pastikan status tombol **Intercept is on** dalam keadaan aktif (menyala).
+
+---
+
+### Langkah 2: Menangkap Request HTTP Target
+
+1. Di dalam browser Burp Suite, buka website target yang ingin diuji.
+2. Burp Suite akan secara otomatis menahan (_intercept_) request HTTP sebelum terkirim ke server internet:
+
+![Burp Suite Proxy Intercept](/images/burp-proxy-1a.png)
+
+---
+
+### Langkah 3: Menginspeksi Nilai Cookie
+
+1. Periksa bagian header request, cari baris **Cookie**.
+2. Perhatikan nilai parameter otorisasi yang dikirimkan. Di sini kita menemukan parameter `Admin=false`:
+
+![Burp Suite Cookie Intercept](/images/burp-proxy-2a.png)
+
+> [!NOTE]
+> Parameter seperti `Admin=false`, `role=user`, atau `is_admin=0` di dalam cookie adalah indikasi awal bahwa aplikasi mungkin memiliki kontrol akses berbasis klien yang rentan.
+
+---
+
+### Langkah 4: Otomatisasi Perubahan dengan Fitur Match & Replace
+
+Agar kita tidak perlu mengubah cookie secara manual pada setiap klik halaman, Burp Suite menyediakan fitur **Match and Replace** yang akan otomatis mengubah teks request:
+
+1. Buka tab **Proxy** > **Proxy settings** (atau sub-tab _Match and replace_).
+2. Salin nilai cookie asli (`Admin=false`) dan masukkan pada kolom **Match**.
+3. Masukkan nilai manipulasi baru (`Admin=true`) pada kolom **Replace**:
+
+![Burp Suite Match & Replace Rule](/images/burp-proxy-3.png)
+![Konfigurasi Match & Replace](/images/burp-proxy-4.png)
+
+---
+
+### Langkah 5: Meneruskan Request (Drop / Forward)
+
+Kembali ke tab **Intercept**. Kamu bisa klik tombol **Forward** untuk meneruskan request yang sudah dimodifikasi, atau klik **Drop** jika ingin melepaskan antrean request sebelumnya:
+
+![Burp Suite Intercept Tab](/images/burp-proxy-5.png)
+
+---
+
+### Langkah 6: Verifikasi Hasil Akses Admin
+
+Sekarang, akses kembali halaman target atau buka rute `/admin` di browser. Karena request yang dikirim sekarang berisi cookie `Admin=true`, server menganggap kita sebagai Administrator dan halaman dashboard admin berhasil terbuka!
+
+![Halaman Admin Berhasil Terbuka](/images/burp-proxy-6.png)
+
+---
+
+## 3. Dampak Keamanan (Impact)
+
+- **Privilege Escalation:** Pengguna biasa (_unprivileged user_) dapat menaikkan hak aksesnya menjadi Super Admin.
+- **Akses Penuh ke Data Sensitif:** Penyerang dapat melihat data seluruh pengguna, menghapus database, atau mengubah konfigurasi sistem.
+- **Pengambilalihan Akun:** Penyerang dapat mereset password akun lain tanpa otorisasi yang sah.
+
+---
+
+## 4. Cara Pencegahan & Remediasi (Best Practices)
+
+Untuk mencegah kerentanan Cookie Manipulation pada aplikasi yang kamu buat:
+
+### 1. Jangan Pernah Menentukan Hak Akses di Sisi Klien
+
+Role, permission, dan status admin **wajib divalidasi di database atau server backend**, bukan berdasarkan data yang dikirimkan oleh browser/client.
+
+### 2. Gunakan Session Server-Side yang Aman
+
+Simpan hanya session ID acak (_opaque token_) pada cookie, lalu ambil data role pengguna dari session store di server (misal Redis atau Database):
+
+```typescript
+// ❌ CONTOH BURUK (Rentan Manipulasi Cookie):
+app.get("/admin", (req, res) => {
+  if (req.cookies.Admin === "true") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Forbidden");
+});
+
+// ✅ CONTOH BAIK (Validasi Sisi Server):
+app.get("/admin", async (req, res) => {
+  const sessionId = req.cookies.sessionId;
+  const user = await getUserFromSession(sessionId);
+
+  if (user && user.role === "ADMIN") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Forbidden");
+});
+```
+
+### 3. Gunakan Atribut Cookie yang Aman
+
+Tambahkan flag `HttpOnly`, `Secure`, dan `SameSite=Strict` pada cookie autentikasi agar cookie tidak bisa diakses atau dimanipulasi via JavaScript script injeksi (XSS).

@@ -1,0 +1,214 @@
+# Broken Access Control: Modifikasi Role Pengguna pada Profil (Mass Assignment)
+
+Salah satu bentuk paling berbahaya dari kerentanan _Broken Access Control_ adalah **Vertical Privilege Escalation** (Eskalasi Hak Akses Vertikal), di mana pengguna biasa dapat menaikkan level hak aksesnya menjadi **Administrator**.
+
+Celah ini sering terjadi akibat fenomena **Mass Assignment (Auto-Binding)**, yaitu ketika server backend secara otomatis memperbarui semua kolom database berdasarkan data JSON yang dikirimkan oleh klien tanpa melakukan penyaringan (_whitelisting_) kolom yang diperbolehkan.
+
+---
+
+## 1. Konsep Kerentanan: Mengapa Celah Ini Terjadi?
+
+Ketika pengguna memperbarui data profil (misalnya mengganti alamat email), aplikasi mengirimkan request HTTP dengan format JSON:
+
+```http
+POST /my-account/change-email HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "user@normal-user.net"
+}
+```
+
+### Informasi Bocor pada Response API
+Saat server merespons, server secara tidak sengaja mengembalikan seluruh objek pengguna:
+
+```json
+{
+  "username": "wiener",
+  "email": "user@normal-user.net",
+  "apikey": "abcdef123456",
+  "roleid": 1
+}
+```
+
+Dari response di atas, penyerang mengetahui bahwa level hak akses ditentukan oleh parameter internal bernama **`roleid`** (di mana `1` = User Biasa, dan umumnya `2` = Administrator).
+
+### Eksekusi Manipulasi (Mass Assignment)
+Penyerang menggunakan **Burp Suite Repeater** untuk menambahkan parameter `"roleid": 2` ke dalam request update email. Jika backend mengikat (*auto-binding*) semua input klien ke model database, server akan langsung mengeksekusi:
+
+```sql
+UPDATE users SET email = 'user@normal-user.net', roleid = 2 WHERE id = 101;
+```
+
+Akun penyerang seketika berubah menjadi **Administrator**!
+
+---
+
+## 2. Alur Eksploitasi: Modifikasi Role via Burp Repeater
+
+![User Role Modification Diagram](/images/role-modification-diagram.svg)
+
+---
+
+## 3. Praktik Langkah Demi Langkah Menggunakan Burp Suite Repeater
+
+Berikut adalah panduan lengkap menyelesaikan skenario lab PortSwigger (*User role can be modified in user profile*):
+
+---
+
+### Langkah 1: Login ke Akun Uji Coba
+1. Buka browser bawaan Burp Suite.
+2. Akses halaman login target dan masuk menggunakan kredensial pengguna biasa:
+   - **Username:** `wiener`
+   - **Password:** `peter`
+3. Masuk ke menu **My Account** (Profil Pengguna).
+
+---
+
+### Langkah 2: Lakukan Update Email & Tangkap Request
+1. Pada form **Update email**, masukkan alamat email baru (misal: `wiener@normal-user.net`).
+2. Klik tombol **Update email**.
+3. Di **Burp Suite**, buka tab **Proxy** > **HTTP history**.
+4. Cari request dengan method `POST /my-account/change-email`.
+
+---
+
+### Langkah 3: Kirim Request ke Burp Repeater
+1. Klik kanan pada request `POST /my-account/change-email` tersebut.
+2. Pilih **Send to Repeater** (atau tekan shortcut `Ctrl + R` / `Cmd + R`).
+3. Pindah ke tab **Repeater** di bagian atas Burp Suite.
+
+---
+
+### Langkah 4: Analisis Response Awal (Temukan Parameter Role)
+1. Di tab Repeater, klik tombol **Send** untuk melihat respons asli server.
+2. Periksa panel **Response** di sebelah kanan:
+   ```json
+   {
+     "username": "wiener",
+     "email": "wiener@normal-user.net",
+     "apikey": "4K2L8J...",
+     "roleid": 1
+   }
+   ```
+3. Perhatikan field `"roleid": 1`. Angka `1` menandakan role akun standar saat ini.
+
+---
+
+### Langkah 5: Modifikasi Payload Request di Repeater
+1. Kembali ke panel **Request** di sebelah kiri.
+2. Tambahkan baris `"roleid": 2` ke dalam JSON body:
+
+```http
+POST /my-account/change-email HTTP/1.1
+Host: target-lab.net
+Cookie: session=token_user_wiener
+Content-Type: application/json
+Content-Length: 53
+
+{
+  "email": "wiener@normal-user.net",
+  "roleid": 2
+}
+```
+
+> [!NOTE]
+> Pastikan format JSON tetap valid (tambahkan tanda koma `,` setelah baris `"email": "..."`). Jika menggunakan Burp Suite, `Content-Length` akan otomatis disesuaikan.
+
+---
+
+### Langkah 6: Kirim Request & Verifikasi Hasil
+1. Klik tombol **Send** di Repeater.
+2. Lihat panel **Response**. Jika server merespons dengan:
+   ```json
+   {
+     "username": "wiener",
+     "email": "wiener@normal-user.net",
+     "apikey": "4K2L8J...",
+     "roleid": 2
+   }
+   ```
+   Artinya parameter `roleid` berhasil diterima dan di-update ke database!
+
+---
+
+### Langkah 7: Akses Panel Administrator
+1. Kembali ke browser web target dan refresh halaman **My Account**.
+2. Menu navigasi baru bernama **Admin panel** (`/admin`) akan muncul di header website.
+3. Buka halaman `/admin`, lalu jalankan aksi administratif (misalnya menghapus akun target `carlos`).
+4. Skenario pengujian berhasil diselesaikan dengan sempurna! 🎉
+
+---
+
+## 4. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (Blind Object Update)
+```typescript
+// Handler Express / Node.js
+app.post("/my-account/change-email", authenticateUser, async (req, res) => {
+  try {
+    // ❌ BAHAYA: Langsung memasukkan seluruh req.body ke database!
+    // Penyerang bisa menyisipkan roleid, isAdmin, balance, password, dll.
+    const updatedUser = await db.user.update({
+      where: { id: req.user.id },
+      data: req.body, 
+    });
+
+    // ❌ Membocorkan field sensitif internal ke response
+    return res.json(updatedUser);
+  } catch (error) {
+    return res.status(500).json({ error: "Gagal memperbarui profil." });
+  }
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Field Whitelisting & DTO)
+```typescript
+import { z } from "zod";
+
+// 1. Definisikan skema validasi ketat (Hanya field yang diizinkan)
+const UpdateEmailSchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+});
+
+app.post("/my-account/change-email", authenticateUser, async (req, res) => {
+  try {
+    // 2. Validasi input: Field yang tidak ada di schema akan ditolak / dibuang
+    const parsedData = UpdateEmailSchema.parse(req.body);
+
+    // 3. Update database HANYA dengan field yang telah disetujui (Whitelisted)
+    const updatedUser = await db.user.update({
+      where: { id: req.user.id },
+      data: {
+        email: parsedData.email, // roleid TIDAK AKAN PERNAH terupdate dari endpoint ini!
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        // Jangan sertakan roleid / hash password pada response umum
+      },
+    });
+
+    return res.json({
+      message: "Email berhasil diperbarui.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: "Input tidak valid." });
+  }
+});
+```
+
+---
+
+## 5. Ringkasan & Best Practices Pencegahan
+
+1. **Gunakan Data Transfer Objects (DTO) & Strict Schema Validation:**
+   Selalu filter properti input klien menggunakan library validator (seperti Zod, Joi, class-validator) atau framework DTO bawaan sebelum diteruskan ke database.
+2. **Jangan Pernah Percayai Parameter Role dari Klien:**
+   Perubahan role pengguna hanya boleh dilakukan melalui endpoint khusus administrator (misalnya `PATCH /api/admin/users/:id/role`) yang diproteksi oleh middleware otorisasi RBAC (*Role-Based Access Control*).
+3. **Cegah Information Disclosure pada Response:**
+   Hindari mengembalikan model database mentah (*raw entity*) ke respons JSON klien. Gunakan DTO response untuk menyembunyikan kolom sensitif seperti `roleid`, `password_hash`, `is_superadmin`, atau `balance`.

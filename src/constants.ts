@@ -56,22 +56,35 @@ export const NOTES = [
 
 export const LEARNS = [
   {
-    id: 'dart-mastery',
-    track: 'dart',
-    date: '2024-07-01',
-    tags: ['Dart', 'Programming', 'Mobile'],
-    title: { id: learnId['dart-mastery'].title, en: learnEn['dart-mastery'].title },
-    description: { id: learnId['dart-mastery'].description, en: learnEn['dart-mastery'].description },
-    lessons: learnId['dart-mastery'].lessons.map((lesson, idx) => ({
+    id: 'security-mastery',
+    track: 'security',
+    date: '2026-08-23',
+    tags: ['Security', 'Bug Hunting', 'Web'],
+    title: { id: learnId['security-mastery'].title, en: learnEn['security-mastery'].title },
+    description: { id: learnId['security-mastery'].description, en: learnEn['security-mastery'].description },
+    lessons: learnId['security-mastery'].lessons.map((lesson, idx) => ({
       id: lesson.id,
-      title: { id: lesson.title, en: learnEn['dart-mastery'].lessons[idx]?.title },
-      content: { id: lesson.content, en: learnEn['dart-mastery'].lessons[idx]?.content }
+      title: { id: lesson.title, en: learnEn['security-mastery'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['security-mastery'].lessons[idx]?.content }
+    }))
+  },
+  {
+    id: 'big-o',
+    track: 'big-o',
+    date: '2026-08-22',
+    tags: ['Algoritma'],
+    title: { id: learnId['big-o'].title, en: learnEn['big-o'].title },
+    description: { id: learnId['big-o'].description, en: learnEn['big-o'].description },
+    lessons: learnId['big-o'].lessons.map((lesson, idx) => ({
+      id: lesson.id,
+      title: { id: lesson.title, en: learnEn['big-o'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['big-o'].lessons[idx]?.content }
     }))
   },
   {
     id: 'flutter-mastery',
     track: 'flutter',
-    date: '2024-08-01',
+    date: '2026-08-01',
     tags: ['Flutter', 'Mobile', 'UI'],
     title: { id: learnId['flutter-mastery'].title, en: learnEn['flutter-mastery'].title },
     description: { id: learnId['flutter-mastery'].description, en: learnEn['flutter-mastery'].description },
@@ -82,9 +95,35 @@ export const LEARNS = [
     }))
   },
   {
+    id: 'dart-mastery',
+    track: 'dart',
+    date: '2026-07-15',
+    tags: ['Dart', 'Programming', 'Mobile'],
+    title: { id: learnId['dart-mastery'].title, en: learnEn['dart-mastery'].title },
+    description: { id: learnId['dart-mastery'].description, en: learnEn['dart-mastery'].description },
+    lessons: learnId['dart-mastery'].lessons.map((lesson, idx) => ({
+      id: lesson.id,
+      title: { id: lesson.title, en: learnEn['dart-mastery'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['dart-mastery'].lessons[idx]?.content }
+    }))
+  },
+  {
+    id: 'golang-mastery',
+    track: 'golang',
+    date: '2026-07-10',
+    tags: ['Golang', 'Backend'],
+    title: { id: learnId['golang-mastery'].title, en: learnEn['golang-mastery'].title },
+    description: { id: learnId['golang-mastery'].description, en: learnEn['golang-mastery'].description },
+    lessons: learnId['golang-mastery'].lessons.map((lesson, idx) => ({
+      id: lesson.id,
+      title: { id: lesson.title, en: learnEn['golang-mastery'].lessons[idx]?.title },
+      content: { id: lesson.content, en: learnEn['golang-mastery'].lessons[idx]?.content }
+    }))
+  },
+  {
     id: 'react-mastery',
     track: 'react',
-    date: '2024-05-10',
+    date: '2026-07-01',
     tags: ['React', 'Frontend'],
     title: { id: learnId['react-mastery'].title, en: learnEn['react-mastery'].title },
     description: { id: learnId['react-mastery'].description, en: learnEn['react-mastery'].description },
@@ -94,19 +133,6 @@ export const LEARNS = [
       content: { id: lesson.content, en: learnEn['react-mastery'].lessons[idx]?.content }
     }))
   },
-  {
-    id: 'golang-mastery',
-    track: 'golang',
-    date: '2024-06-15',
-    tags: ['Golang', 'Backend'],
-    title: { id: learnId['golang-mastery'].title, en: learnEn['golang-mastery'].title },
-    description: { id: learnId['golang-mastery'].description, en: learnEn['golang-mastery'].description },
-    lessons: learnId['golang-mastery'].lessons.map((lesson, idx) => ({
-      id: lesson.id,
-      title: { id: lesson.title, en: learnEn['golang-mastery'].lessons[idx]?.title },
-      content: { id: lesson.content, en: learnEn['golang-mastery'].lessons[idx]?.content }
-    }))
-  }
 ];
 
 export const SKILLS = [

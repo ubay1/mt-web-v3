@@ -1,0 +1,113 @@
+# Information Disclosure: Debug Pages & Content Discovery (Feroxbuster)
+
+During application development, engineers frequently enable debug modes or leave diagnostic files (such as `phpinfo.php`, `/_profiler`, `/actuator/env`) to monitor internal application states.
+
+If these diagnostic endpoints remain exposed in production, attackers can extract critical secrets like **Secret Keys**, environment variables, runtime versions, and internal infrastructure topology.
+
+---
+
+## 1. Content Discovery Tools: Feroxbuster & SecLists
+
+Because diagnostic endpoints rarely appear in public navigation menus, security practitioners use **Content Discovery / Directory Brute-forcing** tools.
+
+### A. Feroxbuster
+[Feroxbuster](https://github.com/epi052/feroxbuster) is a high-performance content discovery tool built with Rust. It provides recursive scanning and multi-threading capabilities.
+
+```bash
+# Install Feroxbuster (macOS via Homebrew)
+brew install feroxbuster
+
+# Or install with Rust Cargo
+cargo install feroxbuster
+```
+
+### B. SecLists (Industry-Standard Wordlists)
+[SecLists](https://github.com/danielmiessler/SecLists) contains curated lists of endpoints and parameter names. `common.txt` is ideal for baseline discovery.
+
+```bash
+# Download common.txt from SecLists
+curl -s -O https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt
+```
+
+---
+
+## 2. Practical Walkthrough
+
+### Step 1: Execute Feroxbuster
+Run Feroxbuster specifying the target URL and wordlist path:
+
+```bash
+./feroxbuster -u https://target-website.com/ -w ./common.txt
+```
+
+Common flags:
+- `-u <URL>`: Target web URL.
+- `-w <PATH>`: Path to wordlist file (`common.txt`).
+- `-t <THREADS>`: Concurrent threads (e.g., `-t 50`).
+- `-s 200,301,302`: Filter for specific HTTP status codes.
+
+Sample scan results:
+```text
+200      GET        1 lines        8 L        8 W       84 B https://target-website.com/robots.txt
+200      GET      142 lines      480 L      890 W    12040 B https://target-website.com/cgi-bin/phpinfo.php
+301      GET        0 lines        0 L        0 W        0 B https://target-website.com/admin => https://target-website.com/admin/
+```
+
+---
+
+### Step 2: Access Diagnostic Endpoints (`phpinfo.php`)
+Open the discovered endpoint:
+```text
+https://target-website.com/cgi-bin/phpinfo.php
+```
+
+`phpinfo()` displays active PHP modules, server variables, and environment configuration:
+
+```text
+_____________________________________________________________
+PHP Version 8.2.14
+Configuration: Linux web-prod-01 5.15.0 #1 SMP
+_____________________________________________________________
+Environment Variables:
+  APP_ENV        => production
+  SECRET_KEY     => 9a7b1c3d5e8f2042a1bc894e720ff30a1
+  JWT_SECRET     => SuperSecretJwtKeySigning2026!
+  DATABASE_HOST  => 10.0.0.15
+  AWS_ACCESS_KEY => AKIAIOSFODNN7EXAMPLE
+_____________________________________________________________
+```
+
+> [!CAUTION]
+> Leaking the **SECRET_KEY** or **JWT_SECRET** is a High/Critical severity flaw. Attackers can forge administrator session cookies or sign arbitrary JWTs, leading to complete **Account Takeover**.
+
+---
+
+## 3. Security Risks
+
+- **Authentication Bypass:** Leaked application signing keys allow attackers to create valid session cookies or impersonate any user.
+- **Remote Code Execution (RCE):** In many web frameworks (Flask, Django, Laravel, Symfony), secret key disclosure allows weaponizing insecure deserialization vulnerabilities into full server compromise.
+- **Targeted Exploits:** Detailed component version numbers expose unpatched CVEs and known library weaknesses.
+
+---
+
+## 4. Prevention & Remediation
+
+1. **Disable Debug Mode in Production:**
+   Ensure production deployment environments enforce non-debug configurations:
+   ```env
+   APP_DEBUG=false
+   NODE_ENV=production
+   ENVIRONMENT=production
+   ```
+
+2. **Remove Diagnostic Files Before Release:**
+   Delete temporary test scripts (`phpinfo.php`, `test.php`, `info.js`) before deploying.
+
+3. **Block Diagnostic Paths via Reverse Proxy:**
+   ```nginx
+   # Deny diagnostic and profiler endpoints
+   location ~* (phpinfo|debug|_profiler|actuator) {
+       deny all;
+       return 404;
+   }
+   ```

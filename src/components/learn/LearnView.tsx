@@ -10,6 +10,8 @@ import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 
 export const TRACK_OPTIONS = [
   { id: "all", labelKey: "learn.all_tracks", defaultLabel: "Semua Jalur (All Tracks)", icon: "⚡", tag: "ALL" },
+  { id: "security", labelKey: "Bug Hunting", defaultLabel: "Bug Hunting", icon: "🛡️", tag: "Security", count: 5 },
+  { id: "big-o", labelKey: "Big O", defaultLabel: "Big O", icon: "🧠", tag: "Big O", count: 1 },
   { id: "dart", labelKey: "Dart Mastery", defaultLabel: "Dart Mastery", icon: "🎯", tag: "Dart", count: 10 },
   { id: "flutter", labelKey: "Flutter Mastery", defaultLabel: "Flutter Mastery", icon: "💙", tag: "Flutter", count: 7 },
   { id: "react", labelKey: "React.js Mastery", defaultLabel: "React.js Mastery", icon: "⚛️", tag: "React", count: 17 },

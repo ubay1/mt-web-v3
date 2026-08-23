@@ -45,11 +45,77 @@ import FlutterLesson5 from './id/flutter-lesson-5-state-management.mdx';
 import FlutterLesson6 from './id/flutter-lesson-6-networking-api.mdx';
 import FlutterLesson7 from './id/flutter-lesson-7-theming-animations.mdx';
 
+import BigONotation from './id/big-o-notation.mdx';
+import SecurityLesson1 from './id/security-lesson-1-backup-files.mdx';
+import SecurityLesson2 from './id/security-lesson-2-debug-pages.mdx';
+import SecurityLesson3 from './id/security-lesson-3-exposed-git.mdx';
+import SecurityLesson4 from './id/security-lesson-4-cookie-manipulation.mdx';
+import SecurityLesson5 from './id/security-lesson-5-access-private-user-data.mdx';
+import SecurityLesson6 from './id/security-lesson-6-user-role-modification.mdx';
+import SecurityLesson7 from './id/security-lesson-7-http-trace-access-control.mdx';
+
 export const learnId = {
+  'security-mastery': {
+    title: 'Belajar Bug Hunting & Web Security',
+    description: 'Panduan praktis belajar bug hunting dan keamanan web: pengujian celah keamanan, reconnaissance, hingga teknik eksploitasi dan mitigasi.',
+    lessons: [
+      {
+        id: 'security-lesson-1',
+        title: 'Information Disclosure: Kebocoran File Backup & Database Password',
+        content: SecurityLesson1,
+      },
+      {
+        id: 'security-lesson-2',
+        title: 'Information Disclosure: Debug Page & Feroxbuster Discovery',
+        content: SecurityLesson2,
+      },
+      {
+        id: 'security-lesson-3',
+        title: 'Information Disclosure: Exposed Version Control (.git) di Server',
+        content: SecurityLesson3,
+      },
+      {
+        id: 'security-lesson-4',
+        title: 'Broken Access Control: Cookie Manipulation',
+        content: SecurityLesson4,
+      },
+      {
+        id: 'security-lesson-5',
+        title: 'Broken Access Control: Mengakses Data Pribadi Pengguna (IDOR)',
+        content: SecurityLesson5,
+      },
+      {
+        id: 'security-lesson-6',
+        title: 'Broken Access Control: Modifikasi Role Pengguna pada Profil',
+        content: SecurityLesson6,
+      },
+      {
+        id: 'security-lesson-7',
+        title: 'Broken Access Control: Debugging Flow Menggunakan HTTP TRACE',
+        content: SecurityLesson7,
+      },
+    ],
+  },
+  'big-o': {
+    title: 'Big O',
+    description: 'Belajar Big O Notation, cara mengukur efisiensi kode.',
+    lessons: [
+      {
+        id: 'big-o',
+        title: 'Big O',
+        content: BigONotation,
+      },
+    ],
+  },
   'dart-mastery': {
     title: 'Belajar Bahasa Dart Modern',
     description: 'Panduan lengkap belajar bahasa Dart dari dasar hingga mahir: Null Safety, OOP, Records Dart 3, dan Asynchronous.',
     lessons: [
+      {
+        id: 'big-o',
+        title: 'Big O',
+        content: BigONotation,
+      },
       {
         id: 'dart-1',
         title: 'Dart Dasar: Pengenalan Dart & Struktur Dasar',

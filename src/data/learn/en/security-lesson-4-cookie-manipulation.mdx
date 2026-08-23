@@ -1,0 +1,129 @@
+# Broken Access Control: Cookie Manipulation
+
+**Broken Access Control** is consistently ranked as the #1 web security vulnerability in the **OWASP Top 10**. This flaw occurs when an application fails to properly enforce user permissions and authorization checks on the server side (_backend_).
+
+One classic example is **Cookie Manipulation**, where a web application erroneously relies on raw client-side cookies to determine whether a visitor has administrative privileges.
+
+---
+
+## 1. Vulnerability Overview: Why Does This Happen?
+
+Vulnerable web applications store authorization status directly inside client cookies as unencrypted, unsigned plain text, such as:
+
+```http
+Cookie: session=xyz123; Admin=false
+```
+
+Because cookies are sent by the client browser, an attacker can **intercept** HTTP requests and tamper with `Admin=false`, changing it to `Admin=true` before it reaches the server. If the backend blindly trusts this cookie value without server-side validation, the attacker immediately gains administrative privileges (**Privilege Escalation**)!
+
+---
+
+## 2. Step-by-Step Practical Walkthrough (Burp Suite)
+
+To test and demonstrate cookie manipulation, we use the industry-standard HTTP proxy tool: **Burp Suite**.
+
+---
+
+### Step 1: Launch Burp Suite & Built-in Browser
+
+1. Open **Burp Suite**.
+2. Navigate to the **Proxy** > **Intercept** tab.
+3. Click the **Open Browser** button to launch Burp Suite's pre-configured browser (no manual proxy certificates or network configurations required).
+4. Make sure the **Intercept is on** toggle button is active.
+
+---
+
+### Step 2: Intercept Target HTTP Requests
+
+1. Inside the Burp browser, open the target website you want to test.
+2. Burp Suite will automatically hold (_intercept_) outgoing HTTP requests before they are transmitted over the internet:
+
+![Burp Suite Proxy Intercept](/images/burp-proxy-1a.png)
+
+---
+
+### Step 3: Inspect Cookie Headers
+
+1. Inspect the request headers and locate the **Cookie** field.
+2. Check if there are user role or privilege parameters. In this example, we observe the `Admin=false` parameter:
+
+![Burp Suite Cookie Intercept](/images/burp-proxy-2a.png)
+
+> [!NOTE]
+> Cookie parameters like `Admin=false`, `role=user`, or `is_admin=0` are strong indicators of potential client-controlled access control vulnerabilities.
+
+---
+
+### Step 4: Automate Replacement with Match & Replace
+
+To avoid manually altering the cookie on every single request, Burp Suite provides a **Match and Replace** feature:
+
+1. Open **Proxy** > **Proxy settings** (or the _Match and replace_ rules table).
+2. Enter the original cookie string (`Admin=false`) in the **Match** field.
+3. Enter the manipulated replacement string (`Admin=true`) in the **Replace** field:
+
+![Burp Suite Match & Replace Rule](/images/burp-proxy-3.png)
+![Match and Replace Configuration](/images/burp-proxy-4.png)
+
+---
+
+### Step 5: Forward or Drop Requests
+
+Return to the **Intercept** tab. You can click **Forward** to release the modified request to the server, or click **Drop** to discard pending intercepted requests:
+
+![Burp Suite Intercept Tab](/images/burp-proxy-5.png)
+
+---
+
+### Step 6: Verify Admin Access
+
+Now, refresh the webpage or navigate to `/admin` in the browser. Because outgoing requests now contain `Admin=true`, the backend grants full administrator dashboard access!
+
+![Admin Dashboard Successfully Accessed](/images/burp-proxy-6.png)
+
+---
+
+## 3. Security Impact
+
+- **Privilege Escalation:** Unprivileged regular users can escalate themselves to Super Admin.
+- **Data Breaches & Data Manipulation:** Full access to view, modify, or delete sensitive user databases and transaction records.
+- **Account Takeover:** Unauthorized administrative password resets and privilege abuse.
+
+---
+
+## 4. Prevention & Remediation (Best Practices)
+
+To prevent Cookie Manipulation in your web applications:
+
+### 1. Never Determine User Permissions on the Client Side
+
+User roles and authorization checks **must always be validated against the database or session store on the server**.
+
+### 2. Implement Server-Side Sessions
+
+Store only an opaque session token in the cookie, and retrieve user roles from a secure backend store (e.g., Redis or PostgreSQL):
+
+```typescript
+// ❌ BAD PRACTICE (Vulnerable to Cookie Tampering):
+app.get("/admin", (req, res) => {
+  if (req.cookies.Admin === "true") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Forbidden");
+});
+
+// ✅ GOOD PRACTICE (Server-Side Validation):
+app.get("/admin", async (req, res) => {
+  const sessionId = req.cookies.sessionId;
+  const user = await getUserFromSession(sessionId);
+
+  if (user && user.role === "ADMIN") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Forbidden");
+});
+```
+
+### 3. Enforce Secure Cookie Attributes
+
+Set `HttpOnly`, `Secure`, and `SameSite=Strict` flags on all authentication cookies to mitigate cross-site scripting (XSS) and cross-site request forgery (CSRF) risks.

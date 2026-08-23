@@ -1,0 +1,114 @@
+# Information Disclosure: Kebocoran File Backup & Database Password
+
+**Information Disclosure** (Pengungkapan Informasi) adalah kerentanan keamanan di mana sebuah aplikasi web secara tidak sengaja membocorkan informasi sensitif kepada pengguna yang tidak berwenang. Informasi ini bisa berupa kredensial database, kode sumber (_source code_), kredensial API, hingga detail arsitektur internal.
+
+Salah satu skenario paling umum terjadi akibat **file backup** atau file sementara yang tertinggal di direktori publik server web.
+
+---
+
+## 1. Bagaimana File Backup Bisa Bocor?
+
+Ketika seorang developer atau sysadmin melakukan perubahan langsung di server produksi (sebuah *bad practice*), mereka sering kali membuat salinan cadangan dari file penting, misalnya:
+- `ProductTemplate.java.bak`
+- `config.php.old`
+- `settings.py.backup`
+- `database.sql.tar.gz`
+- `~index.php` (file swap editor Vim/Nano)
+
+### ⚠️ Masalah Utama: MIME Type & Eksekusi Server
+Server web (seperti Apache/Nginx) dikonfigurasi untuk mengeksekusi file `.php` atau mengkompilasi file `.java`/`.ts` di balik layar sehingga kode sumber tidak pernah terlihat oleh pengunjung. 
+
+Namun, ketika sebuah file memiliki ekstensi `.bak` atau `.old`, server web tidak mengenali ekstensi tersebut sebagai skrip yang harus dieksekusi, melainkan menganggapnya sebagai file teks biasa (**plain text**) dan langsung mengirimkannya ke browser!
+
+---
+
+## 2. Alur Praktik & Investigasi (Reconnaissance)
+
+Berikut adalah langkah-langkah sistematis dalam menemukan kebocoran file backup pada audit keamanan web:
+
+### Langkah 1: Memeriksa File `robots.txt`
+Banyak developer mencantumkan direktori sensitif ke dalam file `robots.txt` dengan tujuan mencegah mesin pencari seperti Google mengindeksnya. Namun, file ini bersifat publik dan justru memberitahu penyerang di mana folder rahasia berada.
+
+Akses URL:
+```text
+https://target-website.com/robots.txt
+```
+
+Contoh isi `robots.txt`:
+```http
+User-agent: *
+Disallow: /backup
+Disallow: /admin
+```
+
+---
+
+### Langkah 2: Menjelajahi Direktori `/backup`
+Setelah melihat `Disallow: /backup`, buka direktori tersebut di browser atau menggunakan tool HTTP:
+```text
+https://target-website.com/backup
+```
+
+Jika *Directory Listing* aktif pada web server, kamu akan melihat daftar file cadangan di dalam folder tersebut.
+
+---
+
+### Langkah 3: Mengunduh dan Membaca File Backup
+Misalkan ditemukan file `ProductTemplate.java.bak`, akses langsung URL file tersebut:
+```text
+https://target-website.com/backup/ProductTemplate.java.bak
+```
+
+Karena ekstensi `.bak` disajikan sebagai teks biasa, seluruh kode sumber Java terbuka dan terbaca:
+
+```java
+package com.example.web.model;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+public class ProductTemplate {
+    // ⚠️ Kredensial database bocor di dalam kode sumber backup!
+    private static final String DB_URL = "jdbc:postgresql://db.internal.local:5432/production_db";
+    private static final String DB_USER = "db_admin";
+    private static final String DB_PASS = "Sup3rS3cr3tP@ssw0rd!2026";
+
+    public Connection getConnection() throws Exception {
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    }
+}
+```
+
+> [!CAUTION]
+> Password database (`Sup3rS3cr3tP@ssw0rd!2026`) dan kredensial internal berhasil didapatkan. Ini memungkinkan eskalasi serangan lebih lanjut ke level database internal.
+
+---
+
+## 3. Dampak Keamanan (Impact)
+
+1. **Kompromi Database:** Penyerang dapat menggunakan kredensial untuk mengakses data pengguna, transaksi finansial, atau memodifikasi data.
+2. **Eksposur Logika Bisnis:** Penyerang dapat menganalisis arsitektur kode dan mencari celah lain (seperti SQL Injection atau Insecure Deserialization).
+3. **Kepatuhan & Regulasi:** Pelanggaran regulasi perlindungan data pribadi (GDPR, UU PDP) dengan sanksi denda berat.
+
+---
+
+## 4. Cara Pencegahan & Remediasi (Best Practices)
+
+Untuk mencegah kebocoran file backup pada aplikasi yang kamu bangun:
+
+### 1. Jangan Pernah Mengedit atau Menyimpan Backup di Web Root
+Pastikan tidak ada file cadangan yang disimpan di dalam direktori publik web (`public/`, `dist/`, atau `/var/www/html/`).
+
+### 2. Konfigurasi Web Server untuk Memblokir Ekstensi Sensitif
+Tambahkan aturan di konfigurasi Nginx untuk menolak akses ke ekstensi berbahaya:
+
+```nginx
+# Blokir akses ke file backup, temporary, dan config sensitif
+location ~* \.(bak|old|backup|sql|tar|gz|zip|swp|temp|env|log)$ {
+    deny all;
+    return 404;
+}
+```
+
+### 3. Gunakan Environment Variables untuk Secrets
+Jangan pernah melakukan _hardcode_ kredensial ke dalam file kode. Gunakan variabel lingkungan (seperti `.env` yang berada di luar public root) atau secret manager (Vault, AWS Secrets Manager).

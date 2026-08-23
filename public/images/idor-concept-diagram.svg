@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 580" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Gradients -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <linearGradient id="alertGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#450A0A"/>
+      <stop offset="100%" stop-color="#2C0B0E"/>
+    </linearGradient>
+
+    <linearGradient id="successGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <!-- Glowing Accents -->
+    <filter id="glowRed" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Shadows -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#F43F5E"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; fill: #F1F5F9; }
+    .code-text { font-family: 'JetBrains Mono', 'Fira Code', Menlo, monospace; font-size: 13px; fill: #38BDF8; font-weight: 600; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; fill: #CBD5E1; }
+    .alert-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; fill: #FDA4AF; }
+    .alert-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; fill: #FECDD3; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; font-weight: 700; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1080" height="580" rx="16" fill="url(#bgGrad)"/>
+  <rect width="1080" height="580" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Subtle Grid Pattern -->
+  <g opacity="0.08" stroke="#94A3B8" stroke-width="1">
+    <line x1="0" y1="80" x2="1080" y2="80"/>
+    <line x1="0" y1="160" x2="1080" y2="160"/>
+    <line x1="0" y1="240" x2="1080" y2="240"/>
+    <line x1="0" y1="320" x2="1080" y2="320"/>
+    <line x1="0" y1="400" x2="1080" y2="400"/>
+    <line x1="0" y1="480" x2="1080" y2="480"/>
+    <line x1="120" y1="0" x2="120" y2="580"/>
+    <line x1="240" y1="0" x2="240" y2="580"/>
+    <line x1="360" y1="0" x2="360" y2="580"/>
+    <line x1="480" y1="0" x2="480" y2="580"/>
+    <line x1="600" y1="0" x2="600" y2="580"/>
+    <line x1="720" y1="0" x2="720" y2="580"/>
+    <line x1="840" y1="0" x2="840" y2="580"/>
+    <line x1="960" y1="0" x2="960" y2="580"/>
+  </g>
+
+  <!-- Header Section -->
+  <g transform="translate(48, 48)">
+    <rect x="0" y="0" width="100" height="24" rx="12" fill="#38BDF8" fill-opacity="0.15" stroke="#38BDF8" stroke-width="1"/>
+    <text x="50" y="16" text-anchor="middle" class="badge" fill="#38BDF8">MEKANISME IDOR</text>
+    <text x="116" y="18" class="title" font-size="20">Broken Access Control: Mengakses Data Pribadi Pengguna</text>
+    <text x="0" y="44" class="subtitle" font-size="13">Ilustrasi Horizontal Privilege Escalation akibat kelalaian validasi kepemilikan objek di backend</text>
+  </g>
+
+  <!-- ==================== LEFT CARD: ATTACKER ==================== -->
+  <g transform="translate(48, 125)" filter="url(#cardShadow)">
+    <rect width="250" height="390" rx="14" fill="url(#cardGrad)" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.7"/>
+    
+    <!-- User Icon & Header -->
+    <circle cx="42" cy="40" r="22" fill="#0284C7" fill-opacity="0.2" stroke="#38BDF8" stroke-width="1.5"/>
+    <path d="M42 32 A 6 6 0 1 0 42 44 A 6 6 0 1 0 42 32 M32 50 C32 46 36 45 42 45 C48 45 52 46 52 50 Z" fill="#38BDF8"/>
+    
+    <text x="76" y="35" class="card-title" font-size="16">User A (Penyerang)</text>
+    <text x="76" y="52" class="desc-text" font-size="12" fill="#94A3B8">ID Akun Asli: <tspan fill="#38BDF8" font-weight="700">101</tspan></text>
+
+    <line x1="20" y1="75" x2="230" y2="75" stroke="#334155" stroke-width="1"/>
+
+    <!-- Action 1: Manipulasi ID Request -->
+    <rect x="18" y="90" width="214" height="74" rx="8" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+    <text x="28" y="110" class="badge" fill="#FBBF24">1. KIRIM REQUEST</text>
+    <text x="28" y="132" class="code-text" font-size="12">GET /api/user/profile</text>
+    <text x="28" y="148" class="code-text" font-size="12" fill="#F43F5E">?id=102 <tspan fill="#94A3B8" font-size="11">(Milik User B)</tspan></text>
+
+    <!-- Action 2: Terima Data Korban -->
+    <rect x="18" y="180" width="214" height="185" rx="8" fill="#450A0A" fill-opacity="0.3" stroke="#F43F5E" stroke-width="1" stroke-opacity="0.8"/>
+    <text x="28" y="202" class="badge" fill="#F43F5E">4. TERIMA DATA KORBAN</text>
+    <text x="28" y="222" class="desc-text" font-size="12" fill="#FECDD3" font-weight="600">Berhasil mencuri data:</text>
+    
+    <rect x="28" y="234" width="194" height="118" rx="6" fill="#1C1917" stroke="#7F1D1D" stroke-width="1"/>
+    <text x="38" y="254" class="code-text" font-size="11" fill="#A7F3D0">HTTP/1.1 200 OK</text>
+    <text x="38" y="274" class="code-text" font-size="11" fill="#FDE047">"id": 102,</text>
+    <text x="38" y="292" class="code-text" font-size="11" fill="#FDE047">"name": "User B",</text>
+    <text x="38" y="310" class="code-text" font-size="11" fill="#FDE047">"email": "userB@corp.com",</text>
+    <text x="38" y="328" class="code-text" font-size="11" fill="#FDE047">"phone": "0812-9988-7711"</text>
+  </g>
+
+  <!-- ==================== CENTER CARD: BACKEND SERVER ==================== -->
+  <g transform="translate(375, 125)" filter="url(#cardShadow)">
+    <rect width="360" height="390" rx="14" fill="url(#cardGrad)" stroke="#475569" stroke-width="1.5"/>
+    
+    <!-- Server Icon & Header -->
+    <rect x="20" y="22" width="36" height="36" rx="8" fill="#334155" stroke="#64748B" stroke-width="1"/>
+    <path d="M28 32 h20 M28 38 h20 M28 44 h8" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="48" cy="44" r="2" fill="#10B981"/>
+    
+    <text x="68" y="37" class="card-title" font-size="16">Web Server / Backend</text>
+    <text x="68" y="53" class="desc-text" font-size="12" fill="#94A3B8">Memproses Request &amp; Database</text>
+
+    <line x1="20" y1="75" x2="340" y2="75" stroke="#334155" stroke-width="1"/>
+
+    <!-- Step 1: Authentication -->
+    <rect x="20" y="90" width="320" height="52" rx="8" fill="#064E3B" fill-opacity="0.3" stroke="#059669" stroke-width="1"/>
+    <text x="32" y="110" class="badge" fill="#34D399">✓ STEP 1: AUTHENTICATION CHECK</text>
+    <text x="32" y="128" class="desc-text" font-size="12">Apakah User A sudah login? → <tspan fill="#34D399" font-weight="700">YA (Sesi Valid)</tspan></text>
+
+    <!-- Step 2: Database Query -->
+    <rect x="20" y="152" width="320" height="56" rx="8" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+    <text x="32" y="172" class="badge" fill="#60A5FA">⚡ STEP 2: DATABASE QUERY</text>
+    <text x="32" y="193" class="code-text" font-size="11.5">SELECT * FROM users WHERE id = 102</text>
+
+    <!-- Step 3: Missing Authorization Alert -->
+    <rect x="20" y="218" width="320" height="147" rx="8" fill="url(#alertGrad)" stroke="#F43F5E" stroke-width="1.5" filter="url(#glowRed)" stroke-opacity="0.9"/>
+    
+    <g transform="translate(32, 238)">
+      <path d="M8 2 L16 16 L0 16 Z" fill="#F43F5E"/>
+      <text x="8" y="14" font-family="sans-serif" font-weight="900" font-size="11" fill="#FFFFFF" text-anchor="middle">!</text>
+      <text x="24" y="12" class="alert-title" font-size="13">⚠️ MISSING OBJECT AUTHORIZATION</text>
+    </g>
+    
+    <text x="32" y="278" class="alert-desc" font-size="12">Server <tspan font-weight="700" fill="#FFFFFF">TIDAK MEMERIKSA</tspan> kepemilikan objek!</text>
+    <text x="32" y="298" class="alert-desc" font-size="11.5">Backend langsung percaya ID dari URL tanpa cek:</text>
+    
+    <rect x="32" y="308" width="296" height="42" rx="6" fill="#1C1917" stroke="#991B1B" stroke-width="1"/>
+    <text x="40" y="325" class="code-text" font-size="11" fill="#FDA4AF">if (profile.userId !== session.userId)</text>
+    <text x="40" y="340" class="code-text" font-size="11" fill="#94A3B8">// ❌ Baris pengecekan ini terlewatkan!</text>
+  </g>
+
+  <!-- ==================== RIGHT CARD: VICTIM DATA ==================== -->
+  <g transform="translate(805, 125)" filter="url(#cardShadow)">
+    <rect width="225" height="390" rx="14" fill="url(#cardGrad)" stroke="#64748B" stroke-width="1.5"/>
+    
+    <!-- User Icon & Header -->
+    <circle cx="42" cy="40" r="22" fill="#475569" fill-opacity="0.4" stroke="#94A3B8" stroke-width="1.5"/>
+    <path d="M42 32 A 6 6 0 1 0 42 44 A 6 6 0 1 0 42 32 M32 50 C32 46 36 45 42 45 C48 45 52 46 52 50 Z" fill="#CBD5E1"/>
+    
+    <text x="76" y="35" class="card-title" font-size="16">User B (Korban)</text>
+    <text x="76" y="52" class="desc-text" font-size="12" fill="#94A3B8">ID Akun: <tspan fill="#FDE047" font-weight="700">102</tspan></text>
+
+    <line x1="20" y1="75" x2="205" y2="75" stroke="#334155" stroke-width="1"/>
+
+    <!-- Database Storage Box -->
+    <rect x="18" y="90" width="189" height="275" rx="8" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+    
+    <g transform="translate(28, 110)">
+      <path d="M0 4 C0 1.8 14 0 32 0 C50 0 64 1.8 64 4 L64 24 C64 26.2 50 28 32 28 C14 28 0 26.2 0 24 Z" fill="#1E293B" stroke="#64748B" stroke-width="1"/>
+      <ellipse cx="32" cy="4" rx="32" ry="4" fill="#334155"/>
+      <text x="76" y="16" class="badge" fill="#94A3B8">DATABASE</text>
+    </g>
+
+    <text x="28" y="165" class="desc-text" font-size="12" fill="#94A3B8">Objek Data Tersimpan:</text>
+
+    <rect x="26" y="178" width="173" height="170" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+    <text x="36" y="200" class="code-text" font-size="11" fill="#38BDF8">Record ID: 102</text>
+    <line x1="36" y1="208" x2="185" y2="208" stroke="#334155" stroke-width="1"/>
+    <text x="36" y="228" class="desc-text" font-size="11" fill="#E2E8F0">Nama: User B</text>
+    <text x="36" y="248" class="desc-text" font-size="11" fill="#E2E8F0">Email: userB@...</text>
+    <text x="36" y="268" class="desc-text" font-size="11" fill="#E2E8F0">HP: 0812-9988...</text>
+    <text x="36" y="288" class="desc-text" font-size="11" fill="#E2E8F0">Alamat: Jl. Raya...</text>
+    <text x="36" y="308" class="desc-text" font-size="11" fill="#E2E8F0">Role: Customer</text>
+    <text x="36" y="332" class="badge" fill="#F43F5E">● STATUS: TEREKSPOS</text>
+  </g>
+
+  <!-- ==================== FLOW ARROWS ==================== -->
+  <!-- 1. Request Arrow (User A -> Server) -->
+  <path d="M 298 250 L 365 250" fill="none" stroke="#38BDF8" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowCyan)" filter="url(#glowCyan)"/>
+  <rect x="306" y="228" width="54" height="18" rx="9" fill="#0C4A6E" stroke="#38BDF8" stroke-width="1"/>
+  <text x="333" y="240" font-family="sans-serif" font-size="9" font-weight="700" fill="#BAE6FD" text-anchor="middle">REQ 102</text>
+
+  <!-- 2. DB Fetch Arrow (Server <-> DB) -->
+  <path d="M 735 285 L 805 285" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4,4"/>
+  <path d="M 805 315 L 735 315" fill="none" stroke="#FDE047" stroke-width="2" stroke-dasharray="4,4"/>
+
+  <!-- 3. Response Arrow (Server -> User A) -->
+  <path d="M 375 420 L 308 420" fill="none" stroke="#F43F5E" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowRed)" filter="url(#glowRed)"/>
+  <rect x="305" y="398" width="60" height="18" rx="9" fill="#881337" stroke="#F43F5E" stroke-width="1"/>
+  <text x="335" y="410" font-family="sans-serif" font-size="9" font-weight="700" fill="#FFE4E6" text-anchor="middle">DATA BOCOR</text>
+
+</svg>

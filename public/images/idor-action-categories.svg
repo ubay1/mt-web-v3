@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 460" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Glowing Filters -->
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowAmber" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glowRed" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Shadow -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowDown" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M1,1 L4,6 L7,1 Z" fill="#64748B"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; font-weight: 700; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12.5px; fill: #CBD5E1; line-height: 1.4; }
+    .item-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11.5px; fill: #E2E8F0; }
+    .code-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1080" height="460" rx="16" fill="url(#bgGrad)"/>
+  <rect width="1080" height="460" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Subtle Grid Background -->
+  <g opacity="0.06" stroke="#94A3B8" stroke-width="1">
+    <line x1="0" y1="80" x2="1080" y2="80"/>
+    <line x1="0" y1="160" x2="1080" y2="160"/>
+    <line x1="0" y1="240" x2="1080" y2="240"/>
+    <line x1="0" y1="320" x2="1080" y2="320"/>
+    <line x1="0" y1="400" x2="1080" y2="400"/>
+    <line x1="180" y1="0" x2="180" y2="460"/>
+    <line x1="360" y1="0" x2="360" y2="460"/>
+    <line x1="540" y1="0" x2="540" y2="460"/>
+    <line x1="720" y1="0" x2="720" y2="460"/>
+    <line x1="900" y1="0" x2="900" y2="460"/>
+  </g>
+
+  <!-- Top Root Node (Tree Header) -->
+  <g transform="translate(370, 24)" filter="url(#cardShadow)">
+    <rect width="340" height="46" rx="23" fill="#1E293B" stroke="#64748B" stroke-width="1.5"/>
+    <circle cx="26" cy="23" r="12" fill="#3B82F6" fill-opacity="0.2"/>
+    <path d="M22 23 L25 26 L31 20" stroke="#60A5FA" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <text x="48" y="28" class="card-title" font-size="15" fill="#F8FAFC">Tiga Kategori Aksi Manipulasi IDOR</text>
+  </g>
+
+  <!-- Branching Connector Lines -->
+  <path d="M 540 70 L 540 95" stroke="#475569" stroke-width="2"/>
+  <path d="M 200 95 L 880 95" stroke="#475569" stroke-width="2"/>
+  <path d="M 200 95 L 200 120" stroke="#38BDF8" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <path d="M 540 95 L 540 120" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <path d="M 880 95 L 880 120" stroke="#F43F5E" stroke-width="2" marker-end="url(#arrowDown)"/>
+
+  <!-- ==================== COLUMN 1: READ IDOR ==================== -->
+  <g transform="translate(48, 125)" filter="url(#cardShadow)">
+    <rect width="304" height="305" rx="14" fill="url(#cardGrad)" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.8"/>
+    
+    <!-- Header Badge & Icon -->
+    <rect x="18" y="18" width="38" height="38" rx="10" fill="#0369A1" fill-opacity="0.2" stroke="#38BDF8" stroke-width="1.5"/>
+    <path d="M27 37 C29 32 34 28 37 28 C40 28 45 32 47 37 C45 42 40 46 37 46 C34 46 29 42 27 37 Z" fill="none" stroke="#38BDF8" stroke-width="2"/>
+    <circle cx="37" cy="37" r="3" fill="#38BDF8"/>
+    
+    <text x="66" y="34" class="card-title" font-size="16" fill="#38BDF8">1. Read IDOR</text>
+    <text x="66" y="50" class="desc-text" font-size="12" fill="#94A3B8">Melihat Data Rahasia Korban</text>
+
+    <line x1="18" y1="68" x2="286" y2="68" stroke="#334155" stroke-width="1"/>
+
+    <text x="18" y="90" class="desc-text">Penyerang mengekstrak berkas pribadi atau riwayat transaksi sensitif.</text>
+
+    <!-- Example Pill Box -->
+    <rect x="18" y="106" width="268" height="128" rx="8" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <text x="28" y="126" class="badge" fill="#38BDF8">OBJEK YANG SERING DITARGET:</text>
+    
+    <text x="28" y="148" class="item-text">• File Invoice &amp; Kuitansi Pembayaran</text>
+    <text x="28" y="168" class="item-text">• Riwayat Transkrip Chat Support</text>
+    <text x="28" y="188" class="item-text">• Rekam Medis &amp; Mutasi Rekening</text>
+    <text x="28" y="208" class="item-text">• Lampiran Tiket Identitas (KTP/SIM)</text>
+
+    <!-- Bottom Tag -->
+    <rect x="18" y="248" width="268" height="38" rx="6" fill="#0284C7" fill-opacity="0.15" stroke="#38BDF8" stroke-width="1"/>
+    <text x="152" y="272" text-anchor="middle" class="badge" fill="#7DD3FC">⚠️ DAMPAK: KEBOCORAN DATA (PII LEAK)</text>
+  </g>
+
+  <!-- ==================== COLUMN 2: WRITE IDOR ==================== -->
+  <g transform="translate(388, 125)" filter="url(#cardShadow)">
+    <rect width="304" height="305" rx="14" fill="url(#cardGrad)" stroke="#F59E0B" stroke-width="1.5" stroke-opacity="0.8"/>
+    
+    <!-- Header Badge & Icon -->
+    <rect x="18" y="18" width="38" height="38" rx="10" fill="#B45309" fill-opacity="0.2" stroke="#F59E0B" stroke-width="1.5"/>
+    <path d="M28 44 L32 44 L44 32 L40 28 L28 40 Z" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M41 27 L45 31" stroke="#F59E0B" stroke-width="2"/>
+    
+    <text x="66" y="34" class="card-title" font-size="16" fill="#FBBF24">2. Write IDOR</text>
+    <text x="66" y="50" class="desc-text" font-size="12" fill="#94A3B8">Mengubah Data Korban</text>
+
+    <line x1="18" y1="68" x2="286" y2="68" stroke="#334155" stroke-width="1"/>
+
+    <text x="18" y="90" class="desc-text">Penyerang memodifikasi profil akun atau pengaturan milik user target.</text>
+
+    <!-- Example Pill Box -->
+    <rect x="18" y="106" width="268" height="128" rx="8" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <text x="28" y="126" class="badge" fill="#FBBF24">OBJEK YANG SERING DITARGET:</text>
+    
+    <text x="28" y="148" class="item-text">• Mengganti Email / No HP Korban</text>
+    <text x="28" y="168" class="item-text">• Reset Password Tanpa Otorisasi</text>
+    <text x="28" y="188" class="item-text">• Mengubah Alamat Kirim Pesanan</text>
+    <text x="28" y="208" class="item-text">• Mengubah Status Pembayaran Order</text>
+
+    <!-- Bottom Tag -->
+    <rect x="18" y="248" width="268" height="38" rx="6" fill="#D97706" fill-opacity="0.15" stroke="#F59E0B" stroke-width="1"/>
+    <text x="152" y="272" text-anchor="middle" class="badge" fill="#FDE68A">🚨 DAMPAK: ACCOUNT TAKEOVER (ATO)</text>
+  </g>
+
+  <!-- ==================== COLUMN 3: DELETE IDOR ==================== -->
+  <g transform="translate(728, 125)" filter="url(#cardShadow)">
+    <rect width="304" height="305" rx="14" fill="url(#cardGrad)" stroke="#F43F5E" stroke-width="1.5" stroke-opacity="0.8"/>
+    
+    <!-- Header Badge & Icon -->
+    <rect x="18" y="18" width="38" height="38" rx="10" fill="#BE123C" fill-opacity="0.2" stroke="#F43F5E" stroke-width="1.5"/>
+    <path d="M28 31 H46 M33 31 V43 H41 V31 M35 27 H39" stroke="#F43F5E" stroke-width="2" stroke-linecap="round"/>
+    
+    <text x="66" y="34" class="card-title" font-size="16" fill="#F43F5E">3. Delete IDOR</text>
+    <text x="66" y="50" class="desc-text" font-size="12" fill="#94A3B8">Menghapus Resource Korban</text>
+
+    <line x1="18" y1="68" x2="286" y2="68" stroke="#334155" stroke-width="1"/>
+
+    <text x="18" y="90" class="desc-text">Penyerang menghapus entri database atau file pengguna lain tanpa izin.</text>
+
+    <!-- Example Pill Box -->
+    <rect x="18" y="106" width="268" height="128" rx="8" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <text x="28" y="126" class="badge" fill="#F43F5E">OBJEK YANG SERING DITARGET:</text>
+    
+    <text x="28" y="148" class="item-text">• Menghapus Dokumen &amp; File Cloud</text>
+    <text x="28" y="168" class="item-text">• Membatalkan Pesanan Pengguna Lain</text>
+    <text x="28" y="188" class="item-text">• Menutup Tiket Pengaduan Nasabah</text>
+    <text x="28" y="208" class="item-text">• Menghapus Riwayat Transaksi</text>
+
+    <!-- Bottom Tag -->
+    <rect x="18" y="248" width="268" height="38" rx="6" fill="#E11D48" fill-opacity="0.15" stroke="#F43F5E" stroke-width="1"/>
+    <text x="152" y="272" text-anchor="middle" class="badge" fill="#FECDD3">💥 DAMPAK: DATA LOSS &amp; DOS</text>
+  </g>
+
+</svg>
