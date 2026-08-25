@@ -53,6 +53,11 @@ import SecurityLesson4 from './en/security-lesson-4-cookie-manipulation.mdx';
 import SecurityLesson5 from './en/security-lesson-5-access-private-user-data.mdx';
 import SecurityLesson6 from './en/security-lesson-6-user-role-modification.mdx';
 import SecurityLesson7 from './en/security-lesson-7-http-trace-access-control.mdx';
+import SecurityLesson8 from './en/security-lesson-8-directory-traversal-absolute-path.mdx';
+import SecurityLesson9 from './en/security-lesson-9-directory-traversal-hardcoded-extension.mdx';
+import SecurityLesson10 from './en/security-lesson-10-directory-traversal-bypassing-filters.mdx';
+import SecurityLesson11 from './en/security-lesson-11-directory-traversal-hardcoded-path.mdx';
+import SecurityLesson12 from './en/security-lesson-12-directory-traversal-extreme-filtering-intruder.mdx';
 
 export const learnEn = {
   'security-mastery': {
@@ -93,6 +98,31 @@ export const learnEn = {
         id: 'security-lesson-7',
         title: 'Broken Access Control: Debugging Flow with HTTP TRACE',
         content: SecurityLesson7,
+      },
+      {
+        id: 'security-lesson-8',
+        title: 'Directory Traversal: Bypassing with Absolute Path',
+        content: SecurityLesson8,
+      },
+      {
+        id: 'security-lesson-9',
+        title: 'Directory Traversal: Bypassing Hardcoded Extension',
+        content: SecurityLesson9,
+      },
+      {
+        id: 'security-lesson-10',
+        title: 'Directory Traversal: Bypassing Defensive Filters',
+        content: SecurityLesson10,
+      },
+      {
+        id: 'security-lesson-11',
+        title: 'Directory Traversal: Bypassing Hardcoded Base Path',
+        content: SecurityLesson11,
+      },
+      {
+        id: 'security-lesson-12',
+        title: 'Directory Traversal: Extreme Filtering with Intruder',
+        content: SecurityLesson12,
       },
     ],
   },

