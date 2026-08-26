@@ -58,6 +58,10 @@ import SecurityLesson9 from './id/security-lesson-9-directory-traversal-hardcode
 import SecurityLesson10 from './id/security-lesson-10-directory-traversal-bypassing-filters.mdx';
 import SecurityLesson11 from './id/security-lesson-11-directory-traversal-hardcoded-path.mdx';
 import SecurityLesson12 from './id/security-lesson-12-directory-traversal-extreme-filtering-intruder.mdx';
+import SecurityLesson13 from './id/security-lesson-13-csrf-tokens-vulnerabilities.mdx';
+import SecurityLesson14 from './id/security-lesson-14-xss-vectors-and-angularjs.mdx';
+import SecurityLesson15 from './id/security-lesson-15-xss-real-world-and-bug-hunting.mdx';
+import SecurityLesson16 from './id/security-lesson-16-xss-bypassing-filters-and-intruder.mdx';
 
 export const learnId = {
   'security-mastery': {
@@ -123,6 +127,26 @@ export const learnId = {
         id: 'security-lesson-12',
         title: 'Directory Traversal: Extreme Filtering dengan Intruder',
         content: SecurityLesson12,
+      },
+      {
+        id: 'security-lesson-13',
+        title: 'Cross-Site Request Forgery (CSRF): Memahami Celah & Token',
+        content: SecurityLesson13,
+      },
+      {
+        id: 'security-lesson-14',
+        title: 'Cross-Site Scripting (XSS): Vektor Tag Link, Gambar, Script, & AngularJS',
+        content: SecurityLesson14,
+      },
+      {
+        id: 'security-lesson-15',
+        title: 'Cross-Site Scripting (XSS): Dampak Serangan Nyata & Metodologi Bug Hunter',
+        content: SecurityLesson15,
+      },
+      {
+        id: 'security-lesson-16',
+        title: 'Cross-Site Scripting (XSS): Bypassing Filter & Intruder Fuzzing',
+        content: SecurityLesson16,
       },
     ],
   },
