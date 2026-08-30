@@ -62,6 +62,7 @@ import SecurityLesson13 from './en/security-lesson-13-csrf-tokens-vulnerabilitie
 import SecurityLesson14 from './en/security-lesson-14-xss-vectors-and-angularjs.mdx';
 import SecurityLesson15 from './en/security-lesson-15-xss-real-world-and-bug-hunting.mdx';
 import SecurityLesson16 from './en/security-lesson-16-xss-bypassing-filters-and-intruder.mdx';
+import SecurityLesson17 from './en/security-lesson-17-xss-protected-by-csp-bypasses.mdx';
 
 export const learnEn = {
   'security-mastery': {
@@ -147,6 +148,11 @@ export const learnEn = {
         id: 'security-lesson-16',
         title: 'Cross-Site Scripting (XSS): Filter Bypasses & Intruder Fuzzing',
         content: SecurityLesson16,
+      },
+      {
+        id: 'security-lesson-17',
+        title: 'Cross-Site Scripting (XSS): CSP Protection & CSP Bypass Techniques',
+        content: SecurityLesson17,
       },
     ],
   },

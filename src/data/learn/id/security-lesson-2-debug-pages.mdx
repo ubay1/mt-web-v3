@@ -1,17 +1,18 @@
 # Information Disclosure: Debug Page & Content Discovery (Feroxbuster)
 
-Ketika aplikasi web masih dalam tahap pengembangan (*development*), developer sering kali mengaktifkan fitur *debugging* atau membuat file diagnostik (seperti `phpinfo.php`, `/_profiler`, `/actuator/env`) untuk mempermudah pengecekan status server.
+Ketika aplikasi web masih dalam tahap pengembangan (_development_), developer sering kali mengaktifkan fitur _debugging_ atau membuat file diagnostik (seperti `phpinfo.php`, `/_profiler`, `/actuator/env`) untuk mempermudah pengecekan status server.
 
-Jika halaman *debug* ini lupa dimatikan saat naik ke server produksi, penyerang dapat mengekstraksi informasi berharga seperti **Secret Key**, environment variables, versi modul server, hingga konfigurasi internal.
+Jika halaman _debug_ ini lupa dimatikan saat naik ke server produksi, penyerang dapat mengekstraksi informasi berharga seperti **Secret Key**, environment variables, versi modul server, hingga konfigurasi internal.
 
 ---
 
 ## 1. Alat Bantu Content Discovery: Feroxbuster & SecLists
 
-Karena halaman debug dan file diagnostik tidak memiliki link tautan di menu utama website, praktisi keamanan (*Bug Hunter* / *Penetration Tester*) menggunakan teknik **Content Discovery / Directory Brute-forcing**.
+Karena halaman debug dan file diagnostik tidak memiliki link tautan di menu utama website, praktisi keamanan (_Bug Hunter_ / _Penetration Tester_) menggunakan teknik **Content Discovery / Directory Brute-forcing**.
 
 ### A. Feroxbuster
-[Feroxbuster](https://github.com/epi052/feroxbuster) adalah alat *content discovery* berbasis Rust yang sangat cepat, mendukung rekursif otomatis, dan multi-threading.
+
+[Feroxbuster](https://github.com/epi052/feroxbuster) adalah alat _content discovery_ berbasis Rust yang sangat cepat, mendukung rekursif otomatis, dan multi-threading.
 
 ```bash
 # Instalasi Feroxbuster (macOS via Homebrew)
@@ -22,6 +23,7 @@ cargo install feroxbuster
 ```
 
 ### B. SecLists (Wordlists Standar Keamanan)
+
 [SecLists](https://github.com/danielmiessler/SecLists) adalah kumpulan wordlist paling populer di dunia keamanan siber. Untuk pencarian konten web dasar, kita menggunakan `common.txt`.
 
 ```bash
@@ -34,19 +36,22 @@ curl -s -O https://raw.githubusercontent.com/danielmiessler/SecLists/master/Disc
 ## 2. Praktik Menemukan Halaman Debug
 
 ### Langkah 1: Menjalankan Pemindaian Feroxbuster
+
 Jalankan perintah Feroxbuster dengan menyertakan URL target dan jalur file wordlist:
 
 ```bash
-./feroxbuster -u https://target-website.com/ -w ./common.txt
+./feroxbuster -u https://target-website.com/ -w ./common.txt -s 200
 ```
 
 Opsi penting Feroxbuster:
+
 - `-u <URL>`: Menentukan URL target.
 - `-w <PATH>`: Menentukan path ke wordlist (`common.txt`).
 - `-t <THREADS>`: Jumlah thread bersamaan (misal: `-t 50`).
 - `-s 200,301,302`: Filter hanya status HTTP yang diinginkan.
 
 Contoh output Feroxbuster saat menemukan file tersembunyi:
+
 ```text
 200      GET        1 lines        8 L        8 W       84 B https://target-website.com/robots.txt
 200      GET      142 lines      480 L      890 W    12040 B https://target-website.com/cgi-bin/phpinfo.php
@@ -56,12 +61,14 @@ Contoh output Feroxbuster saat menemukan file tersembunyi:
 ---
 
 ### Langkah 2: Mengakses Halaman Diagnostik (`phpinfo.php`)
+
 Buka endpoint yang ditemukan:
+
 ```text
 https://target-website.com/cgi-bin/phpinfo.php
 ```
 
-Halaman `phpinfo()` menampilkan seluruh variabel konfigurasi PHP runtime, modul aktif, dan variabel lingkungan (*Environment Variables*).
+Halaman `phpinfo()` menampilkan seluruh variabel konfigurasi PHP runtime, modul aktif, dan variabel lingkungan (_Environment Variables_).
 
 ```text
 _____________________________________________________________
@@ -78,7 +85,7 @@ _____________________________________________________________
 ```
 
 > [!CAUTION]
-> Menemukan **SECRET_KEY** atau **JWT_SECRET** adalah temuan tingkat tinggi (*High Severity*). Penyerang dapat memanfaatkannya untuk memalsukan (*forge*) session token cookie atau JWT administrator untuk mengambil alih seluruh akun pengguna (*Account Takeover*).
+> Menemukan **SECRET_KEY** atau **JWT_SECRET** adalah temuan tingkat tinggi (_High Severity_). Penyerang dapat memanfaatkannya untuk memalsukan (_forge_) session token cookie atau JWT administrator untuk mengambil alih seluruh akun pengguna (_Account Takeover_).
 
 ---
 
@@ -86,7 +93,7 @@ _____________________________________________________________
 
 - **Bypass Autentikasi:** Dengan membocorkan application key/secret token, enkripsi cookie atau token sesi dapat didekripsi dan dipalsukan oleh penyerang.
 - **Eksploitasi Deserialization:** Pada banyak framework (seperti Flask, Django, Laravel, Symfony), bocornya secret key dapat berujung pada **Remote Code Execution (RCE)** melalui exploit insecure deserialization.
-- **Peta Serangan Lengkap:** Penyerang mengetahui versi PHP, modul yang rentan (*outdated libraries*), dan jalur path direktori absolut server.
+- **Peta Serangan Lengkap:** Penyerang mengetahui versi PHP, modul yang rentan (_outdated libraries_), dan jalur path direktori absolut server.
 
 ---
 
@@ -94,6 +101,7 @@ _____________________________________________________________
 
 1. **Matikan Debug Mode di Produksi:**
    Pastikan konfigurasi aplikasi selalu dalam mode produksi sebelum dideploy:
+
    ```env
    APP_DEBUG=false
    NODE_ENV=production

