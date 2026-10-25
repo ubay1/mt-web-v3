@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Script from "next/script";
 import I18nProvider from "../components/I18nProvider";
 import SmoothScroll from "../components/SmoothScroll";
 import Navbar from "../components/Navbar";
@@ -27,6 +28,13 @@ export default function RootLayout({
             <Footer />
           </SmoothScroll>
         </I18nProvider>
+        {/* Commento SDK — test aja */}
+        <Script
+          src="https://commento-feedback.netlify.app/commento-sdk.js?token=ebb0ace0-6035-4bec-9fcf-776ec1055199"
+          data-token="ebb0ace0-6035-4bec-9fcf-776ec1055199"
+          data-api="https://commento-feedback.netlify.app"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
