@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 620" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGradLink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGradLink" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <linearGradient id="cardGradEvilLink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B0716"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+
+    <filter id="shadowLink" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrCyanL" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#38BDF8"/>
+    </marker>
+    <marker id="arrRoseL" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#F43F5E"/>
+    </marker>
+    <marker id="arrGreenL" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#10B981"/>
+    </marker>
+    <marker id="arrAmberL" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#F59E0B"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; fill: #F8FAFC; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 500; fill: #94A3B8; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; }
+    .code-text { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; }
+    .desc-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; fill: #CBD5E1; }
+    .badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 9.5px; font-weight: 700; }
+    .step-badge { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1080" height="620" rx="16" fill="url(#bgGradLink)"/>
+  <rect width="1080" height="620" rx="16" fill="none" stroke="#334155" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <!-- Top Header Banner -->
+  <g transform="translate(48, 30)">
+    <rect x="0" y="0" width="130" height="22" rx="11" fill="#F43F5E" fill-opacity="0.15" stroke="#F43F5E" stroke-width="1"/>
+    <text x="65" y="15" text-anchor="middle" class="badge" fill="#FB7185">OAUTH CSRF LAB</text>
+    <text x="145" y="17" class="title" font-size="19">Forced OAuth Profile Linking</text>
+    <text x="0" y="40" class="subtitle" font-size="12">Eksploitasi Ketiadaan Parameter State: Menautkan Akun Sosial Penyerang ke Akun Admin Korban</text>
+  </g>
+
+  <!-- ================================================================= -->
+  <!-- CARD 1: TOP LEFT - ATTACKER (WIENER)                              -->
+  <!-- ================================================================= -->
+  <g transform="translate(48, 90)" filter="url(#shadowLink)">
+    <rect width="440" height="195" rx="12" fill="url(#cardGradEvilLink)" stroke="#F43F5E" stroke-width="1.2"/>
+    <path d="M 0 12 Q 0 0 12 0 L 428 0 Q 440 0 440 12 L 440 32 L 0 32 Z" fill="#4C0519" />
+    <circle cx="16" cy="16" r="4" fill="#EF4444"/>
+    <circle cx="28" cy="16" r="4" fill="#F59E0B"/>
+    <circle cx="40" cy="16" r="4" fill="#10B981"/>
+    <text x="56" y="20" class="card-title" font-size="11.5" fill="#FECDD3">1. Penyerang (Wiener - Akun Sosial: peter.wiener)</text>
+
+    <g transform="translate(16, 44)">
+      <rect width="408" height="64" rx="6" fill="#0B0205" stroke="#881337" stroke-width="1"/>
+      <text x="12" y="18" class="badge" fill="#FB7185">LANGKAH 1: INISIASI LINKING &amp; GENERATE CODE</text>
+      <text x="12" y="34" class="desc-text">• Penyerang klik tombol <tspan fill="#FDE047">"Attach a social profile"</tspan></text>
+      <text x="12" y="50" class="desc-text">• Login dengan akun medsos milik penyerang (<tspan fill="#38BDF8">peter.wiener:hotdog</tspan>)</text>
+
+      <rect y="74" width="408" height="64" rx="6" fill="#0B0205" stroke="#F43F5E" stroke-width="1"/>
+      <text x="12" y="92" class="badge" fill="#FDA4AF">LANGKAH 2: INTERCEPT &amp; DROP REQUEST DI BURP</text>
+      <text x="12" y="110" class="code-text" fill="#FDE68A">GET /oauth-linking?code=VALID_AUTH_CODE</text>
+      <text x="12" y="126" class="desc-text" fill="#F87171">⚠️ Copy URL lalu DROP request agar Authorization Code BELUM terpakai!</text>
+    </g>
+  </g>
+
+  <!-- ================================================================= -->
+  <!-- CARD 2: TOP RIGHT - EXPLOIT SERVER (MALICIOUS IFRAME)             -->
+  <!-- ================================================================= -->
+  <g transform="translate(592, 90)" filter="url(#shadowLink)">
+    <rect width="440" height="195" rx="12" fill="url(#cardGradLink)" stroke="#F59E0B" stroke-width="1.2"/>
+    <path d="M 0 12 Q 0 0 12 0 L 428 0 Q 440 0 440 12 L 440 32 L 0 32 Z" fill="#451A03" />
+    <text x="16" y="20" class="card-title" font-size="11.5" fill="#FDE68A">2. Exploit Server Penyerang (Payload CSRF)</text>
+
+    <g transform="translate(16, 44)">
+      <rect width="408" height="135" rx="6" fill="#090D16" stroke="#B45309" stroke-width="1"/>
+      <text x="12" y="20" class="badge" fill="#FBBF24">LANGKAH 3: RANCANG JEBAKAN IFRAME</text>
+      <text x="12" y="38" class="desc-text">Penyerang membuat halaman HTML di exploit server:</text>
+      
+      <rect x="12" y="46" width="384" height="42" rx="4" fill="#1E293B" stroke="#475569" stroke-width="0.8"/>
+      <text x="20" y="64" class="code-text" fill="#CBD5E1">&lt;iframe</text>
+      <text x="20" y="78" class="code-text" fill="#FDE68A">  src="https://target.com/oauth-linking?code=VALID_AUTH_CODE"&gt;</text>
+      <text x="20" y="94" class="code-text" fill="#CBD5E1">&lt;/iframe&gt;</text>
+
+      <text x="12" y="112" class="desc-text" fill="#94A3B8">• Ketika korban membuka halaman ini, browser korban otomatis</text>
+      <text x="12" y="126" class="desc-text" fill="#94A3B8">  mengakses URL linking sambil membawa Session Cookie korban!</text>
+    </g>
+  </g>
+
+  <!-- Horizontal connector: Attacker -> Exploit Server -->
+  <path d="M 488 185 L 584 185" fill="none" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrAmberL)"/>
+  <rect x="498" y="160" width="84" height="20" rx="4" fill="#451A03" stroke="#B45309" stroke-width="0.8"/>
+  <text x="540" y="174" text-anchor="middle" class="step-badge" fill="#FDE68A">Deploy CSRF</text>
+
+  <!-- ================================================================= -->
+  <!-- CARD 3: BOTTOM LEFT - VICTIM (ADMIN BROWSER)                      -->
+  <!-- ================================================================= -->
+  <g transform="translate(48, 335)" filter="url(#shadowLink)">
+    <rect width="440" height="250" rx="12" fill="url(#cardGradLink)" stroke="#38BDF8" stroke-width="1.2"/>
+    <path d="M 0 12 Q 0 0 12 0 L 428 0 Q 440 0 440 12 L 440 32 L 0 32 Z" fill="#0C4A6E" />
+    <circle cx="16" cy="16" r="4" fill="#38BDF8"/>
+    <text x="28" y="20" class="card-title" font-size="11.5" fill="#BAE6FD">3. Browser Korban (Admin Terotentikasi)</text>
+
+    <g transform="translate(16, 44)">
+      <rect width="408" height="60" rx="6" fill="#090D16" stroke="#0369A1" stroke-width="1"/>
+      <text x="12" y="18" class="badge" fill="#38BDF8">KONDISI KORBAN:</text>
+      <text x="12" y="34" class="desc-text">• Admin sedang login aktif di blog target (<tspan fill="#34D399">Cookie: session=AdminSession</tspan>)</text>
+      <text x="12" y="48" class="desc-text">• Admin membuka link jebakan yang dikirimkan oleh penyerang</text>
+
+      <rect y="70" width="408" height="115" rx="6" fill="#0B132B" stroke="#1D4ED8" stroke-width="1"/>
+      <text x="12" y="90" class="badge" fill="#93C5FD">LANGKAH 4: TRIGGER CSRF OLEH BROWSER ADMIN</text>
+      <text x="12" y="108" class="desc-text">Browser admin memuat iframe dan mengirim request latar belakang:</text>
+      <text x="12" y="126" class="code-text" fill="#86EFAC">GET /oauth-linking?code=VALID_AUTH_CODE HTTP/1.1</text>
+      <text x="12" y="142" class="code-text" fill="#38BDF8">Cookie: session=AdminSessionCookie</text>
+      <text x="12" y="162" class="desc-text" fill="#93C5FD">⚡ Request linking berjalan menggunakan hak akses penuh milik Admin!</text>
+    </g>
+  </g>
+
+  <!-- ================================================================= -->
+  <!-- CARD 4: BOTTOM RIGHT - TARGET SERVER & TAKEOVER                   -->
+  <!-- ================================================================= -->
+  <g transform="translate(592, 335)" filter="url(#shadowLink)">
+    <rect width="440" height="250" rx="12" fill="url(#cardGradLink)" stroke="#10B981" stroke-width="1.2"/>
+    <path d="M 0 12 Q 0 0 12 0 L 428 0 Q 440 0 440 12 L 440 32 L 0 32 Z" fill="#064E3B" />
+    <text x="16" y="20" class="card-title" font-size="11.5" fill="#A7F3D0">4. Server Target &amp; Dampak Pembajakan Akun</text>
+
+    <g transform="translate(16, 44)">
+      <!-- Vulnerability Root Cause -->
+      <rect width="408" height="84" rx="6" fill="#090D16" stroke="#881337" stroke-width="1"/>
+      <text x="12" y="18" class="badge" fill="#F43F5E">AKAR MASALAH: KETIADAAN PARAMETER STATE</text>
+      <text x="12" y="36" class="desc-text">1. Server tidak menyertakan dan memvalidasi parameter <tspan fill="#F87171" font-weight="700">state</tspan>.</text>
+      <text x="12" y="52" class="desc-text">2. Server tidak dapat memverifikasi siapa yang menginisiasi linking.</text>
+      <text x="12" y="68" class="desc-text">3. Server <tspan fill="#FDE047" font-weight="700">menautkan akun peter.wiener ke akun Admin!</tspan></text>
+
+      <!-- Account Takeover Result -->
+      <rect y="94" width="408" height="92" rx="6" fill="#064E3B" fill-opacity="0.3" stroke="#10B981" stroke-width="1"/>
+      <text x="12" y="114" class="badge" fill="#34D399">HASIL AKHIR: FULL ACCOUNT TAKEOVER</text>
+      <text x="12" y="132" class="desc-text">• Penyerang klik <tspan fill="#34D399" font-weight="700">"Log in with social media"</tspan></text>
+      <text x="12" y="148" class="desc-text">• Karena akun medsos terikat ke Admin, penyerang login sebagai <tspan fill="#34D399" font-weight="700">Admin</tspan>!</text>
+      <text x="12" y="166" class="desc-text" fill="#6EE7B7">✓ Penyerang dapat membuka /admin dan menghapus pengguna Carlos.</text>
+    </g>
+  </g>
+
+  <!-- Connectors: Exploit Server -> Victim Browser (Top Right to Bottom Left) -->
+  <path d="M 750 285 C 750 315, 350 295, 350 327" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrAmberL)"/>
+  <rect x="490" y="300" width="105" height="20" rx="4" fill="#451A03" stroke="#B45309" stroke-width="0.8"/>
+  <text x="542" y="314" text-anchor="middle" class="step-badge" fill="#FDE68A">Victim Visits Link</text>
+
+  <!-- Connector: Victim Browser -> Target Server (Horizontal Bottom) -->
+  <path d="M 488 460 L 584 460" fill="none" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrGreenL)"/>
+  <rect x="496" y="435" width="88" height="22" rx="4" fill="#064E3B" stroke="#10B981" stroke-width="1"/>
+  <text x="540" y="450" text-anchor="middle" class="step-badge" fill="#ECFDF5">Trigger Link</text>
+  <text x="540" y="475" text-anchor="middle" class="desc-text" font-size="9" fill="#A7F3D0">Carry Admin Cookie</text>
+</svg>

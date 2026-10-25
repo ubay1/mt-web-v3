@@ -1,0 +1,326 @@
+# OAuth 2.0: Forced OAuth Profile Linking & OAuth CSRF
+
+Banyak website modern memungkinkan penggunanya menghubungkan akun media sosial (seperti Google atau GitHub) ke akun website yang sudah ada melalui fitur **"Attach a social profile"** atau **"Link Account"**. Fitur ini bertujuan memudahkan pengguna agar nantinya bisa login menggunakan akun sosial media tanpa harus mengetik username dan password biasa.
+
+Namun, jika implementasi alur OAuth ini tidak dilengkapi dengan mekanisme perlindungan **CSRF (Cross-Site Request Forgery)**—khususnya parameter **`state`**—timbul celah keamanan kritis bernama **Forced OAuth Profile Linking**.
+
+Celah ini memungkinkan penyerang **memaksa akun korban (termasuk Admin) menautkan akun media sosial milik penyerang**. Akibatnya, penyerang cukup mengklik _"Log in with social media"_ untuk langsung masuk ke akun korban tanpa perlu mengetahui kredensial aslinya (**Full Account Takeover**).
+
+Materi ini membedah alur eksploitasi celah ini berdasarkan lab resmi PortSwigger Web Security Academy: _Forced OAuth profile linking_, lengkap dengan analisis arsitektur, panduan eksploitasi Burp Suite, serta kode perbaikan defensif.
+
+---
+
+## 1. Mekanisme Fitur "Attach Social Profile"
+
+Mari kita pahami bagaimana proses penautan akun (_account linking_) berjalan di balik layar:
+
+1. Pengguna yang sudah login di situs web (misal `target.com`) mengklik tombol **"Attach a social profile"**.
+2. Browser dialihkan ke OAuth Provider (misal `oauth-server.com`) dengan membawa parameter `client_id` dan `redirect_uri`:
+   ```http
+   GET /auth?client_id=123&redirect_uri=https://target.com/oauth-linking&response_type=code HTTP/1.1
+   Host: oauth-server.com
+   ```
+3. Pengguna login ke akun media sosialnya dan memberikan persetujuan (_consent_).
+4. OAuth Provider mengalihkan browser kembali ke `target.com` dengan membawa **Authorization Code**:
+   ```http
+   GET /oauth-linking?code=xyz_auth_code_987 HTTP/1.1
+   Host: target.com
+   Cookie: session=active_user_session
+   ```
+5. Backend `target.com` menukar `code` tersebut dengan access token ke server OAuth Provider, mengambil data profil media sosial pengguna, lalu **menyimpan identitas sosial tersebut ke dalam database akun milik user yang sedang aktif** (`active_user_session`).
+
+> [!WARNING]
+> **Pertanyaan Krusial:** Bagaimana server `target.com` memastikan bahwa request di langkah 4 benar-benar dikirim oleh pengguna yang sama yang mengklik tombol di langkah 1?
+> Jika server tidak memiliki pembuktian tersebut, siapa pun bisa menyuntikkan kode otorisasi miliknya ke sesi orang lain!
+
+---
+
+## 2. Diagram Anatomi Alur Serangan: Forced Profile Linking
+
+Berikut adalah peta alur eksploitasi di mana penyerang memperdaya Admin agar mengikat akun media sosial milik penyerang:
+
+![Forced OAuth Profile Linking](/images/oauth-forced-profile-linking.svg)
+
+---
+
+## 3. Di Mana Letak "Bug"-nya? (Akar Masalah Ketiadaan Parameter `state`)
+
+Celah ini terjadi murni karena **kelalaian pengembang dalam menggunakan parameter `state` pada alur OAuth**:
+
+### Fungsi Parameter `state` sebagai Anti-CSRF Token
+
+Dalam spesifikasi OAuth 2.0 (RFC 6749 Section 10.12), parameter `state` dirancang khusus sebagai **token pencegah CSRF**:
+
+1. Saat client application memulai alur otorisasi, client membuat string acak kriptografis unik (`state=k7J9d2...`) dan menyimpannya di cookie sesi pengguna.
+2. Parameter ini dikirimkan ke Authorization Server bersama request `/auth`.
+3. Authorization Server **wajib mengembalikan nilai `state` yang sama persis** saat melakukan pengalihan kembali ke `redirect_uri`:
+   ```http
+   GET /oauth-linking?code=xyz&state=k7J9d2... HTTP/1.1
+   ```
+4. Client application memvalidasi apakah `state` yang diterima dari URL cocok dengan nilai `state` yang tersimpan di cookie sesi pengguna.
+
+### Konsekuensi Tanpa Parameter `state`
+
+Jika parameter `state` dihilangkan:
+
+- Request `/oauth-linking?code=...` menjadi rentan CSRF murni.
+- Penyerang dapat menginisiasi proses linking dari browsernya sendiri untuk akun media sosial penyerang, menghasilkan authorization code yang sah.
+- Penyerang kemudian mencegat request callback dan mengirimkan URL tersebut ke korban.
+- Ketika korban membuka URL tersebut (bahkan melalui `<iframe>` tersembunyi), server target memproses kode penyerang menggunakan sesi milik korban!
+
+---
+
+### 💡 Analisis Konseptual: Apakah Ini Mirip Hijacking?
+
+Sering muncul pertanyaan mendasar: **"Apakah serangan ini sama dengan Session Hijacking?"**
+
+Secara dampak akhir, serangan ini memang merupakan bentuk **Account Hijacking** (atau lebih tepatnya: **Full Account Takeover**). Namun, mekanisme internalnya jauh lebih berbahaya dan persisten dibanding pembajakan sesi biasa:
+
+| Aspek | Session Hijacking Tradisional | Forced OAuth Profile Linking |
+| :--- | :--- | :--- |
+| **Target Serangan** | Mencuri tiket atau cookie sesi aktif korban (via XSS, man-in-the-middle, dsb). | Menyusupkan dan menancapkan akun sosial milik penyerang ke database profil korban. |
+| **Kebutuhan Kredensial** | Membutuhkan akses langsung ke token sesi korban yang sedang aktif. | Penyerang sama sekali tidak perlu mencuri cookie, token, ataupun password korban. |
+| **Durasi Akses** | **Sementara (Ephemeral):** Akses hilang saat korban menekan tombol *Logout* atau cookie kedaluwarsa. | **Permanen (Persistent Backdoor):** Akses tetap melekat meskipun korban mengganti password atau *logout*. |
+| **Vektor Metode** | Pencurian kredensial (*Credential Theft*). | **Inverted CSRF (CSRF Terbalik):** Korban dipaksa mengikat identitas penyerang ke profilnya. |
+
+> [!IMPORTANT]
+> **Konsep "Inverted CSRF":**
+> Pada serangan CSRF biasa, penyerang memaksa browser korban mengirimkan data atau perintah milik korban (*"transfer uang dari akun korban"*).
+> Namun pada **Forced OAuth Profile Linking**, penyerang membalik alurnya: penyerang memaksa akun korban untuk **menerima dan mengikat identitas pihak ketiga milik penyerang** ke akun korban. Kapan pun penyerang ingin masuk, ia cukup mengklik *"Log in with social media"*.
+
+---
+
+## 4. Panduan Eksploitasi: Alur Langkah demi Langkah (Hands-on Walkthrough)
+
+Mari kita praktikkan eksploitasi celah ini pada lab resmi PortSwigger: **Lab: Forced OAuth profile linking**.
+
+- **Target Sasaran:** Mengambil alih akun **Admin**, mengakses panel administrasi, lalu menghapus user bernama **Carlos**.
+- **Kredensial Penyerang:**
+  - Akun website blog: `wiener:peter`
+  - Akun media sosial penyerang: `peter.wiener:hotdog`
+
+---
+
+Berikut adalah alur sistematis 9 langkah yang telah teruji untuk menyelesaikan skenario ini:
+
+### Langkah 1: Login Biasa ke Blog Website
+Masuk ke halaman login blog target (`/login`), lalu login menggunakan kredensial standar:
+- **Username:** `wiener`
+- **Password:** `peter`
+
+---
+
+### Langkah 2: Tautkan Akun ke Media Sosial
+1. Di halaman portal akun Anda (`/my-account`), klik tombol **"Attach a social profile"**.
+2. Masukkan kredensial akun media sosial: `peter.wiener` / `hotdog`.
+3. Setelah selesai, akun sosial Anda kini terhubung ke akun `wiener`. Tahap ini berguna untuk memicu inisiasi awal koneksi OAuth pada browser Anda.
+
+---
+
+### Langkah 3: Siapkan Template Iframe di Exploit Server
+Buka tab baru menuju **Exploit Server** yang disediakan lab. Di bagian **Body**, siapkan kerangka tag iframe:
+```html
+<iframe src="..."></iframe>
+```
+*Dengan menyiapkan template terlebih dahulu, Anda bisa langsung menempelkan URL callback sebelum authorization code kedaluwarsa.*
+
+---
+
+### Langkah 4: Intercept, Salin URL Callback, dan Klik Forward
+1. Di Burp Suite, aktifkan fitur intersepsi (**Proxy** > **Intercept is on**).
+2. Di browser, klik tombol **"Attach a social profile"** sekali lagi untuk memulai siklus otorisasi baru.
+3. Di Burp Proxy, klik **Forward** pada request awal hingga Anda menangkap request callback pengalihan ke blog target:
+   ```http
+   GET /oauth-linking?code=K7s9D2mP0xL4vN1aQ8jK HTTP/1.1
+   Host: YOUR-LAB-ID.web-security-academy.net
+   ```
+4. Klik kanan pada request tersebut dan pilih **Copy URL** (atau salin baris URL lengkap yang memuat `code=...`).
+5. Klik tombol **Forward** untuk membiarkan request selesai.
+
+---
+
+### Langkah 5: Kembali ke Halaman Profil & Matikan Intercept
+1. Buka kembali halaman profil Anda (`/my-account`).
+2. Di Burp Suite, matikan intersepsi (**Intercept is off**).
+
+---
+
+### Langkah 6: Logout dari Akun Blog Website
+Klik tombol **Log out** pada website blog agar sesi login Anda bersih dan tidak tumpang tindih dengan sesi yang akan diuji selanjutnya.
+
+---
+
+### Langkah 7: Pasang Iframe di Exploit Server & Deliver to Victim
+1. Kembali ke tab **Exploit Server**.
+2. Masukkan URL yang tadi Anda salin ke dalam atribut `src` iframe:
+   ```html
+   <iframe
+     src="https://YOUR-LAB-ID.web-security-academy.net/oauth-linking?code=KODE_YANG_BARU_DISALIN"
+   ></iframe>
+   ```
+3. Klik tombol **Store** untuk menyimpan halaman exploit.
+4. Klik tombol **Deliver exploit to victim**.
+   - Admin (korban yang memiliki sesi login aktif di blog) akan memuat halaman tersebut.
+   - Tag iframe otomatis memicu request `GET /oauth-linking?code=...` menggunakan sesi Admin, sehingga akun sosial media penyerang (`peter.wiener`) berhasil tertaut ke akun **Admin**!
+
+---
+
+### Langkah 8: Login Menggunakan Akun Media Sosial
+1. Kembali ke halaman login blog target (`/login`).
+2. Klik tombol **"Log in with social media"**.
+3. Sistem akan mengautentikasi menggunakan profil media sosial Anda (`peter.wiener`).
+
+---
+
+### Langkah 9: Sukses Masuk ke Role Admin & Selesaikan Misi
+1. Perhatikan bahwa Anda kini tidak lagi masuk sebagai Wiener, melainkan telah berhasil login sebagai **Admin**!
+2. Masuk ke menu **Admin panel** di bagian navigasi atas (`/admin`).
+3. Cari akun bernama **carlos**, lalu klik tombol **Delete**.
+4. Notifikasi keberhasilan lab (**"Congratulations, you solved the lab!"**) akan muncul.
+
+---
+
+## 5. Bedah Kode Backend: Mengapa Terjadi & Cara Memperbaikinya
+
+### ❌ Implementasi Backend yang Rentan (Tanpa Proteksi State)
+
+Berikut adalah contoh kode backend Express.js yang tidak memvalidasi parameter `state`:
+
+```typescript
+import express from "express";
+import axios from "axios";
+import {
+  getCurrentUserFromSession,
+  linkSocialAccountToUser,
+} from "./user-service";
+
+const app = express();
+
+// ❌ RENTAN: Langsung menukar code tanpa memeriksa parameter state & session token
+app.get("/oauth-linking", async (req, res) => {
+  const { code } = req.query;
+  const user = await getCurrentUserFromSession(req.cookies.session);
+
+  if (!user) {
+    return res.status(401).send("Harap login terlebih dahulu");
+  }
+
+  try {
+    // 1. Menukar code milik siapa pun dengan access token
+    const tokenResponse = await axios.post("https://oauth-provider.com/token", {
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+      code,
+    });
+
+    const socialUser = await axios.get("https://oauth-provider.com/userinfo", {
+      headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
+    });
+
+    // 2. Fatal: Langsung menautkan akun sosial ke pengguna sesi saat ini (Admin)!
+    await linkSocialAccountToUser(user.id, socialUser.data.id);
+
+    return res.redirect("/my-account?linked=success");
+  } catch (error) {
+    return res.status(500).send("Gagal menautkan akun");
+  }
+});
+```
+
+---
+
+### ✅ Implementasi Backend yang Aman (Validasi State Kriptografis)
+
+Pertahanan standar industri mewajibkan pembuatan dan validasi parameter `state` yang terikat ke cookie sesi:
+
+```typescript
+import express from "express";
+import crypto from "crypto";
+import axios from "axios";
+import {
+  getCurrentUserFromSession,
+  linkSocialAccountToUser,
+} from "./user-service";
+
+const app = express();
+
+// 1. Inisiasi Linking: Generate State Unik per Sesi
+app.get("/attach-social-profile", async (req, res) => {
+  const user = await getCurrentUserFromSession(req.cookies.session);
+  if (!user) return res.status(401).send("Unauthorized");
+
+  // Buat random cryptographic token untuk state
+  const oauthState = crypto.randomBytes(32).toString("hex");
+
+  // Simpan state di HttpOnly Secure cookie yang terikat ke browser pengguna
+  res.cookie("oauth_link_state", oauthState, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 10 * 60 * 1000, // Berlaku 10 menit
+  });
+
+  const authUrl = new URL("https://oauth-provider.com/auth");
+  authUrl.searchParams.set("client_id", process.env.CLIENT_ID!);
+  authUrl.searchParams.set("redirect_uri", "https://target.com/oauth-linking");
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("state", oauthState); // ✅ Sertakan state
+
+  return res.redirect(authUrl.toString());
+});
+
+// 2. Callback Linking: Validasi State Wajib Cocok
+app.get("/oauth-linking", async (req, res) => {
+  const { code, state } = req.query;
+  const storedState = req.cookies.oauth_link_state;
+  const user = await getCurrentUserFromSession(req.cookies.session);
+
+  // ✅ KUNCI PERTAHANAN: Tolak jika state tidak ada atau tidak cocok!
+  if (!state || !storedState || state !== storedState) {
+    return res
+      .status(403)
+      .send("CSRF validation failed: Invalid or missing state parameter");
+  }
+
+  // Hapus cookie state setelah digunakan (one-time verification)
+  res.clearCookie("oauth_link_state");
+
+  // Lanjutkan penukaran code dengan aman...
+  const tokenResponse = await axios.post("https://oauth-provider.com/token", {
+    client_id: process.env.CLIENT_ID,
+    client_secret: process.env.CLIENT_SECRET,
+    code,
+  });
+
+  const socialUser = await axios.get("https://oauth-provider.com/userinfo", {
+    headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
+  });
+
+  await linkSocialAccountToUser(user.id, socialUser.data.id);
+  return res.redirect("/my-account?linked=success");
+});
+```
+
+---
+
+## 6. Metodologi Bug Hunting: Menemukan Celah OAuth CSRF
+
+Saat melakukan pengujian penetrasi atau berburu bug bounty:
+
+1. **Cari Titik Integrasi Akun:** Fokus pada menu profil yang memiliki opsi _"Connect with Google"_, _"Link Discord"_, _"Sync GitHub"_, atau _"Integrate Slack"_.
+2. **Pantau Parameter URL Otorisasi:** Amati request `GET /auth` atau `/authorize`. Apakah terdapat parameter `state`?
+   - **Jika tidak ada parameter `state`:** Celah hampir pasti dapat dieksploitasi via CSRF!
+3. **Uji Validasi State (Bypass Testing):** Jika parameter `state` ada, jangan langsung menyerah. Coba skenario berikut:
+   - **Hapus parameter `state` dari request callback:** Apakah backend tetap memproses code?
+   - **Ganti nilai `state` dengan string kosong (`state=`) atau nilai arbitrer (`state=123`):** Apakah backend benar-benar memeriksa nilainya atau hanya mengecek keberadaannya?
+   - **Gunakan state dari sesi akun penyerang lain:** Apakah server mencocokkan nilai state dengan cookie session pengguna, atau hanya memeriksa apakah state tersebut pernah dibuat oleh server?
+4. **Verifikasi One-Time Use:** Pastikan kamu men-drop request callback saat menguji PoC agar authorization code tidak hangus sebelum diserahkan ke korban.
+
+---
+
+## 7. Ringkasan Prinsip Keamanan OAuth 2.0
+
+1. **Parameter `state` Bersifat Wajib:** Jangan pernah memperlakukan parameter `state` sebagai opsi opsional pada alur login maupun penautan akun.
+2. **Ikatkan `state` ke Sesi Pengguna:** Parameter `state` harus merupakan hash atau token kriptografis yang terikat secara spesifik pada session cookie pengguna yang memulai request.
+3. **One-Time Token Validation:** Bersihkan token state segera setelah verifikasi selesai agar tidak dapat digunakan kembali (_Replay Attack_).
+4. **Terapkan SameSite Cookie:** Gunakan atribut `SameSite=Lax` atau `SameSite=Strict` pada session cookie aplikasi web untuk meminimalisasi pengiriman ambient credentials secara otomatis dari situs pihak ketiga.

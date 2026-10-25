@@ -63,6 +63,8 @@ import SecurityLesson14 from './id/security-lesson-14-xss-vectors-and-angularjs.
 import SecurityLesson15 from './id/security-lesson-15-xss-real-world-and-bug-hunting.mdx';
 import SecurityLesson16 from './id/security-lesson-16-xss-bypassing-filters-and-intruder.mdx';
 import SecurityLesson17 from './id/security-lesson-17-xss-protected-by-csp-bypasses.mdx';
+import SecurityLesson18 from './id/security-lesson-18-oauth-authentication-bypass-implicit-flow.mdx';
+import SecurityLesson19 from './id/security-lesson-19-forced-oauth-profile-linking.mdx';
 
 export const learnId = {
   'security-mastery': {
@@ -153,6 +155,16 @@ export const learnId = {
         id: 'security-lesson-17',
         title: 'Cross-Site Scripting (XSS): Proteksi CSP & Teknik Bypassing CSP',
         content: SecurityLesson17,
+      },
+      {
+        id: 'security-lesson-18',
+        title: 'OAuth 2.0: Bypass Autentikasi via Celah Implicit Flow & Parameter Tampering',
+        content: SecurityLesson18,
+      },
+      {
+        id: 'security-lesson-19',
+        title: 'OAuth 2.0: Forced OAuth Profile Linking & OAuth CSRF',
+        content: SecurityLesson19,
       },
     ],
   },

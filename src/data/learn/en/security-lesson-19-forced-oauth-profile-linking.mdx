@@ -1,0 +1,326 @@
+# OAuth 2.0: Forced OAuth Profile Linking & OAuth CSRF
+
+Many modern web applications allow users to link external social accounts (such as Google or GitHub) to an existing local account through features like **"Attach a social profile"** or **"Link Account"**. This functionality is designed to offer flexibility, allowing users to authenticate via their social identity rather than relying solely on traditional passwords.
+
+However, if this OAuth linking flow lacks **CSRF (Cross-Site Request Forgery)** defenses—specifically, the **`state`** parameter—it introduces a critical vulnerability known as **Forced OAuth Profile Linking**.
+
+This flaw allows an attacker to **force an authenticated victim (including an administrator) to bind the attacker's social media account to the victim's profile**. Consequently, the attacker can simply click _"Log in with social media"_ to authenticate directly into the victim's account without knowing their password (**Full Account Takeover**).
+
+This lesson explores the mechanics of this attack vector based on the official PortSwigger Web Security Academy lab: _Forced OAuth profile linking_, provides an architectural breakdown, a step-by-step Burp Suite exploitation guide, and secure defensive code.
+
+---
+
+## 1. How Account Linking Works
+
+Understanding the underlying communication flow is essential to recognizing where the CSRF vulnerability occurs:
+
+1. A logged-in user on a website (e.g., `target.com`) clicks **"Attach a social profile"**.
+2. The browser is redirected to the OAuth Authorization Server with `client_id` and `redirect_uri`:
+   ```http
+   GET /auth?client_id=123&redirect_uri=https://target.com/oauth-linking&response_type=code HTTP/1.1
+   Host: oauth-server.com
+   ```
+3. The user authenticates with their social provider and approves the requested permissions.
+4. The OAuth Provider redirects the user back to `target.com` carrying an **Authorization Code**:
+   ```http
+   GET /oauth-linking?code=xyz_auth_code_987 HTTP/1.1
+   Host: target.com
+   Cookie: session=active_user_session
+   ```
+5. The backend of `target.com` exchanges the `code` for an access token with the OAuth Provider, retrieves the user's social profile data, and **binds that social account ID to the currently active user session** (`active_user_session`).
+
+> [!WARNING]
+> **The Critical Question:** How does `target.com` know that the request in step 4 was genuinely initiated by the user who owns the active session?
+> Without verification, an attacker can generate a valid authorization code using their own social account and trick another user into completing the linking process!
+
+---
+
+## 2. Attack Flow Diagram: Forced Profile Linking
+
+The diagram below illustrates how an attacker tricks an Administrator into linking the attacker's social profile:
+
+![Forced OAuth Profile Linking](/images/oauth-forced-profile-linking.svg)
+
+---
+
+## 3. Where Is the Bug? (Root Cause: Missing `state` Parameter)
+
+This vulnerability is a textbook example of **OAuth CSRF** resulting from omitting the `state` parameter:
+
+### The Role of the `state` Parameter
+
+In the OAuth 2.0 specification (RFC 6749 Section 10.12), the `state` parameter acts as an **Anti-CSRF Token**:
+
+1. When the client initiates authorization, it generates an unguessable cryptographic token (`state=k7J9d2...`) tied to the user's current session cookie.
+2. The client sends this token to the Authorization Server in the `/auth` request.
+3. The Authorization Server **must return the exact same `state` value** when redirecting back to `redirect_uri`:
+   ```http
+   GET /oauth-linking?code=xyz&state=k7J9d2... HTTP/1.1
+   ```
+4. The client application verifies that the returned `state` matches the value stored in the user's session before processing the `code`.
+
+### Consequences of Omitting `state`
+
+When the `state` parameter is omitted:
+
+- The `/oauth-linking?code=...` endpoint becomes completely susceptible to CSRF.
+- An attacker can initiate linking with their own social media credentials, intercept the resulting authorization code, and construct an exploit URL.
+- When an unsuspecting victim loads this URL (via an invisible `<iframe>`), the victim's browser forwards their own session cookie along with the attacker's code.
+- The target server binds the attacker's social account to the victim!
+
+---
+
+### 💡 Conceptual Analysis: Is This Similar to Session Hijacking?
+
+A frequent architectural question arises: **"Is this vulnerability essentially the same as Session Hijacking?"**
+
+In terms of business impact, this attack is indeed a form of **Account Hijacking** (or more specifically: **Full Account Takeover**). However, its underlying mechanics are far more persistent and insidious than traditional session theft:
+
+| Aspect | Traditional Session Hijacking | Forced OAuth Profile Linking |
+| :--- | :--- | :--- |
+| **Attack Objective** | Stealing an active session cookie/token (via XSS, network sniffing, etc.). | Infiltrating and implanting the attacker's social profile into the victim's account database. |
+| **Credential Dependency** | Requires intercepting or exfiltrating the victim's active credentials. | The attacker never needs to steal or know the victim's cookie, token, or password. |
+| **Access Duration** | **Ephemeral:** Access expires as soon as the victim logs out or the session cookie expires. | **Persistent Backdoor:** Access remains permanently bound, even if the victim changes their password. |
+| **Method Category** | Credential theft (*Active Impersonation*). | **Inverted CSRF:** The victim is forced to attach the attacker's identity to their own profile. |
+
+> [!IMPORTANT]
+> **The "Inverted CSRF" Paradigm:**
+> In conventional CSRF attacks, the attacker forces the victim's browser to dispatch actions or data belonging to the victim (*"transfer money from victim account"*).
+> In **Forced OAuth Profile Linking**, the pattern is inverted: the attacker tricks the victim into **accepting and binding the attacker's third-party identity** to the victim's account. At any future time, the attacker simply clicks *"Log in with social media"* to gain full administrative access.
+
+---
+
+## 4. Exploit Walkthrough: Step-by-Step Hands-on Flow
+
+Let's execute this attack on the official PortSwigger Web Security Academy lab: **Lab: Forced OAuth profile linking**.
+
+- **Target Goal:** Take over the **Admin** account, access the administration panel, and delete the user **Carlos**.
+- **Attacker Credentials:**
+  - Blog website account: `wiener:peter`
+  - Social media account: `peter.wiener:hotdog`
+
+---
+
+The following 9-step flow provides a reliable, tested methodology to solve this lab:
+
+### Step 1: Standard Login to Blog Website
+Access the blog login page (`/login`) and log in using standard credentials:
+- **Username:** `wiener`
+- **Password:** `peter`
+
+---
+
+### Step 2: Attach Account to Social Media
+1. In your user account portal (`/my-account`), click **"Attach a social profile"**.
+2. Enter the social media credentials: `peter.wiener` / `hotdog`.
+3. Complete the flow so your social media account is attached to `wiener`. This initializes and verifies the social integration in your browser session.
+
+---
+
+### Step 3: Prepare the Iframe Template on the Exploit Server
+Open a new tab to the **Exploit Server** provided by the lab. In the **Body** field, prepare the iframe template:
+```html
+<iframe src="..."></iframe>
+```
+*Pre-writing the tag saves critical seconds so the authorization code does not expire before delivery.*
+
+---
+
+### Step 4: Intercept, Copy Callback URL, and Forward
+1. In Burp Suite, turn proxy interception on (**Proxy** > **Intercept is on**).
+2. In your browser, click **"Attach a social profile"** once again to initiate a fresh OAuth authorization cycle.
+3. In Burp Proxy, click **Forward** until you capture the callback request heading back to the blog:
+   ```http
+   GET /oauth-linking?code=K7s9D2mP0xL4vN1aQ8jK HTTP/1.1
+   Host: YOUR-LAB-ID.web-security-academy.net
+   ```
+4. Right-click this request and choose **Copy URL** (or copy the entire request URL containing the fresh `code=...`).
+5. Click **Forward** to allow the request to complete normally.
+
+---
+
+### Step 5: Return to Profile Page & Turn Off Intercept
+1. Navigate back to your account page (`/my-account`).
+2. In Burp Suite, turn proxy interception off (**Intercept is off**).
+
+---
+
+### Step 6: Log Out of the Blog Website
+Click **Log out** on the blog website to clear your active Wiener session.
+
+---
+
+### Step 7: Place Iframe on Exploit Server & Deliver to Victim
+1. Switch back to your **Exploit Server** tab.
+2. Insert the copied URL into the iframe's `src` attribute:
+   ```html
+   <iframe
+     src="https://YOUR-LAB-ID.web-security-academy.net/oauth-linking?code=YOUR_COPIED_CODE"
+   ></iframe>
+   ```
+3. Click **Store** to save the exploit payload.
+4. Click **Deliver exploit to victim**.
+   - The administrator loads the page in the background.
+   - The embedded iframe triggers `GET /oauth-linking?code=...` carrying the admin's session cookie, binding the attacker's social profile (`peter.wiener`) to the **Admin** account!
+
+---
+
+### Step 8: Log In Using Social Media
+1. Return to the target blog login page (`/login`).
+2. Click the **"Log in with social media"** button.
+3. The application will authenticate you via your social media account (`peter.wiener`).
+
+---
+
+### Step 9: Access Admin Role & Solve the Lab
+1. You are now logged in as **Admin**!
+2. Open the **Admin panel** in the header navigation (`/admin`).
+3. Locate the user **carlos** and click **Delete**.
+4. The **"Congratulations, you solved the lab!"** banner will confirm successful completion.
+
+---
+
+## 5. Backend Code Analysis: Vulnerable vs Secure Implementation
+
+### ❌ Vulnerable Implementation (Missing State Validation)
+
+The following Express.js example illustrates the vulnerable pattern:
+
+```typescript
+import express from "express";
+import axios from "axios";
+import {
+  getCurrentUserFromSession,
+  linkSocialAccountToUser,
+} from "./user-service";
+
+const app = express();
+
+// ❌ VULNERABLE: Processes code directly without verifying intent or state token
+app.get("/oauth-linking", async (req, res) => {
+  const { code } = req.query;
+  const user = await getCurrentUserFromSession(req.cookies.session);
+
+  if (!user) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  try {
+    // Exchanges whatever code was received
+    const tokenResponse = await axios.post("https://oauth-provider.com/token", {
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+      code,
+    });
+
+    const socialUser = await axios.get("https://oauth-provider.com/userinfo", {
+      headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
+    });
+
+    // Binds social account directly to the current session (victim)
+    await linkSocialAccountToUser(user.id, socialUser.data.id);
+
+    return res.redirect("/my-account?linked=success");
+  } catch (error) {
+    return res.status(500).send("Linking failed");
+  }
+});
+```
+
+---
+
+### ✅ Secure Defensive Implementation (Cryptographic State Binding)
+
+Proper defense requires generating and strictly enforcing a cryptographic `state` token bound to the user's session:
+
+```typescript
+import express from "express";
+import crypto from "crypto";
+import axios from "axios";
+import {
+  getCurrentUserFromSession,
+  linkSocialAccountToUser,
+} from "./user-service";
+
+const app = express();
+
+// 1. Linking Initiation: Generate Cryptographic State
+app.get("/attach-social-profile", async (req, res) => {
+  const user = await getCurrentUserFromSession(req.cookies.session);
+  if (!user) return res.status(401).send("Unauthorized");
+
+  // Generate an unguessable cryptographic random token
+  const oauthState = crypto.randomBytes(32).toString("hex");
+
+  // Store state in an HttpOnly, SameSite=Lax cookie bound to the user's browser
+  res.cookie("oauth_link_state", oauthState, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 10 * 60 * 1000, // 10 minute expiry
+  });
+
+  const authUrl = new URL("https://oauth-provider.com/auth");
+  authUrl.searchParams.set("client_id", process.env.CLIENT_ID!);
+  authUrl.searchParams.set("redirect_uri", "https://target.com/oauth-linking");
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("state", oauthState); // ✅ State parameter attached
+
+  return res.redirect(authUrl.toString());
+});
+
+// 2. Linking Callback: Enforce Strict State Verification
+app.get("/oauth-linking", async (req, res) => {
+  const { code, state } = req.query;
+  const storedState = req.cookies.oauth_link_state;
+  const user = await getCurrentUserFromSession(req.cookies.session);
+
+  // ✅ CRITICAL DEFENSE: Reject requests with missing or mismatched state
+  if (!state || !storedState || state !== storedState) {
+    return res
+      .status(403)
+      .send("CSRF validation failed: Invalid state parameter");
+  }
+
+  // Clear cookie upon validation to ensure single-use
+  res.clearCookie("oauth_link_state");
+
+  // Proceed with safe code exchange...
+  const tokenResponse = await axios.post("https://oauth-provider.com/token", {
+    client_id: process.env.CLIENT_ID,
+    client_secret: process.env.CLIENT_SECRET,
+    code,
+  });
+
+  const socialUser = await axios.get("https://oauth-provider.com/userinfo", {
+    headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
+  });
+
+  await linkSocialAccountToUser(user.id, socialUser.data.id);
+  return res.redirect("/my-account?linked=success");
+});
+```
+
+---
+
+## 6. Bug Hunting Methodology for OAuth CSRF
+
+When assessing account linking features in bug bounty programs:
+
+1. **Target Account Integration Points:** Focus on settings sections offering third-party integrations (Google, Discord, GitHub, Slack, SSO).
+2. **Inspect the Authorization URL:** Check `GET /auth` or `/authorize` for the presence of the `state` parameter.
+   - **No `state` parameter:** High likelihood of OAuth CSRF vulnerability.
+3. **Bypass Testing if `state` is Present:**
+   - **Parameter Omission:** Remove `state` from the callback request.
+   - **Blank / Arbitrary Value:** Test `state=` or `state=random`.
+   - **Cross-Session Replay:** Attempt using a `state` generated from an attacker session in the victim's session to see if state is tied to user sessions or merely validated globally.
+4. **Always Intercept & Drop:** When generating your proof-of-concept authorization code, drop the final redirect in your proxy to prevent code consumption.
+
+---
+
+## 7. Key Security Takeaways
+
+1. **`state` Is Mandatory:** The `state` parameter is not optional; it is the primary defense against OAuth CSRF attacks.
+2. **Bind `state` to the Session:** A valid `state` must be cryptographically tied to the user's active session cookie.
+3. **Single-Use Enforcement:** Clear the state cookie immediately after validation.
+4. **Apply Modern Cookie Flags:** Set `SameSite=Lax` or `SameSite=Strict` on session cookies to mitigate third-party automatic credential transmission.

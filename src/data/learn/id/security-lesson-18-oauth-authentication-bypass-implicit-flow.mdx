@@ -1,0 +1,296 @@
+# OAuth 2.0: Bypass Autentikasi via Celah Implicit Flow & Client Tampering
+
+Banyak aplikasi modern menyediakan opsi praktis **"Sign in with Google"**, **"Log in with GitHub"**, atau akun media sosial lainnya. Fitur ini dibangun di atas protokol **OAuth 2.0**. Namun, sering kali terjadi kesalahpahaman fundamental di kalangan pengembang: **OAuth 2.0 sejatinya dirancang untuk *Authorization* (Otorisasi akses data), bukan untuk *Authentication* (Membuktikan identitas pengguna)**.
+
+Ketika pengembang memaksakan OAuth untuk proses login tanpa memahami implikasi keamanannya—khususnya saat menggunakan **Implicit Grant Type**—timbul celah fatal di mana penyerang dapat **mengambil alih akun pengguna lain (*Account Takeover*) hanya dengan memodifikasi satu baris data di Burp Suite**.
+
+Materi ini membedah anatomi celah autentikasi OAuth 2.0 berbasis lab PortSwigger Web Security Academy: *Authentication bypass via OAuth implicit flow*, menjelaskan akar masalahnya di level arsitektur, panduan eksploitasi langkah demi langkah, hingga perbaikan kode backend secara defensif.
+
+---
+
+## 1. Konsep Kunci: Mengapa OAuth Sering Disalahgunakan?
+
+Secara standar, OAuth 2.0 mendefinisikan interaksi antara tiga entitas utama:
+1. **Resource Owner:** Pengguna pemilik data/akun.
+2. **Client Application:** Website atau aplikasi kita (misal: Toko Online atau Web Blog) yang ingin mengakses data pengguna.
+3. **OAuth Service Provider (IdP):** Penyedia layanan pihak ketiga (misal: Google, Facebook, Twitter) yang memiliki *Authorization Server* dan *Resource Server*.
+
+### Perbedaan Dua Alur (Grant Types) Populer
+
+| Tipe Alur | Alur Distribusi Token | Tingkat Keamanan |
+| :--- | :--- | :--- |
+| **Authorization Code Flow** | Server aplikasi menukar kode sementara (*code*) dengan access token secara langsung (*back-channel / server-to-server*). | **Tinggi (Standar Industri)** |
+| **Implicit Flow (Legacy)** | Access token dikirim langsung ke peramban pengguna via hash URL (`#access_token=...`). Client JS memproses token secara lokal. | **Rentan (Ditinggalkan di OAuth 2.1)** |
+
+> [!WARNING]
+> **Masalah Utama Implicit Flow:** Token otorisasi terekspos langsung ke browser pengguna, peramban menyimpan token di memori atau URL history, dan client application bertanggung jawab mengabari servernya sendiri tentang siapa yang baru saja login.
+
+---
+
+## 2. Diagram Anatomi Serangan: Client-Side Trust
+
+Berikut adalah visualisasi alur serangan yang terjadi pada implementasi OAuth Implicit Flow yang cacat:
+
+![OAuth Implicit Flow Authentication Bypass](/images/oauth-implicit-flow-bypass.svg)
+
+---
+
+## 3. Di Mana Letak "Bug"-nya? (Akar Masalah Kerentanan)
+
+Celah ini muncul karena **asumsi keliru di sisi backend aplikasi web (*Client Application*)**:
+
+### 1. Bagaimana Aplikasi Melakukan Login
+1. Pengguna mengklik tombol *"Login with Social Media"*.
+2. Browser dialihkan ke server OAuth penyedia, user memasukkan kredensial yang sah.
+3. OAuth Provider mengembalikan access token ke browser melalui fragmen URL:
+   ```http
+   HTTP/1.1 302 Found
+   Location: https://client-app.com/oauth-callback#access_token=vN3a0bL4c9...&token_type=Bearer
+   ```
+4. JavaScript di browser mengambil token tersebut, lalu memanggil endpoint `/userinfo` milik OAuth Provider untuk mengambil data profil:
+   ```json
+   {
+     "id": "10923",
+     "email": "wiener@normal-user.net",
+     "name": "Wiener"
+   }
+   ```
+5. Untuk mempertahankan sesi login pengguna, browser mengirimkan data ini ke backend aplikasi melalui request POST:
+   ```http
+   POST /authenticate HTTP/1.1
+   Host: client-app.com
+   Content-Type: application/json
+
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "vN3a0bL4c9..."
+   }
+   ```
+
+### 2. Kecerobohan Backend (Blind Trust)
+Perhatikan apa yang dilakukan backend aplikasi target saat menerima `POST /authenticate`:
+- Backend membaca `req.body.email`.
+- Backend melihat ada parameter `token`.
+- Backend **berasumsi** bahwa karena ada token yang dikirimkan, maka pengguna yang mengirimkan request tersebut adalah pemilik email `wiener@normal-user.net`!
+- Backend **TIDAK PERNAH** memverifikasi ke OAuth Provider apakah token `vN3a0bL4c9...` tersebut memang benar-benar diterbitkan untuk `wiener@normal-user.net`.
+- Backend **TIDAK PERNAH** memastikan apakah token tersebut cocok dengan email yang dikirimkan di payload.
+
+> [!IMPORTANT]
+> **AKAR MASALAH:** Parameter `email` dan `token` dikirimkan secara terpisah oleh browser (sisi client). Siapa pun yang mengontrol browser dapat memodifikasi isi JSON tersebut sebelum mencapai backend server!
+
+---
+
+## 4. Panduan Eksploitasi: Lab PortSwigger Langkah demi Langkah
+
+Mari kita praktikkan eksploitasi celah ini pada lab resmi PortSwigger: **Lab: Authentication bypass via OAuth implicit flow**.
+
+* **Target Sasaran:** Mengambil alih akun korban bernama **Carlos** dengan email `carlos@carlos-montoya.net`.
+* **Kredensial Penyerang yang Diberikan:** Akun media sosial sendiri `wiener:peter`.
+
+---
+
+### Langkah 1: Aktifkan Burp Suite & Lakukan Login Normal
+
+1. Buka browser yang telah terhubung dengan **Burp Suite Proxy**.
+2. Akses halaman lab dan klik menu **My account**.
+3. Pilih opsi **"Log in with social media"**.
+4. Masukkan username `wiener` dan password `peter`.
+5. Berikan izin otorisasi jika diminta, hingga kamu berhasil login dan dialihkan kembali ke profil akun Wiener.
+
+---
+
+### Langkah 2: Analisis Alur Request di Burp Suite HTTP History
+
+Buka Burp Suite, masuk ke tab **Proxy** > **HTTP history**, lalu telusuri urutan request:
+
+1. Request awal otorisasi:
+   ```http
+   GET /auth?client_id=...&redirect_uri=https://.../oauth-callback&response_type=token&scope=openid%20profile%20email HTTP/1.1
+   Host: oauth-service-provider.net
+   ```
+   *Perhatikan parameter `response_type=token`, yang menandakan aplikasi menggunakan **Implicit Grant Type**!*
+
+2. OAuth Provider merespons dengan pengalihan yang membawa token di hash URL (`#access_token=...`).
+
+3. Browser memanggil `/userinfo` di OAuth Provider menggunakan token tersebut.
+
+4. **Cari request krusial ini di HTTP history:**
+   ```http
+   POST /authenticate HTTP/1.1
+   Host: YOUR-LAB-ID.web-security-academy.net
+   Content-Type: application/json
+
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+
+---
+
+### Langkah 3: Kirim Request ke Burp Repeater & Lakukan Parameter Tampering
+
+1. Klik kanan pada request `POST /authenticate` di HTTP history, lalu pilih **Send to Repeater** (atau tekan `Ctrl + R` / `Cmd + R`).
+2. Di tab **Repeater**, amati bagian request body:
+   ```json
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+3. Ubah nilai `email` menjadi target korban (`carlos@carlos-montoya.net`):
+   ```json
+   {
+     "email": "carlos@carlos-montoya.net",
+     "username": "carlos",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+4. Biarkan parameter `token` tetap menggunakan token milik Wiener! Kita ingin melihat apakah server memvalidasi kecocokan token dengan email.
+
+5. Klik tombol **Send**.
+
+---
+
+### Langkah 4: Evaluasi Respons & Validasi Sesi Carlos
+
+Amati respons dari server di Repeater:
+
+```http
+HTTP/1.1 200 OK
+Set-Cookie: session=xM8qQ92Kd0s1L3k4J...; Path=/; Secure; HttpOnly
+Content-Type: application/json
+
+{"status":"success"}
+```
+
+Server **tidak mengeluarkan error sama sekali**! Server menerbitkan Cookie Sesi yang baru.
+
+Untuk memastikan kita berhasil login sebagai Carlos:
+1. Klik kanan di area editor respons/request Repeater, pilih **Request in browser** > **In original session**.
+2. Salin URL yang diberikan oleh Burp Suite (misalnya `http://burp/show/...`).
+3. Buka tab baru di browser Anda dan tempelkan URL tersebut.
+4. Halaman akun termuat dengan pesan: **"Your username is: carlos"** dan notifikasi **"Congratulations, you solved the lab!"**.
+
+Akun Carlos berhasil diambil alih sepenuhnya tanpa penyerang perlu mengetahui password asli milik Carlos!
+
+---
+
+## 5. Bedah Kode Backend: Mengapa Terjadi & Cara Memperbaikinya
+
+### ❌ Implementasi Backend yang Rentan (Vulnerable Code)
+
+Berikut adalah contoh tipikal kode backend Express.js yang melakukan kesalahan fatal ini:
+
+```typescript
+import express from 'express';
+import { issueSessionCookie, findUserByEmail } from './auth-service';
+
+const app = express();
+app.use(express.json());
+
+// ❌ RENTAN: Mempercayai data identitas (email) langsung dari request body client
+app.post('/authenticate', async (req, res) => {
+  const { email, username, token } = req.body;
+
+  // Cacat fatal: Hanya memeriksa apakah token dikirim, tanpa memvalidasi keasliannya
+  if (!token || !email) {
+    return res.status(400).json({ error: 'Data otentikasi tidak lengkap' });
+  }
+
+  // Server langsung mencari user berdasarkan email yang dikirim penyerang!
+  let user = await findUserByEmail(email);
+  if (!user) {
+    user = await createUser({ email, username });
+  }
+
+  // Menerbitkan sesi login untuk email tersebut tanpa validasi token
+  const sessionToken = issueSessionCookie(user.id);
+  res.cookie('session', sessionToken, { httpOnly: true, secure: true });
+  return res.json({ status: 'success' });
+});
+```
+
+---
+
+### ✅ Implementasi Backend yang Aman (Defensive Code)
+
+Pertahanan yang kokoh mewajibkan verifikasi token langsung ke server OAuth Provider di sisi server (*Server-to-Server Backchannel Verification*):
+
+```typescript
+import express from 'express';
+import axios from 'axios';
+import { issueSessionCookie, findUserByEmail, createUser } from './auth-service';
+
+const app = express();
+app.use(express.json());
+
+const OAUTH_USERINFO_ENDPOINT = 'https://oauth-service-provider.com/userinfo';
+
+// ✅ AMAN: Server memvalidasi token langsung ke OAuth Provider
+app.post('/authenticate', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token otorisasi wajib disertakan' });
+  }
+
+  try {
+    // 1. Server menghubungi OAuth Provider secara mandiri menggunakan token
+    const idpResponse = await axios.get(OAUTH_USERINFO_ENDPOINT, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      timeout: 5000,
+    });
+
+    // 2. Data identitas HANYA diambil dari respons resmi OAuth Provider, BUKAN dari client!
+    const verifiedEmail = idpResponse.data.email;
+    const verifiedUsername = idpResponse.data.username;
+
+    if (!verifiedEmail) {
+      return res.status(400).json({ error: 'Email terverifikasi tidak ditemukan di IdP' });
+    }
+
+    // 3. Terbitkan sesi berdasarkan email yang diverifikasi IdP
+    let user = await findUserByEmail(verifiedEmail);
+    if (!user) {
+      user = await createUser({ email: verifiedEmail, username: verifiedUsername });
+    }
+
+    const sessionToken = issueSessionCookie(user.id);
+    res.cookie('session', sessionToken, { httpOnly: true, secure: true, sameSite: 'lax' });
+
+    return res.json({ status: 'success' });
+  } catch (error) {
+    // Jika token palsu, kedaluwarsa, atau dimanipulasi, IdP akan melempar 401 Unauthorized
+    return res.status(401).json({ error: 'Validasi token gagal di sisi OAuth Provider' });
+  }
+});
+```
+
+---
+
+## 6. Metodologi Bug Hunter: Menguji Celah OAuth di Program Bug Bounty
+
+Saat kamu melakukan audit keamanan web atau berburu bug bounty pada fitur login OAuth:
+
+1. **Pantau Lalu Lintas HTTP di Proxy:** Selalu petakan request dari awal (`GET /auth`) hingga penerbitan session cookie aplikasi.
+2. **Cari Endpoint Autentikasi Internal:** Perhatikan apakah setelah proses login sosial selesai, ada request sekunder seperti `POST /oauth/callback`, `POST /api/v1/auth/social`, atau `POST /authenticate`.
+3. **Periksa Payload Body:** Jika kamu melihat data profil (seperti `email`, `user_id`, `sub`, atau `account_id`) dikirimkan bersama `token`, ini adalah indikasi kuat adanya potensi celah!
+4. **Lakukan Uji Manipulasi Parameter (Tampering):**
+   - Ganti email ke target admin atau email korban lain.
+   - Hapus parameter `token` (apakah server tetap mengizinkan?).
+   - Ganti token dengan token kosong atau token dari akun lain.
+5. **Cek Respons Server:** Jika respons berhasil mengembalikan sesi baru dengan identitas korban, kamu telah menemukan celah **Critical Account Takeover**!
+
+---
+
+## 7. Rekomendasi Standar Industri (OAuth 2.1)
+
+1. **Tinggalkan Implicit Flow:** Konsorsium IETF dan OAuth Working Group secara resmi **mendeprekasi Implicit Grant pada OAuth 2.1**.
+2. **Gunakan Authorization Code Flow dengan PKCE:** Untuk Single Page App (SPA) maupun aplikasi mobile, selalu gunakan **Authorization Code Grant yang dilengkapi dengan PKCE (*Proof Key for Code Exchange - RFC 7636*)**.
+3. **Gunakan OpenID Connect (OIDC):** Untuk kebutuhan autentikasi identitas, gunakan OpenID Connect yang menyediakan **ID Token bertanda tangan digital (JWT tersignatur kriptografis)** sehingga client dan server dapat memverifikasi integritas klaim pengguna tanpa ragu.

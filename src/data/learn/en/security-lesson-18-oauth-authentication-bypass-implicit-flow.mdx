@@ -1,0 +1,296 @@
+# OAuth 2.0: Authentication Bypass via Flawed Implicit Flow & Client Tampering
+
+Many modern web applications offer convenient single sign-on buttons such as **"Sign in with Google"**, **"Log in with GitHub"**, or other social media accounts. This functionality is built on top of the **OAuth 2.0** framework. However, a widespread architectural misconception persists among developers: **OAuth 2.0 was originally designed for *Authorization* (delegating access to resources), not for *Authentication* (verifying the user's identity)**.
+
+When developers adapt OAuth for authentication without understanding its security boundaries—particularly when relying on the legacy **Implicit Grant Type**—a critical vulnerability arises where an attacker can **take over any user account (*Account Takeover*) simply by tampering with a single parameter in Burp Suite**.
+
+This lesson breaks down the anatomy of OAuth 2.0 authentication vulnerabilities based on the official PortSwigger Web Security Academy lab: *Authentication bypass via OAuth implicit flow*, explores the root cause at the architectural level, provides a step-by-step exploit walkthrough, and demonstrates secure defensive backend code.
+
+---
+
+## 1. Core Concept: Why Is OAuth Often Misused?
+
+In standard OAuth 2.0 specifications, interactions occur between three primary parties:
+1. **Resource Owner:** The end user who owns the account and personal data.
+2. **Client Application:** The web or mobile application (e.g., an online store or blog) requesting access to user data.
+3. **OAuth Service Provider (IdP):** The third-party service provider (e.g., Google, Facebook, Twitter) operating an *Authorization Server* and a *Resource Server*.
+
+### Two Common Grant Types Compared
+
+| Grant Type | Token Delivery Mechanism | Security Posture |
+| :--- | :--- | :--- |
+| **Authorization Code Flow** | Client backend exchanges a temporary authorization code directly with the Auth Server via a secure back-channel (*server-to-server*). | **High (Modern Industry Standard)** |
+| **Implicit Flow (Legacy)** | Access token is sent directly to the browser via the URL hash fragment (`#access_token=...`). Client JavaScript handles the token. | **Vulnerable (Deprecated in OAuth 2.1)** |
+
+> [!WARNING]
+> **The Fundamental Flaw of the Implicit Flow:** Sensitive authorization tokens are exposed directly to the browser's address bar and history. Furthermore, the client-side JavaScript becomes responsible for notifying the backend about who has just logged in.
+
+---
+
+## 2. Attack Anatomy Diagram: Client-Side Trust
+
+The diagram below illustrates the exact flaw and exploit path in a misconfigured OAuth Implicit Flow:
+
+![OAuth Implicit Flow Authentication Bypass](/images/oauth-implicit-flow-bypass.svg)
+
+---
+
+## 3. Where Is the Bug? (Root Cause Analysis)
+
+This vulnerability stems from **flawed validation and blind trust on the client application's backend server**:
+
+### 1. How the Application Processes Login
+1. The user clicks *"Log in with social media"*.
+2. The browser is redirected to the OAuth service provider, and the user enters valid credentials.
+3. The OAuth Provider redirects back to the client application with an access token in the URL fragment:
+   ```http
+   HTTP/1.1 302 Found
+   Location: https://client-app.com/oauth-callback#access_token=vN3a0bL4c9...&token_type=Bearer
+   ```
+4. JavaScript in the user's browser reads the fragment and queries the `/userinfo` endpoint on the OAuth Provider to fetch the user profile:
+   ```json
+   {
+     "id": "10923",
+     "email": "wiener@normal-user.net",
+     "name": "Wiener"
+   }
+   ```
+5. To maintain the authenticated session across pages, the browser forwards this profile data to the client application's backend:
+   ```http
+   POST /authenticate HTTP/1.1
+   Host: client-app.com
+   Content-Type: application/json
+
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "vN3a0bL4c9..."
+   }
+   ```
+
+### 2. Backend Misconfiguration (Blind Trust)
+Consider what the client backend does upon receiving `POST /authenticate`:
+- The backend inspects `req.body.email`.
+- It notes the presence of `req.body.token`.
+- It **naively assumes** that because a token is present, the sender must rightfully own the email address `wiener@normal-user.net`!
+- The server **NEVER** verifies with the OAuth Provider whether token `vN3a0bL4c9...` was actually issued to `wiener@normal-user.net`.
+- The server **NEVER** checks whether the token cryptographically links to the submitted email.
+
+> [!IMPORTANT]
+> **THE ROOT CAUSE:** The `email` and `token` parameters are sent independently by the browser (client-side). Anyone with access to the browser or proxy can modify the JSON payload before it reaches the backend!
+
+---
+
+## 4. Exploit Walkthrough: PortSwigger Lab Step-by-Step
+
+Let's put this into practice using the official PortSwigger Web Security Academy lab: **Lab: Authentication bypass via OAuth implicit flow**.
+
+* **Target Goal:** Hijack the account of the victim named **Carlos** (`carlos@carlos-montoya.net`).
+* **Attacker Credentials:** Our own social media account `wiener:peter`.
+
+---
+
+### Step 1: Route Traffic Through Burp & Log In Normally
+
+1. Launch your browser with **Burp Suite Proxy** configured and intercept enabled/monitored.
+2. Navigate to the lab homepage and click **My account**.
+3. Choose the option **"Log in with social media"**.
+4. Submit the credentials `wiener` and `peter`.
+5. Grant access on the consent screen if prompted, until you are redirected back to Wiener's account page.
+
+---
+
+### Step 2: Analyze the OAuth Flow in Burp HTTP History
+
+Open Burp Suite, head to **Proxy** > **HTTP history**, and examine the chronological requests:
+
+1. The initial authorization request:
+   ```http
+   GET /auth?client_id=...&redirect_uri=https://.../oauth-callback&response_type=token&scope=openid%20profile%20email HTTP/1.1
+   Host: oauth-service-provider.net
+   ```
+   *Notice the parameter `response_type=token`, confirming the use of the **Implicit Grant Type**!*
+
+2. The OAuth Provider issues a 302 redirect containing the token in the URL fragment (`#access_token=...`).
+
+3. The client application queries the provider's `/userinfo` endpoint with the token.
+
+4. **Locate this critical request in HTTP history:**
+   ```http
+   POST /authenticate HTTP/1.1
+   Host: YOUR-LAB-ID.web-security-academy.net
+   Content-Type: application/json
+
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+
+---
+
+### Step 3: Send to Burp Repeater & Perform Parameter Tampering
+
+1. Right-click the `POST /authenticate` request in HTTP history and select **Send to Repeater** (or press `Ctrl + R` / `Cmd + R`).
+2. Switch to the **Repeater** tab and inspect the JSON body:
+   ```json
+   {
+     "email": "wiener@normal-user.net",
+     "username": "wiener",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+3. Change the `email` value to Carlos's address (`carlos@carlos-montoya.net`):
+   ```json
+   {
+     "email": "carlos@carlos-montoya.net",
+     "username": "carlos",
+     "token": "k6j89sd90f...access_token..."
+   }
+   ```
+4. Leave the `token` parameter unchanged with Wiener's token! We want to test whether the server validates the token-to-email binding.
+
+5. Click **Send**.
+
+---
+
+### Step 4: Verify Session Cookie & Account Hijack
+
+Review the HTTP response returned in Repeater:
+
+```http
+HTTP/1.1 200 OK
+Set-Cookie: session=xM8qQ92Kd0s1L3k4J...; Path=/; Secure; HttpOnly
+Content-Type: application/json
+
+{"status":"success"}
+```
+
+The server accepted the modified email without error and issued a valid session cookie for Carlos!
+
+To access Carlos's account in your browser:
+1. Right-click anywhere in the Repeater response or request pane and select **Request in browser** > **In original session**.
+2. Copy the generated URL (e.g., `http://burp/show/...`).
+3. Paste the URL into a new browser tab.
+4. You are instantly logged in as Carlos: **"Your username is: carlos"** and the lab is solved!
+
+Carlos's account is completely taken over without ever needing or cracking his password.
+
+---
+
+## 5. Backend Code Analysis: Vulnerable vs Secure Implementation
+
+### ❌ Vulnerable Backend Implementation (Blind Trust)
+
+The following Express.js example demonstrates the flaw:
+
+```typescript
+import express from 'express';
+import { issueSessionCookie, findUserByEmail } from './auth-service';
+
+const app = express();
+app.use(express.json());
+
+// ❌ VULNERABLE: Implicitly trusts identity claims directly from the client body
+app.post('/authenticate', async (req, res) => {
+  const { email, username, token } = req.body;
+
+  // Flaw: Only checks parameter presence, not authenticity or binding
+  if (!token || !email) {
+    return res.status(400).json({ error: 'Missing authentication parameters' });
+  }
+
+  // Server queries the database directly using the untrusted email parameter!
+  let user = await findUserByEmail(email);
+  if (!user) {
+    user = await createUser({ email, username });
+  }
+
+  // Issues a session cookie for the targeted email without token validation
+  const sessionToken = issueSessionCookie(user.id);
+  res.cookie('session', sessionToken, { httpOnly: true, secure: true });
+  return res.json({ status: 'success' });
+});
+```
+
+---
+
+### ✅ Secure Defensive Implementation (Server-Side Verification)
+
+Robust defense requires server-to-server back-channel verification directly with the OAuth Provider:
+
+```typescript
+import express from 'express';
+import axios from 'axios';
+import { issueSessionCookie, findUserByEmail, createUser } from './auth-service';
+
+const app = express();
+app.use(express.json());
+
+const OAUTH_USERINFO_ENDPOINT = 'https://oauth-service-provider.com/userinfo';
+
+// ✅ SECURE: Server verifies token authenticity directly with the OAuth Provider
+app.post('/authenticate', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Authorization token is required' });
+  }
+
+  try {
+    // 1. The backend server queries the OAuth Provider independently
+    const idpResponse = await axios.get(OAUTH_USERINFO_ENDPOINT, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      timeout: 5000,
+    });
+
+    // 2. Identity data is derived EXCLUSIVELY from the IdP response, NEVER from client input!
+    const verifiedEmail = idpResponse.data.email;
+    const verifiedUsername = idpResponse.data.username;
+
+    if (!verifiedEmail) {
+      return res.status(400).json({ error: 'Verified email not present in IdP profile' });
+    }
+
+    // 3. Issue a session based on the cryptographically validated identity
+    let user = await findUserByEmail(verifiedEmail);
+    if (!user) {
+      user = await createUser({ email: verifiedEmail, username: verifiedUsername });
+    }
+
+    const sessionToken = issueSessionCookie(user.id);
+    res.cookie('session', sessionToken, { httpOnly: true, secure: true, sameSite: 'lax' });
+
+    return res.json({ status: 'success' });
+  } catch (error) {
+    // If the token is invalid, expired, or manipulated, the IdP returns 401 Unauthorized
+    return res.status(401).json({ error: 'OAuth token validation failed' });
+  }
+});
+```
+
+---
+
+## 6. Bug Hunter Methodology: Auditing OAuth Implementations
+
+When testing OAuth authentication in bug bounty programs or penetration tests:
+
+1. **Map the Full Exchange in Your Proxy:** Trace the entire flow from initial authorization (`GET /auth`) to session establishment.
+2. **Identify Secondary Callback Requests:** Watch for secondary requests like `POST /oauth/callback`, `POST /api/v1/auth/social`, or `POST /authenticate` triggered by front-end scripts.
+3. **Inspect the JSON Payload:** If profile attributes (such as `email`, `user_id`, `sub`, or `role`) are transmitted alongside a `token`, you have identified a high-probability target for parameter tampering.
+4. **Execute Parameter Tampering Tests:**
+   - Modify the email or user ID to target an administrative or existing victim account.
+   - Strip the `token` entirely to see if authentication relies solely on the identifier.
+   - Submit tokens belonging to a different account to assess binding checks.
+5. **Analyze the Response:** If a valid session cookie or JWT is issued under the victim's identity, you have uncovered a **Critical Account Takeover** vulnerability!
+
+---
+
+## 7. Industry Security Standards (OAuth 2.1 Recommendations)
+
+1. **Deprecate the Implicit Flow:** The IETF and the OAuth Working Group have formally **deprecated the Implicit Grant in OAuth 2.1**.
+2. **Mandate Authorization Code Flow with PKCE:** Both Single Page Applications (SPAs) and native mobile apps should enforce **Authorization Code Grant with PKCE (*Proof Key for Code Exchange - RFC 7636*)**.
+3. **Adopt OpenID Connect (OIDC):** For identity and authentication workflows, leverage OpenID Connect. OIDC provides cryptographically signed **ID Tokens (JWTs)**, ensuring that both client and server can verify signature integrity and audience claims (`aud`, `iss`, `sub`).
