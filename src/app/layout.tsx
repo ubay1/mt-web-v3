@@ -29,12 +29,12 @@ export default function RootLayout({
           </SmoothScroll>
         </I18nProvider>
         {/* Commento SDK — test aja */}
-        <Script
+        {/* <Script
           src="https://commento-feedback.netlify.app/commento-sdk.js?token=ebb0ace0-6035-4bec-9fcf-776ec1055199"
           data-token="ebb0ace0-6035-4bec-9fcf-776ec1055199"
           data-api="https://commento-feedback.netlify.app"
           strategy="afterInteractive"
-        />
+        /> */}
       </body>
     </html>
   );
