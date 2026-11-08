@@ -1,5 +1,17 @@
 # Broken Access Control: Mengakses Data Pribadi Pengguna (IDOR & BOLA)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Login ke akun uji, lalu buka aksi privat (misal: unduh transkrip chat di `/download-transcript/2.txt`).
+> 2. Tangkap request di Burp Suite dan kirim ke **Repeater** (`Ctrl+R`).
+> 3. Ubah identifier objek pada parameter URL menjadi milik pengguna lain (misal: `1.txt`):
+>    ```http
+>    GET /download-transcript/1.txt HTTP/1.1
+>    ```
+> 4. Klik **Send** $\rightarrow$ server merespons `200 OK` berisi data privat korban (IDOR berhasil).
+
+---
+
 **IDOR (Insecure Direct Object References)** atau yang dalam standar keamanan API modern dikenal sebagai **BOLA (Broken Object Level Authorization)** adalah salah satu bentuk paling umum dan berbahaya dari kerentanan _Broken Access Control_ (menempati peringkat **#1 di OWASP API Security Top 10**).
 
 Celah ini terjadi ketika aplikasi web menyediakan akses langsung ke file atau objek database (seperti profil, riwayat chat, invoice, dokumen, atau transaksi) berdasarkan parameter input dari pengguna, **tanpa memverifikasi di sisi server apakah pengguna yang sedang login berhak mengakses objek tersebut**.
@@ -151,6 +163,14 @@ Cookie: session_token=token_user_a_xyz
 3. **Pelanggaran Regulasi Privasi:** Melanggar UU PDP (Indonesia) atau GDPR (Uni Eropa) dengan ancaman denda berat dan sanksi operasional.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Anand Prakash vs Uber ($10.000 Bug Bounty - IDOR Riwayat Perjalanan)
+Celah IDOR/BOLA (Broken Object Level Authorization) merupakan tambang emas bagi para pemburu bug bounty karena dampaknya yang masif:
+* **Kronologi Penemuan:** Peneliti keamanan Anand Prakash menguji API backend Uber pada fitur riwayat perjalanan (*trip receipts*). Ketika aplikasi meminta data perjalanan, request yang dikirimkan berbentuk `GET /api/trips?user_uuid=UUID_PENGGUNA`.
+* **Metode Eksploitasi:** Anand mencoba mengganti nilai `user_uuid` miliknya dengan UUID penumpang lain. Server backend Uber ternyata hanya memeriksa apakah request tersebut memiliki token login yang valid, tetapi **tidak memverifikasi apakah token tersebut adalah pemilik dari `user_uuid` yang diminta**!
+* **Dampak & Hadiah:** Anand berhasil mengakses nama lengkap, lokasi penjemputan/tujuan GPS secara presisi, serta nomor telepon seluruh penumpang Uber di seluruh dunia. Celah kritis ini langsung diganjar hadiah bug bounty sebesar **$10.000 USD**.
 
 ## 8. Pencegahan & Remediasi (Best Practices)
 

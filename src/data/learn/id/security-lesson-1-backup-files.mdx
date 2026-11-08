@@ -1,5 +1,17 @@
 # Information Disclosure: Kebocoran File Backup & Database Password
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Buka `https://target-website.com/robots.txt` $\rightarrow$ temukan direktori cadangan: `Disallow: /backup`.
+> 2. Akses folder cadangan di browser: `https://target-website.com/backup/`.
+> 3. Unduh file backup: `https://target-website.com/backup/ProductTemplate.java.bak`.
+> 4. Buka file `.bak` dan ambil kredensial database hardcoded:
+>    ```java
+>    private static final String DB_PASS = "Sup3rS3cr3tP@ssw0rd!2026";
+>    ```
+
+---
+
 **Information Disclosure** (Pengungkapan Informasi) adalah kerentanan keamanan di mana sebuah aplikasi web secara tidak sengaja membocorkan informasi sensitif kepada pengguna yang tidak berwenang. Informasi ini bisa berupa kredensial database, kode sumber (_source code_), kredensial API, hingga detail arsitektur internal.
 
 Salah satu skenario paling umum terjadi akibat **file backup** atau file sementara yang tertinggal di direktori publik server web.
@@ -91,6 +103,14 @@ public class ProductTemplate {
 3. **Kepatuhan & Regulasi:** Pelanggaran regulasi perlindungan data pribadi (GDPR, UU PDP) dengan sanksi denda berat.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Insiden Kebocoran File Backup Database & Shodan Crawlers
+Di dunia nyata, kerentanan file backup publik sering kali menjadi pintu masuk utama kebocoran data skala masif:
+* **Perayapan Otomatis (Shodan & Censys):** Bot peretas terus-menerus memindai miliaran alamat IP publik untuk mencari URL seperti `/.env.bak`, `/backup.sql`, `/config.php.old`, atau `database.tar.gz`.
+* **Kasus Nyata di Bug Bounty:** Pada beberapa laporan publik di platform HackerOne (termasuk program bug bounty transportasi online dan e-commerce global), developer yang melakukan perbaikan mendadak di server produksi membuat salinan cadangan file `.env.bak` di web root. Peneliti keamanan berhasil mengunduh file tersebut dan menemukan kredensial database Amazon RDS internal serta API Key Stripe produksi.
+* **Dampak & Nilai Bounty:** Laporan kebocoran file backup yang memuat kredensial database produksi hampir selalu diganjar rating **CRITICAL** dengan hadiah bug bounty berkisar antara **$3.000 hingga $10.000 USD**, karena dapat mengarah langsung ke pengunduhan seluruh basis data pelanggan (*Full Database Dump*).
 
 ## 4. Cara Pencegahan & Remediasi (Best Practices)
 

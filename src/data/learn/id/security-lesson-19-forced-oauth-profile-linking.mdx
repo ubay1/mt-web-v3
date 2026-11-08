@@ -1,5 +1,20 @@
 # OAuth 2.0: Forced OAuth Profile Linking & OAuth CSRF
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Login ke akunmu sendiri, buka profil, klik **"Attach a social profile"**.
+> 2. Di Burp Proxy (**Intercept ON**), tahan request pengalihan:
+>    `GET /oauth-linking?code=LEAKED_UNUSED_CODE`
+> 3. **JANGAN forward request!** Salin URL-nya, lalu klik **DROP** agar kode tetap belum terpakai.
+> 4. Masuk ke **Exploit Server**, buat payload CSRF untuk dikirimkan ke korban:
+>    ```html
+>    <iframe src="https://target-website.com/oauth-linking?code=LEAKED_UNUSED_CODE"></iframe>
+>    ```
+> 5. Klik **Deliver exploit to victim** $\rightarrow$ akun media sosialmu kini tertaut ke akun korban.
+> 6. Logout, lalu klik **Log in with social media** untuk langsung masuk ke akun korban (Account Takeover)!
+
+---
+
 Banyak website modern memungkinkan penggunanya menghubungkan akun media sosial (seperti Google atau GitHub) ke akun website yang sudah ada melalui fitur **"Attach a social profile"** atau **"Link Account"**. Fitur ini bertujuan memudahkan pengguna agar nantinya bisa login menggunakan akun sosial media tanpa harus mengetik username dan password biasa.
 
 Namun, jika implementasi alur OAuth ini tidak dilengkapi dengan mekanisme perlindungan **CSRF (Cross-Site Request Forgery)**—khususnya parameter **`state`**—timbul celah keamanan kritis bernama **Forced OAuth Profile Linking**.
@@ -179,6 +194,15 @@ Klik tombol **Log out** pada website blog agar sesi login Anda bersih dan tidak 
 4. Notifikasi keberhasilan lab (**"Congratulations, you solved the lab!"**) akan muncul.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Shopify & Grammarly $10.000+ Bug Bounty (Forced OAuth Profile Linking)
+Celah penautan akun media sosial tanpa CSRF protection adalah salah satu cara termudah melakukan 1-Click Full Account Takeover:
+* **Insiden pada Shopify & Grammarly:** Di platform e-commerce Shopify dan asisten penulisan Grammarly, pengguna dapat menautkan akun login media sosial pihak ketiga (*"Connect with Google"*).
+* **Ketiadaan Parameter `state`:** Peneliti keamanan menemukan bahwa URL callback `/oauth-linking?code=XYZ` tidak menyertakan parameter `state` yang unik untuk memvalidasi identitas pengirim request.
+* **Serangan 1-Click:** Penyerang memulai proses penautan akun media sosial miliknya, menyalin URL callback dengan kode otorisasi yang belum terpakai, lalu membuat halaman web jebakan yang memuat link tersebut dalam tag `<iframe>`. Ketika korban membuka halaman tersebut, akun korban secara otomatis tertaut ke profil media sosial penyerang. Penyerang kemudian cukup mengklik *"Log in with Google"* untuk langsung masuk ke toko online atau akun korban!
+* **Nilai Bounty:** Kedua platform mengganjar temuan ini dengan status **CRITICAL** dan hadiah bug bounty masing-masing melebihi **$10.000 USD**.
 
 ## 5. Bedah Kode Backend: Mengapa Terjadi & Cara Memperbaikinya
 

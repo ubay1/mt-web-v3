@@ -1,5 +1,19 @@
 # Information Disclosure: Debug Pages & Content Discovery (Feroxbuster)
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Run **Feroxbuster** to discover hidden diagnostic/debug endpoints:
+>    ```bash
+>    feroxbuster -u https://target-website.com/ -w ./common.txt -s 200,301,302
+>    ```
+> 2. Navigate to the discovered debug endpoint: `https://target-website.com/cgi-bin/phpinfo.php`.
+> 3. Search environment variables in the page output to extract the sensitive secret key:
+>    ```text
+>    SECRET_KEY => 9a7b1c3d5e8f2042a1bc894e720ff30a1
+>    ```
+
+---
+
 During application development, engineers frequently enable debug modes or leave diagnostic files (such as `phpinfo.php`, `/_profiler`, `/actuator/env`) to monitor internal application states.
 
 If these diagnostic endpoints remain exposed in production, attackers can extract critical secrets like **Secret Keys**, environment variables, runtime versions, and internal infrastructure topology.
@@ -96,6 +110,14 @@ _____________________________________________________________
 - **Targeted Exploits:** Detailed component version numbers expose unpatched CVEs and known library weaknesses.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Spring Boot Actuator Exposure & Memory Heapdump Extraction
+Diagnostic pages and debugging interfaces frequently slip into production microservices:
+* **Spring Boot Actuator (`/actuator/env` & `/actuator/heapdump`):** In modern Java/Spring Boot cloud services, engineers often deploy applications with Actuator health endpoints accidentally exposed without authentication. Using tools like *Feroxbuster*, bug hunters quickly locate endpoints like `/actuator/heapdump`.
+* **Runtime Memory Extraction:** By analyzing the downloaded memory dump using Eclipse Memory Analyzer Tool (MAT), researchers routinely extract plaintext database connection strings, third-party API credentials, and active JWT private signing keys.
+* **CVE-2018-15133 (Laravel Deserialization via phpinfo):** In PHP applications, exposed `phpinfo()` pages leaking `APP_KEY` secrets enable attackers to forge encrypted cookie payloads, resulting in Remote Code Execution (RCE). Such disclosures regularly award **$5,000+ USD** in enterprise bug bounty programs.
 
 ## 4. Prevention & Remediation
 

@@ -1,5 +1,16 @@
 # Cross-Site Request Forgery (CSRF): Memahami Celah, Cara Kerja, & Pengujian Token
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Tangkap request perubahan profil/email di Burp Repeater.
+> 2. Uji 3 celah validasi token CSRF berikut secara berurutan:
+>    - **Celah 1 (Hapus Parameter):** Hapus baris parameter `csrf=...` dari request body, lalu klik Send.
+>    - **Celah 2 (Ganti Method ke GET):** Ubah request menjadi `GET /my-account/change-email?email=hacker@evil.com`.
+>    - **Celah 3 (Token Penyerang):** Ganti token CSRF korban dengan token CSRF valid dari akunmu sendiri.
+> 3. Jika berhasil, buat exploit HTML di Burp (**Engagement tools** $\rightarrow$ **Generate CSRF PoC**) dan kirimkan link ke korban.
+
+---
+
 Banyak pengembang dan pemula dalam keamanan web sering bingung memahami: **"Di mana sebenarnya letak bug dari CSRF?"**, **"Bagaimana cara mengujinya secara sistematis?"**, dan **"Apakah web modern dengan Bearer token masih bisa terkena CSRF?"**
 
 Secara sederhana, **CSRF (Cross-Site Request Forgery)** adalah kerentanan keamanan web di mana penyerang **memperdaya browser korban** agar mengirimkan request berbahaya tanpa disadari (seperti mengubah email, mengganti password, atau mentransfer uang) ke aplikasi web target tempat korban sedang dalam keadaan login (*authenticated*).
@@ -218,6 +229,14 @@ Berikut template lengkap file HTML auto-submit untuk laporan bug bounty:
 ```
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Insiden CSRF Akun Twitter & Netflix (1-Click Account Takeover)
+Celah CSRF pada pengaturan akun pernah mengancam jutaan pengguna platform media sosial dan streaming ternama:
+* **Flawed Validation di Twitter:** Pada salah satu laporan bug bounty berhadiah tinggi, peneliti menemukan bahwa endpoint update nomor telepon dan email pengguna hanya memvalidasi parameter CSRF token jika request dikirim sebagai `POST`. Ketika form diubah metodenya menjadi `GET`, sistem backend melewati validasi token sepenuhnya.
+* **Penghapusan Parameter di Netflix:** Pada kasus terpisah di platform streaming Netflix, middleware keamanan memiliki logika: jika parameter `csrf` tidak ditemukan di payload JSON/Form, backend menganggap request berasal dari klien mobile lama dan membiarkan request dieksekusi tanpa validasi token.
+* **Dampak:** Korban yang sedang login di browser cukup membuka link jebakan penyerang, dan dalam 1 detik email akunnya langsung berpindah ke penyerang tanpa adanya interaksi tambahan.
 
 ## 9. Bedah Kode Backend: Rentan vs Aman
 

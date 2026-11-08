@@ -1,5 +1,21 @@
 # Broken Access Control: User Role can be Modified in User Profile (Mass Assignment)
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Log in with standard credentials (`wiener:peter`), open **My Account**, and submit an email change.
+> 2. Intercept `POST /my-account/change-email` in Burp Suite and send to **Repeater** (`Ctrl+R`).
+> 3. Observe the JSON response containing the role attribute: `"roleid": 1`.
+> 4. Inject the elevated role parameter into the JSON request body:
+>    ```json
+>    {
+>      "email": "wiener@normal-user.net",
+>      "roleid": 2
+>    }
+>    ```
+> 5. Click **Send** $\rightarrow$ your account privilege is escalated to Admin (`roleid: 2`), then browse to `/admin`.
+
+---
+
 One of the most dangerous variations of _Broken Access Control_ is **Vertical Privilege Escalation**, where a standard user elevates their permission level to become an **Administrator**.
 
 This flaw often stems from **Mass Assignment (Auto-Binding)**, a condition where the backend server automatically maps and writes all client-supplied JSON keys into the database model without enforcing strict property whitelisting.
@@ -139,6 +155,15 @@ Content-Length: 53
 4. The lab is completed successfully! 🎉
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Egor Homakov vs. GitHub (The 2012 Rails Mass Assignment Incident)
+One of the most consequential security demonstrations in modern web history:
+* **The Vulnerability:** Ruby on Rails featured automatic Mass Assignment, where HTTP request parameters were directly assigned to database model attributes without explicit whitelisting.
+* **Homakov's Demonstration:** After an initial vulnerability report was dismissed, researcher Egor Homakov submitted an HTTP request to add a public SSH key to his account, while injecting the parameter `public_key[user_id]=1`.
+* **Exploitation:** The backend bound his public SSH key directly to the official Ruby on Rails project maintainer account on GitHub, granting him direct commit rights to push arbitrary code to the Rails core repository.
+* **Industry Impact:** This incident prompted GitHub to temporarily shut down for emergency auditing and led to the architectural overhaul of Ruby on Rails, resulting in the mandatory adoption of `strong_parameters`.
 
 ## 4. Backend Source Code: Vulnerable vs. Secure
 

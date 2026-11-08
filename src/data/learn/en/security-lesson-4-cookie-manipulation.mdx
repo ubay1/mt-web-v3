@@ -1,5 +1,15 @@
 # Broken Access Control: Cookie Manipulation
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Open DevTools (`F12` $\rightarrow$ **Application** / **Storage** $\rightarrow$ **Cookies**) or intercept via Burp Suite.
+> 2. Locate the privilege cookie: `Admin=false`.
+> 3. Change its value to: `Admin=true`.
+> 4. Refresh the page or navigate to `/admin` to access the Administrator dashboard.
+> 5. *(Burp Match & Replace option)*: In **Proxy** > **Match and replace**, add a rule to automatically replace `Admin=false` with `Admin=true` on all requests.
+
+---
+
 **Broken Access Control** is consistently ranked as the #1 web security vulnerability in the **OWASP Top 10**. This flaw occurs when an application fails to properly enforce user permissions and authorization checks on the server side (_backend_).
 
 One classic example is **Cookie Manipulation**, where a web application erroneously relies on raw client-side cookies to determine whether a visitor has administrative privileges.
@@ -90,6 +100,13 @@ Now, refresh the webpage or navigate to `/admin` in the browser. Because outgoin
 - **Account Takeover:** Unauthorized administrative password resets and privilege abuse.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Privilege Cookie Manipulation in IoT Routers & SaaS Environments
+Trusting client-controlled state for authorization is a recurring design flaw:
+* **IoT Router Firmware Consoles (Netgear & D-Link):** Historically, multiple CVE advisories affecting home and enterprise networking gear revealed admin dashboards that relied solely on cookies like `Cookie: isAdmin=1` or `auth=true`. Any local network user could modify their browser cookie storage to access administrative consoles and push rogue firmware or manipulate DNS records.
+* **Multi-Tenant SaaS Platforms:** In SaaS architectures utilizing unsigned cookies or raw base64-encoded JSON payloads (`{"role":"member"}`), attackers routinely modify the payload to `{"role":"superadmin"}` to view other corporate tenants' private records.
 
 ## 4. Prevention & Remediation (Best Practices)
 

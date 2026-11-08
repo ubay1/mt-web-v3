@@ -1,5 +1,19 @@
 # Information Disclosure: Debug Page & Content Discovery (Feroxbuster)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Jalankan **Feroxbuster** untuk menemukan endpoint diagnostik/debug tersembunyi:
+>    ```bash
+>    feroxbuster -u https://target-website.com/ -w ./common.txt -s 200,301,302
+>    ```
+> 2. Buka path debug yang ditemukan: `https://target-website.com/cgi-bin/phpinfo.php`.
+> 3. Ekstrak secret key sensitif pada daftar variabel environment:
+>    ```text
+>    SECRET_KEY => 9a7b1c3d5e8f2042a1bc894e720ff30a1
+>    ```
+
+---
+
 Ketika aplikasi web masih dalam tahap pengembangan (_development_), developer sering kali mengaktifkan fitur _debugging_ atau membuat file diagnostik (seperti `phpinfo.php`, `/_profiler`, `/actuator/env`) untuk mempermudah pengecekan status server.
 
 Jika halaman _debug_ ini lupa dimatikan saat naik ke server produksi, penyerang dapat mengekstraksi informasi berharga seperti **Secret Key**, environment variables, versi modul server, hingga konfigurasi internal.
@@ -96,6 +110,14 @@ _____________________________________________________________
 - **Peta Serangan Lengkap:** Penyerang mengetahui versi PHP, modul yang rentan (_outdated libraries_), dan jalur path direktori absolut server.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Paparan Spring Boot Actuator & Insiden Ekstraksi Kredensial Heapdump
+Halaman diagnostik dan informasi debug sering kali tertinggal saat rilis aplikasi microservices modern:
+* **Spring Boot Actuator (`/actuator/env` & `/actuator/heapdump`):** Pada arsitektur Java/Spring Boot enterprise, fitur Actuator kerap dibiarkan terbuka ke publik tanpa autentikasi. Peneliti keamanan menggunakan alat seperti *Feroxbuster* untuk mendeteksi endpoint `/actuator/heapdump`.
+* **Ekstraksi Memori:** Dari file heapdump berukuran ratusan megabyte tersebut, peneliti dapat mengekstrak memori runtime menggunakan Eclipse MAT (Memory Analyzer Tool) untuk membaca variabel environment yang didekripsi, private key JWT, dan password database.
+* **CVE-2018-15133 (Laravel Deserialization via phpinfo):** Pada ekosistem PHP/Laravel, kebocoran halaman `phpinfo()` yang mengekspos `APP_KEY` memungkinkan penyerang membuat payload deserialisasi cookie terenkripsi yang berujung pada *Remote Code Execution* (RCE). Temuan ini diganjar bounty rata-rata **$5.000+ USD** pada program bug bounty enterprise.
 
 ## 4. Pencegahan & Remediasi
 

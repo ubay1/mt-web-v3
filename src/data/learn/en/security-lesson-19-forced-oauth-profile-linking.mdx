@@ -1,5 +1,20 @@
 # OAuth 2.0: Forced OAuth Profile Linking & OAuth CSRF
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Log in to your test account, open your profile, and click **"Attach a social profile"**.
+> 2. In Burp Proxy (**Intercept ON**), capture the linking callback:
+>    `GET /oauth-linking?code=LEAKED_UNUSED_CODE`
+> 3. **DO NOT forward this request!** Copy the URL, then click **DROP** so the code remains unused.
+> 4. In the **Exploit Server**, craft a CSRF payload to deliver to the victim:
+>    ```html
+>    <iframe src="https://target-website.com/oauth-linking?code=LEAKED_UNUSED_CODE"></iframe>
+>    ```
+> 5. Click **Deliver exploit to victim** $\rightarrow$ your social profile is linked to the victim's account.
+> 6. Log out, then click **Log in with social media** to instantly access the victim's account (Account Takeover)!
+
+---
+
 Many modern web applications allow users to link external social accounts (such as Google or GitHub) to an existing local account through features like **"Attach a social profile"** or **"Link Account"**. This functionality is designed to offer flexibility, allowing users to authenticate via their social identity rather than relying solely on traditional passwords.
 
 However, if this OAuth linking flow lacks **CSRF (Cross-Site Request Forgery)** defenses—specifically, the **`state`** parameter—it introduces a critical vulnerability known as **Forced OAuth Profile Linking**.
@@ -179,6 +194,15 @@ Click **Log out** on the blog website to clear your active Wiener session.
 4. The **"Congratulations, you solved the lab!"** banner will confirm successful completion.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Shopify & Grammarly $10,000+ OAuth CSRF Account Takeovers
+Social profile linking without CSRF tokens represents one of the cleanest 1-click full account takeover vectors:
+* **The Vulnerability on Shopify & Grammarly:** Users were provided a feature to link third-party social identities (*"Connect with Google"*).
+* **Missing `state` Parameter:** Security researchers discovered that the authorization callback `/oauth-linking?code=XYZ` lacked a `state` parameter to validate the request originator.
+* **1-Click Exploitation:** The attacker initiated the linking flow with their own social account, intercepted the callback in Burp Suite, dropped the request locally so the authorization code remained valid, and embedded the URL in an `<iframe>` on an exploit page. When the victim visited the page, their account silently linked to the attacker's social profile. The attacker then clicked *"Log in with Google"* to assume complete control of the victim's account.
+* **Bounty Payouts:** Both platforms classified the issue as **CRITICAL** and awarded bounties exceeding **$10,000 USD**.
 
 ## 5. Backend Code Analysis: Vulnerable vs Secure Implementation
 

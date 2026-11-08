@@ -1,5 +1,22 @@
 # OAuth 2.0: Authentication Bypass via Flawed Implicit Flow & Client Tampering
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Log in with your own social media account (`wiener:peter`).
+> 2. In Burp HTTP history, locate the authentication request:
+>    `POST /authenticate` with body `{"email":"wiener@normal-user.net","token":"..."}`
+> 3. Send to **Repeater** (`Ctrl+R`), and change the `email` field to the victim's email:
+>    ```json
+>    {
+>      "email": "carlos@carlos-montoya.net",
+>      "username": "carlos",
+>      "token": "..."
+>    }
+>    ```
+> 4. Click **Send** $\rightarrow$ right-click the response $\rightarrow$ select **Show response in browser** to log in as Carlos!
+
+---
+
 Many modern web applications offer convenient single sign-on buttons such as **"Sign in with Google"**, **"Log in with GitHub"**, or other social media accounts. This functionality is built on top of the **OAuth 2.0** framework. However, a widespread architectural misconception persists among developers: **OAuth 2.0 was originally designed for *Authorization* (delegating access to resources), not for *Authentication* (verifying the user's identity)**.
 
 When developers adapt OAuth for authentication without understanding its security boundaries—particularly when relying on the legacy **Implicit Grant Type**—a critical vulnerability arises where an attacker can **take over any user account (*Account Takeover*) simply by tampering with a single parameter in Burp Suite**.
@@ -178,6 +195,14 @@ To access Carlos's account in your browser:
 Carlos's account is completely taken over without ever needing or cracking his password.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Frans Rosén & Arne Swinnen: Mass SaaS Account Takeovers via OAuth Implicit Flow
+Renowned bug hunters uncovered systemic account takeover flaws in corporate OAuth implementations:
+* **Industry Antipattern:** Enterprise web applications allowed client-side JavaScript to handle login flows using the Implicit Grant (`response_type=token`). After receiving an access token from Google/Facebook, the browser submitted a POST request: `{"email":"target@victim.com", "token":"attacker_token"}` to the application backend.
+* **Parameter Tampering Exploitation:** Frans Rosén and Arne Swinnen demonstrated that backends validated the presence of a valid OAuth token, but **never checked whether the token's subject matched the submitted email**. Swapping the email parameter in Burp Repeater yielded instantaneous access to any victim account.
+* **Impact & Depreciation:** Yielded dozens of **$15,000 to $30,000 USD** bounties and prompted the IETF OAuth working group to **formally deprecate and remove the Implicit Flow in the OAuth 2.1 standard**.
 
 ## 5. Backend Code Analysis: Vulnerable vs Secure Implementation
 

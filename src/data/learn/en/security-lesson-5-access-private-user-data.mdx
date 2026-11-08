@@ -1,5 +1,17 @@
 # Broken Access Control: Accessing Private User Data (IDOR & BOLA)
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Log in with your test account and trigger a private action (e.g., download chat transcript at `/download-transcript/2.txt`).
+> 2. Intercept the request in Burp Suite and forward to **Repeater** (`Ctrl+R`).
+> 3. Change the object identifier in the URL path/parameter to another user's target (e.g., `1.txt`):
+>    ```http
+>    GET /download-transcript/1.txt HTTP/1.1
+>    ```
+> 4. Click **Send** $\rightarrow$ the server responds with `200 OK` exposing the victim's private transcript (IDOR verified).
+
+---
+
 **IDOR (Insecure Direct Object References)**, now commonly standardized under **BOLA (Broken Object Level Authorization)** in modern API security (ranked **#1 on the OWASP API Security Top 10**), is one of the most widespread and severe vulnerabilities within the _Broken Access Control_ category.
 
 This flaw occurs when an application exposes a direct reference to internal files or database records (such as user profiles, chat transcripts, invoices, private documents, or payment transactions) based on client-controlled parameters, **without verifying on the server side whether the authenticated user has permission to access that object**.
@@ -151,6 +163,14 @@ Cookie: session_token=token_user_a_xyz
 3. **Regulatory Non-Compliance:** Severe penalties under GDPR, HIPAA, and national data privacy laws.
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Anand Prakash vs. Uber ($10,000 Bug Bounty - Trip History BOLA/IDOR)
+Broken Object Level Authorization (BOLA/IDOR) ranks #1 on the OWASP API Security Top 10 due to its frequent occurrence and devastating impact:
+* **Discovery Protocol:** Renowned security researcher Anand Prakash audited the Uber API endpoint responsible for fetching passenger ride receipts. The client application sent an HTTP request: `GET /api/trips?user_uuid=VICTIM_UUID`.
+* **Exploitation Method:** Anand substituted his own user UUID with that of another registered user. The Uber backend verified that the request had a valid session token, but **failed to verify whether the session token actually owned the requested `user_uuid`**.
+* **Impact & Reward:** Anand successfully retrieved full names, exact real-time GPS pickup/drop-off locations, and phone numbers of passengers worldwide. Uber awarded him a **$10,000 USD** bounty and patched the authorization check immediately.
 
 ## 8. Prevention & Remediation (Best Practices)
 

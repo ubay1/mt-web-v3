@@ -1,5 +1,21 @@
 # Broken Access Control: Modifikasi Role Pengguna pada Profil (Mass Assignment)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Login dengan akun standar (`wiener:peter`), buka profil **My Account**, lalu submit perubahan email.
+> 2. Tangkap request `POST /my-account/change-email` di Burp Suite lalu kirim ke **Repeater** (`Ctrl+R`).
+> 3. Amati response JSON yang memiliki field role: `"roleid": 1`.
+> 4. Sisipkan parameter privilege escalation ke JSON request body:
+>    ```json
+>    {
+>      "email": "wiener@normal-user.net",
+>      "roleid": 2
+>    }
+>    ```
+> 5. Klik **Send** $\rightarrow$ akun tereskalasi menjadi Admin (`roleid: 2`), lalu akses menu `/admin`.
+
+---
+
 Salah satu bentuk paling berbahaya dari kerentanan _Broken Access Control_ adalah **Vertical Privilege Escalation** (Eskalasi Hak Akses Vertikal), di mana pengguna biasa dapat menaikkan level hak aksesnya menjadi **Administrator**.
 
 Celah ini sering terjadi akibat fenomena **Mass Assignment (Auto-Binding)**, yaitu ketika server backend secara otomatis memperbarui semua kolom database berdasarkan data JSON yang dikirimkan oleh klien tanpa melakukan penyaringan (_whitelisting_) kolom yang diperbolehkan.
@@ -139,6 +155,15 @@ Content-Length: 53
 4. Skenario pengujian berhasil diselesaikan dengan sempurna! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Egor Homakov vs GitHub (Insiden Mass Assignment Ruby on Rails 2012)
+Ini adalah salah satu insiden keamanan web paling bersejarah di dunia:
+* **Akar Masalah:** Framework Ruby on Rails saat itu memiliki fitur *Mass Assignment* otomatis, di mana seluruh atribut request HTTP langsung dimasukkan ke model database tanpa validasi whitelist ketat.
+* **Pembuktian Egor Homakov:** Peneliti Egor Homakov menemukan bahwa saat menambahkan SSH Key di GitHub, ia bisa menyisipkan parameter tambahan: `public_key[user_id]=1`. Parameter ini menautkan kunci SSH milik Egor ke akun organisasi resmi tim Ruby on Rails di GitHub.
+* **Eksploitasi Nyata:** Untuk membuktikan bahayanya setelah laporannya sempat diabaikan, Egor melakukan commit kode langsung ke repositori resmi Ruby on Rails tanpa izin!
+* **Dampak Industri:** Insiden ini memaksa GitHub menutup layanannya sementara untuk audit darurat dan memicu perombakan arsitektur keamanan di Rails dengan merilis fitur proteksi wajib `strong_parameters`.
 
 ## 4. Bedah Kode Backend: Rentan vs Aman
 

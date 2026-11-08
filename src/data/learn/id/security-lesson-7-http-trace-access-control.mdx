@@ -1,5 +1,23 @@
 # Broken Access Control: Debugging Flow Menggunakan HTTP TRACE
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Kirim request metode `TRACE` di Burp Repeater untuk mendeteksi header internal reverse proxy:
+>    ```http
+>    TRACE / HTTP/1.1
+>    Host: target-website.com
+>    ```
+> 2. Amati header yang dipantulkan server pada respons (misal: `X-Custom-IP-Authorization: <IP>`).
+> 3. Akses endpoint admin (`GET /admin`) dengan menambahkan header hasil temuan tersebut bernilai `127.0.0.1`:
+>    ```http
+>    GET /admin HTTP/1.1
+>    Host: target-website.com
+>    X-Custom-IP-Authorization: 127.0.0.1
+>    ```
+> 4. Status respons menjadi `200 OK` dan pembatasan IP akses admin berhasil ditembus!
+
+---
+
 Salah satu teknik lanjutan dalam pengujian _Broken Access Control_ adalah memanfaatkan fungsionalitas diagnostik jaringan seperti **HTTP TRACE** untuk mengungkap arsitektur internal server dan menerobos pembatasan hak akses administratif.
 
 Metode HTTP TRACE dirancang untuk kebutuhan _debugging_ (pengujian _loopback_), di mana server akan **memantulkan kembali request yang diterimanya secara persis** kepada klien. Ketika server berada di balik _Reverse Proxy_, _Load Balancer_, atau _WAF_, metode ini dapat membocorkan header internal rahasia yang digunakan sistem untuk mengontrol otorisasi akses.
@@ -148,6 +166,14 @@ Secara default, atribut cookie `HttpOnly` melindungi token sesi agar tidak bisa 
 3. Skrip JavaScript dapat membaca isi response body dan mencuri cookie sesi administrator yang seharusnya terlindungi!
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Bypass IP Filtering & WAF di Perbankan via HTTP TRACE & Reverse Proxy Spoofing
+Kombinasi metode TRACE dengan manipulasi header internal sering ditemukan pada audit infrastruktur enterprise:
+* **Skenario Industri Perbankan:** Sebuah bank membatasi akses ke dashboard transfer dana internal hanya untuk alamat IP kantor (`127.0.0.1` atau subnet internal). Pembatasan ini dikontrol oleh reverse proxy (seperti Nginx atau F5 Big-IP) yang menambahkan header kustom `X-Forwarded-For` atau `X-Custom-IP-Authorization`.
+* **Penemuan Header via TRACE:** Server web backend Apache mengaktifkan metode `TRACE`. Peneliti keamanan mengirimkan request `TRACE /` dan membaca respons pantulan server. Dari sana, terlihat jelas nama header rahasia yang digunakan oleh proxy internal.
+* **Bypass Otorisasi:** Peneliti kemudian menyuntikkan header rahasia tersebut dengan nilai `127.0.0.1` pada request ke endpoint admin. Reverse proxy yang salah konfigurasi meneruskan header tersebut, dan sistem backend mengizinkan akses penuh seolah-olah request datang dari komputer administrator lokal.
 
 ## 6. Remediasi & Konfigurasi Server yang Aman
 

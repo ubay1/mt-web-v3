@@ -1,5 +1,23 @@
 # Broken Access Control: Debugging Flow with HTTP TRACE
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Send an HTTP `TRACE` method request in Burp Repeater to discover internal headers attached by reverse proxies:
+>    ```http
+>    TRACE / HTTP/1.1
+>    Host: target-website.com
+>    ```
+> 2. Inspect the reflected headers in the response body (e.g., `X-Custom-IP-Authorization: <IP>`).
+> 3. Access `/admin` and spoof the trusted internal IP using that header set to `127.0.0.1`:
+>    ```http
+>    GET /admin HTTP/1.1
+>    Host: target-website.com
+>    X-Custom-IP-Authorization: 127.0.0.1
+>    ```
+> 4. The server responds with `200 OK` granting administrative privileges.
+
+---
+
 An advanced technique in testing _Broken Access Control_ involves leveraging network diagnostic functionalities such as **HTTP TRACE** to expose internal server architectures and bypass administrative access restrictions.
 
 The HTTP TRACE method is designed for diagnostic loopback testing, where the web server **echoes back the exact HTTP request it received** directly to the client. When an application sits behind a _Reverse Proxy_, _Load Balancer_, or _WAF_, this debugging method can inadvertently disclose secret internal headers used by the system for authorization decisions.
@@ -148,6 +166,14 @@ By design, the `HttpOnly` cookie flag prevents client-side JavaScript (via XSS) 
 3. The JavaScript payload reads the reflected response body and exfiltrates the administrator's session tokens!
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Reverse-Proxy Header Spoofing via HTTP TRACE & Cross-Site Tracing (XST)
+Enterprise networks frequently combine reverse proxies with legacy backend configurations:
+* **Banking Architecture Scenario:** A major banking platform restricted access to its internal funds transfer console exclusively to corporate office IPs (`127.0.0.1` or internal subnets) using reverse-proxy headers like `X-Forwarded-For` or custom authentication headers.
+* **Header Discovery via TRACE:** The Apache backend server had the `TRACE` method enabled. Researchers sent `TRACE /` and read the reflected HTTP response, which unmasked the exact secret header name attached by the internal proxy layer.
+* **Bypass Execution:** The researcher injected that discovered header set to `127.0.0.1` directly into requests sent to `/admin`. The misconfigured reverse proxy forwarded the spoofed header, and the backend granted administrative access.
 
 ## 6. Remediation & Hardening Guidelines
 

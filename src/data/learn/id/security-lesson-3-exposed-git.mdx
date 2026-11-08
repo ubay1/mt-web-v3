@@ -1,5 +1,22 @@
 # Information Disclosure: Exposed Version Control (.git) di Server
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Uji keterbukaan folder Git: buka `https://target-website.com/.git/HEAD`.
+> 2. Unduh seluruh isi repository Git ke komputer lokal:
+>    ```bash
+>    pip install git-dumper
+>    git-dumper https://target-website.com/.git/ ./leaked-repo
+>    ```
+> 3. Cari riwayat commit kredensial yang pernah dihapus developer:
+>    ```bash
+>    cd ./leaked-repo && git log -p
+>    # atau cari kata kunci: git log -S "password" -p
+>    ```
+> 4. Gunakan password yang ditemukan untuk login sebagai `administrator`.
+
+---
+
 Folder `.git` adalah direktori tersembunyi yang dibuat oleh sistem Git ketika sebuah repository diinisialisasi. Di dalamnya tersimpan seluruh riwayat commit, riwayat perubahan kode, konfigurasi user, branch, hingga hash objek dari setiap file dalam proyek.
 
 Jika folder `.git` ini tanpa sengaja ikut terunggah atau terakses secara publik melalui HTTP (`https://target-website.com/.git/`), penyerang dapat **mengunduh ulang seluruh kode sumber dan riwayat proyek secara utuh**.
@@ -131,6 +148,14 @@ Kerentanan exposed `.git` hampir selalu dikategorikan sebagai **High** hingga **
 3. **Peta Titik Lemah:** Mempermudah pencarian celah zero-day di kode backend.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Insiden Kebocoran Folder `.git` United Nations (PBB) & Toyota
+Folder repository versi kontrol yang terekspos adalah salah satu temuan paling bernilai bagi peneliti keamanan dan penyerang:
+* **Insiden PBB (United Nations - 2021):** Peneliti keamanan menemukan bahwa salah satu subdomain infrastruktur United Nations secara tidak sengaja membiarkan folder `/.git` dapat diakses oleh publik. Menggunakan tool seperti `git-dumper`, peneliti berhasil mengunduh ulang seluruh kode sumber dan memeriksa riwayat commit (`git log -p`). Ditemukan commit lama di mana developer pernah mencantumkan password database dan kunci API sensitif sebelum dihapus di commit berikutnya.
+* **Kasus Vendor Toyota:** Insiden serupa terjadi pada mitra rantai pasok Toyota, di mana folder `.git` terekspos selama bertahun-tahun di server publik, membeberkan kode sumber sistem manajemen internal dan kredensial akses ke jaringan produksi.
+* **Dampak:** Temuan ini selalu diklasifikasikan sebagai **CRITICAL / HIGH Severity** di program bug bounty dengan hadiah mencapai **$10.000 – $20.000 USD** karena penyerang mendapatkan seluruh *blueprint* aplikasi beserta rahasia infrastrukturnya.
 
 ## 4. Pencegahan & Remediasi (Best Practices)
 

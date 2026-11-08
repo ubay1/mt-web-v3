@@ -1,5 +1,15 @@
 # Broken Access Control: Cookie Manipulation
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Buka DevTools (`F12` $\rightarrow$ tab **Application** / **Storage** $\rightarrow$ **Cookies**) atau tahan request di Burp Suite.
+> 2. Temukan cookie hak akses: `Admin=false`.
+> 3. Ubah nilainya menjadi: `Admin=true`.
+> 4. Refresh browser atau buka `/admin` untuk mengakses panel Administrator.
+> 5. *(Opsi Burp Match & Replace)*: Buat aturan di **Proxy** > **Match and replace** untuk mengganti `Admin=false` menjadi `Admin=true` otomatis.
+
+---
+
 **Broken Access Control** (Kegagalan Kontrol Akses) adalah salah satu kerentanan web paling berbahaya yang menempati peringkat teratas dalam **OWASP Top 10**. Celah ini terjadi ketika sistem tidak memverifikasi hak akses pengguna dengan benar di sisi server (_backend_).
 
 Salah satu skenario paling sederhana dari celah ini adalah **Cookie Manipulation**, di mana aplikasi web secara keliru mempercayai nilai cookie di sisi klien (_client-side_) untuk menentukan apakah seorang pengguna adalah admin atau bukan.
@@ -90,6 +100,13 @@ Sekarang, akses kembali halaman target atau buka rute `/admin` di browser. Karen
 - **Pengambilalihan Akun:** Penyerang dapat mereset password akun lain tanpa otorisasi yang sah.
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Eksploitasi Cookie Admin pada Perangkat IoT & Aplikasi SaaS
+Manipulasi nilai cookie klien untuk eskalasi hak akses adalah pola kerentanan klasik yang kerap berulang di perangkat nyata:
+* **Konsol Firmware Router IoT (Netgear & D-Link):** Berbagai laporan CVE pada router rumahan dan perkantoran menemukan bahwa halaman admin web router hanya mengandalkan cookie sederhana seperti `Cookie: isAdmin=1` atau `auth=true`. Siapa pun yang terhubung ke jaringan Wi-Fi lokal dapat mengubah nilai cookie tersebut di browser dan langsung masuk ke dashboard konfigurasi router untuk mengganti DNS atau mengunggah firmware berbahaya.
+* **Kasus SaaS Multi-Tenant:** Pada platform software-as-a-service yang menggunakan cookie peran yang tidak ditandatangani secara kriptografis (misal: JSON mentah di-encode base64 `{"role":"user"}`), penyerang cukup memodifikasinya menjadi `{"role":"admin"}` untuk melihat data seluruh tenant pelanggan lain.
 
 ## 4. Cara Pencegahan & Remediasi (Best Practices)
 

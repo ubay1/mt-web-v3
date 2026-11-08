@@ -1,5 +1,19 @@
 # Directory Traversal: Bypassing Hardcoded Base Path (Start-of-Path Validation)
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Tangkap request gambar di Burp Repeater:
+>    ```http
+>    GET /image?filename=50.jpg HTTP/1.1
+>    ```
+> 2. Sertakan prefix path wajib di awal parameter (`/var/www/images/`), lalu lakukan traversal mundur:
+>    ```http
+>    GET /image?filename=/var/www/images/../../../etc/passwd HTTP/1.1
+>    ```
+> 3. Klik **Send** $\rightarrow$ validasi awalan terpenuhi dan sistem membaca `/etc/passwd`.
+
+---
+
 Dalam arsitektur backend aplikasi web, salah satu pola paling umum yang diterapkan pengembang untuk mengisolasi berkas statis adalah dengan **mengunci direktori dasar (_hardcoded base path_)** atau **mewajibkan input pengguna diawali jalur folder tertentu (_start-of-path validation_)**, misalnya `/var/www/images/` atau `C:\inetpub\wwwroot\uploads\`.
 
 Pengembang berasumsi bahwa karena berkas selalu dicari di dalam folder tersebut, pengguna tidak akan bisa mengakses berkas di luarnya. Namun, karena sistem operasi secara alami mendukung navigasi hierarki direktori (_dot-dot-slash_ `../`), pembatasan direktori dasar ini dapat ditembus dengan mudah.
@@ -179,6 +193,17 @@ peter:x:1002:1002:Peter:/home/peter:/bin/bash
 3. Lab berhasil diselesaikan (*Solved*)! 🎉
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Grafana Zero-Day Directory Traversal (CVE-2021-43798)
+Kerentanan validasi awalan path (start-of-path validation) yang mengejutkan komunitas DevOps di akhir 2021:
+* **Mekanisme Celah:** Platform dashboard monitoring Grafana memiliki endpoint untuk memuat aset plugin: `/public/plugins/<plugin-id>/*`. Backend memvalidasi bahwa path harus diawali dengan folder direktori plugin yang terpasang di sistem.
+* **Eksploitasi Prefix Fulfillment:** Peneliti menemukan bahwa plugin bawaan Grafana (seperti `alertlist` atau `graph`) selalu ada secara default. Penyerang menyisipkan sekuens traversal tepat setelah nama plugin:
+  ```http
+  GET /public/plugins/alertlist/../../../../../../../../etc/passwd HTTP/1.1
+  ```
+* **Dampak Industri:** Grafana meloloskan validasi awalan jalur karena string diawali dengan folder plugin yang sah, lalu kernel POSIX mengeksekusi traversal mundur hingga ke `/etc/passwd` dan file konfigurasi `grafana.ini` yang menyimpan master secret key database.
 
 ## 5. Bedah Kode Backend: Rentan vs Aman
 

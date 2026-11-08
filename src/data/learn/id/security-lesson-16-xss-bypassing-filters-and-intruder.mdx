@@ -1,5 +1,21 @@
 # Cross-Site Scripting (XSS): Bypassing Single Quote, Advanced Filters, & Fuzzing dengan Burp Intruder
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. **Bypass Escape Kutip (`'`):** Netralkan backslash dengan backslash tambahan:
+>    ```javascript
+>    ';alert(1)//
+>    ```
+> 2. **Bypass Blokir Tanda Kurung `()`:** Gunakan template literal (backtick):
+>    ```javascript
+>    `onerror=alert`1`
+>    ```
+> 3. **Fuzzing Filter WAF (Burp Intruder):**
+>    - Tandai posisi tag: `<§tag§ id=x>` $\rightarrow$ masukkan daftar tag HTML PortSwigger.
+>    - Tandai event handler: `<svg §event§=1>` $\rightarrow$ filter status `200 OK` untuk menemukan event yang diizinkan WAF.
+
+---
+
 Dalam pengujian keamanan web nyata (*penetration testing* dan *bug bounty*), kamu hampir tidak akan pernah menemukan aplikasi yang mengizinkan payload mentah `<script>alert(1)</script>` tanpa adanya filter.
 
 Sebagian besar aplikasi web modern menerapkan filter keamanan seperti:
@@ -283,6 +299,14 @@ Elemen marquee HTML legacy yang masih didukung peramban modern:
 ```
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Bypassing WAF Cloudflare & AWS Menggunakan Tag HTML5 Langka
+Di dunia nyata, hampir seluruh website modern dilindungi oleh Web Application Firewall (WAF):
+* **Kegagalan Blacklist WAF:** Firewall enterprise seperti Cloudflare WAF, AWS WAF, dan Imperva memblokir kata kunci populer seperti `<script>`, `onerror=`, `onload=`, dan `<iframe`.
+* **Fuzzing Tag Eksotis dengan Burp Intruder:** Pemburu bug bounty menyemprotkan ribuan vektor dari kamus resmi HTML5 PortSwigger. Ditemukan bahwa tag-tag modern yang jarang digunakan pengembang—seperti `<svg><animatetransform onbegin=alert(1)>`, `<details ontoggle=alert(1) open>`, atau `<select autofocus onfocus=alert(1)>`—kerap kali belum terdaftar di aturan filter WAF.
+* **Nilai Bounty:** Menemukan teknik baru WAF Bypass yang berhasil mengeksekusi XSS di situs perusahaan teknologi besar (seperti PayPal, Microsoft, atau GitLab) menghasilkan penghargaan bug bounty tertinggi di kisaran **$10.000 hingga $25.000 USD**.
 
 ## 7. Bedah Kode Backend: Filter Rapuh vs Pertahanan Solid
 

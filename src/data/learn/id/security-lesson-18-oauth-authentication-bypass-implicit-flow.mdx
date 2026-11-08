@@ -1,5 +1,22 @@
 # OAuth 2.0: Bypass Autentikasi via Celah Implicit Flow & Client Tampering
 
+> [!TIP]
+> ### ⚡ Cara Cepat / Quick Solution (Langsung Praktik)
+> 1. Login menggunakan akun media sosial sendiri (`wiener:peter`).
+> 2. Di Burp HTTP history, cari request:
+>    `POST /authenticate` dengan body `{"email":"wiener@normal-user.net","token":"..."}`
+> 3. Kirim ke **Repeater** (`Ctrl+R`), lalu ganti parameter `email` menjadi milik korban:
+>    ```json
+>    {
+>      "email": "carlos@carlos-montoya.net",
+>      "username": "carlos",
+>      "token": "..."
+>    }
+>    ```
+> 4. Klik **Send** $\rightarrow$ klik kanan respons $\rightarrow$ **Show response in browser** untuk login sebagai Carlos!
+
+---
+
 Banyak aplikasi modern menyediakan opsi praktis **"Sign in with Google"**, **"Log in with GitHub"**, atau akun media sosial lainnya. Fitur ini dibangun di atas protokol **OAuth 2.0**. Namun, sering kali terjadi kesalahpahaman fundamental di kalangan pengembang: **OAuth 2.0 sejatinya dirancang untuk *Authorization* (Otorisasi akses data), bukan untuk *Authentication* (Membuktikan identitas pengguna)**.
 
 Ketika pengembang memaksakan OAuth untuk proses login tanpa memahami implikasi keamanannya—khususnya saat menggunakan **Implicit Grant Type**—timbul celah fatal di mana penyerang dapat **mengambil alih akun pengguna lain (*Account Takeover*) hanya dengan memodifikasi satu baris data di Burp Suite**.
@@ -178,6 +195,14 @@ Untuk memastikan kita berhasil login sebagai Carlos:
 Akun Carlos berhasil diambil alih sepenuhnya tanpa penyerang perlu mengetahui password asli milik Carlos!
 
 ---
+
+## 🌍 Studi Kasus Nyata di Industri (Real-World Case Study)
+
+### Frans Rosén & Arne Swinnen: Account Takeover Massal pada Implementasi OAuth
+Dua pemburu bug bounty legendaris mengungkap bahaya fatal penggunaan OAuth Implicit Flow di aplikasi SaaS modern:
+* **Akar Masalah di Industri:** Banyak platform aplikasi web membiarkan browser memproses login via Implicit Flow. Setelah mendapatkan access token dari Google/Facebook, browser mengirimkan JSON `{"email":"target@korban.com", "token":"token_penyerang"}` ke server aplikasi.
+* **Eksploitasi Parameter Tampering:** Frans Rosén dan Arne Swinnen menemukan bahwa server aplikasi hanya memeriksa apakah token valid, namun **tidak pernah memvalidasi apakah token tersebut benar-benar diterbitkan untuk email korban**. Penyerang cukup mengganti alamat email di Burp Suite untuk seketika login ke akun CEO atau administrator target.
+* **Dampak & Standardisasi:** Penemuan ini diganjar puluhan hadiah bug bounty bernilai **$15.000 – $30.000 USD** per temuan di berbagai perusahaan Fortune 500, dan menjadi alasan utama **IETF menghapus sepenuhnya Implicit Flow dari spesifikasi resmi OAuth 2.1**.
 
 ## 5. Bedah Kode Backend: Mengapa Terjadi & Cara Memperbaikinya
 
